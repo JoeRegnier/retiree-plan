@@ -26,10 +26,11 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
+      const normalisedEmail = email.trim().toLowerCase();
       if (tab === 0) {
-        await login(email, password);
+        await login(normalisedEmail, password);
       } else {
-        await register(email, password, name || undefined);
+        await register(normalisedEmail, password, name || undefined);
       }
     } catch (err: any) {
       setError(err.message);

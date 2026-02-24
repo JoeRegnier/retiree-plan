@@ -247,10 +247,10 @@ export function AccountsPage() {
                         />
                         <ListItemSecondaryAction>
                           <Tooltip title="Edit">
-                            <IconButton size="small" onClick={() => openDialog(acc)}><EditIcon fontSize="small" /></IconButton>
+                            <IconButton size="small" aria-label="Edit account" onClick={() => openDialog(acc)}><EditIcon fontSize="small" /></IconButton>
                           </Tooltip>
                           <Tooltip title="Delete">
-                            <IconButton size="small" onClick={() => deleteAccount.mutate(acc.id)}><DeleteIcon fontSize="small" /></IconButton>
+                            <IconButton size="small" aria-label="Delete account" onClick={() => deleteAccount.mutate(acc.id)}><DeleteIcon fontSize="small" /></IconButton>
                           </Tooltip>
                         </ListItemSecondaryAction>
                       </ListItem>

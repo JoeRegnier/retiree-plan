@@ -234,6 +234,7 @@ export function ProjectionsPage() {
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Scenario" select fullWidth size="small"
+                inputProps={{ 'data-tour': 'scenario-select' }}
                 value={selectedScenarioId} onChange={(e) => setSelectedScenarioId(e.target.value)}
                 disabled={!scenarios?.length}
               >
@@ -242,12 +243,14 @@ export function ProjectionsPage() {
             </Grid>
             <Grid item xs={6} sm={3}>
               <Button fullWidth variant="contained" startIcon={<PlayArrowIcon />}
+                data-tour="run-projection-btn"
                 onClick={handleRun} disabled={isRunning || !selectedScenarioId}>
                 {runProjection.isPending ? <CircularProgress size={20} /> : 'Run Projection'}
               </Button>
             </Grid>
             <Grid item xs={6} sm={3}>
               <Button fullWidth variant="outlined" onClick={handleRunMC}
+                data-tour="run-mc-btn"
                 disabled={isRunning || !selectedScenarioId || !projectionData}>
                 {runMC.isPending ? <CircularProgress size={20} /> : 'Run Monte Carlo'}
               </Button>

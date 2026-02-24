@@ -1,4 +1,9 @@
 import { useState } from 'react';
+import TourIcon from '@mui/icons-material/Tour';
+import { useTour } from '../contexts/TourContext';
+import { APP_TOUR_STEPS } from '../data/tourSteps';
+import { TourOverlay } from '../components/TourOverlay';
+import { OnboardingWizard } from '../components/OnboardingWizard';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import {
   Box,
@@ -38,21 +43,21 @@ import { useAuth } from '../contexts/AuthContext';
 const DRAWER_WIDTH = 260;
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
-  { label: 'Household', path: '/household', icon: <PeopleIcon /> },
-  { label: 'Accounts', path: '/accounts', icon: <AccountBalanceIcon /> },
-  { label: 'Milestones', path: '/milestones', icon: <FlagIcon /> },
-  { label: 'Scenarios', path: '/scenarios', icon: <CompareArrowsIcon /> },
-  { label: 'Projections', path: '/projections', icon: <TimelineIcon /> },
-  { label: 'Simulations', path: '/simulations', icon: <CasinoIcon /> },
-  { label: 'Tax Analytics', path: '/tax-analytics', icon: <BarChartIcon /> },
-  { label: 'Estate', path: '/estate', icon: <AccountTreeIcon /> },
-  { label: 'International', path: '/international', icon: <PublicIcon /> },
-  { label: 'Compare', path: '/compare', icon: <CompareIcon /> },
-  { label: 'AI Assistant', path: '/ai-chat', icon: <SmartToyIcon /> },
-  { label: 'Integrations', path: '/integrations', icon: <IntegrationInstructionsIcon /> },
-  { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
-  { label: 'Help', path: '/help', icon: <HelpOutlineIcon /> },
+  { label: 'Dashboard',    path: '/',              icon: <DashboardIcon />,              tourId: 'nav-dashboard' },
+  { label: 'Household',    path: '/household',     icon: <PeopleIcon />,                 tourId: 'nav-household' },
+  { label: 'Accounts',     path: '/accounts',      icon: <AccountBalanceIcon />,         tourId: 'nav-accounts' },
+  { label: 'Milestones',   path: '/milestones',    icon: <FlagIcon />,                   tourId: 'nav-milestones' },
+  { label: 'Scenarios',    path: '/scenarios',     icon: <CompareArrowsIcon />,          tourId: 'nav-scenarios' },
+  { label: 'Projections',  path: '/projections',   icon: <TimelineIcon />,               tourId: 'nav-projections' },
+  { label: 'Simulations',  path: '/simulations',   icon: <CasinoIcon />,                 tourId: 'nav-simulations' },
+  { label: 'Tax Analytics',path: '/tax-analytics', icon: <BarChartIcon />,               tourId: 'nav-tax' },
+  { label: 'Estate',       path: '/estate',        icon: <AccountTreeIcon />,            tourId: 'nav-estate' },
+  { label: 'International',path: '/international', icon: <PublicIcon /> },
+  { label: 'Compare',      path: '/compare',       icon: <CompareIcon />,                tourId: 'nav-compare' },
+  { label: 'AI Assistant', path: '/ai-chat',       icon: <SmartToyIcon />,               tourId: 'nav-ai' },
+  { label: 'Integrations', path: '/integrations',  icon: <IntegrationInstructionsIcon /> },
+  { label: 'Settings',     path: '/settings',      icon: <SettingsIcon /> },
+  { label: 'Help',         path: '/help',          icon: <HelpOutlineIcon /> },
 ];
 
 export function AppLayout() {
@@ -62,10 +67,16 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [onboardingCtx, setOnboardingCtx] = useState<{ openOnboarding: () => void } | null>(null);
+  const { startTour } = useTour();
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <Box
+        sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }}
+        onClick={() => navigate('/overview')}
+        title="View feature overview"
+      >
         <Box
           sx={{
             width: 36,
@@ -94,6 +105,7 @@ export function AppLayout() {
             <ListItemButton
               key={item.path}
               aria-current={active ? 'page' : undefined}
+              {...(item.tourId ? { 'data-tour': item.tourId } : {})}
               onClick={() => {
                 navigate(item.path);
                 setMobileOpen(false);
@@ -194,6 +206,15 @@ export function AppLayout() {
             </IconButton>
             <Box sx={{ flex: 1 }} />
             <IconButton
+              aria-label="Start guided tour"
+              data-tour="tour-help"
+              title="Start guided tour"
+              onClick={() => startTour(APP_TOUR_STEPS)}
+              sx={{ mr: 0.5 }}
+            >
+              <TourIcon fontSize="small" />
+            </IconButton>
+            <IconButton
               aria-label="User account menu"
               aria-haspopup="true"
               aria-expanded={!!anchorEl}
@@ -215,6 +236,31 @@ export function AppLayout() {
               <MenuItem
                 onClick={() => {
                   setAnchorEl(null);
+                  navigate('/overview');
+                }}
+              >
+                Feature Overview
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                  onboardingCtx?.openOnboarding();
+                }}
+              >
+                Getting Started
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                  startTour(APP_TOUR_STEPS);
+                }}
+              >
+                Take a Tour
+              </MenuItem>
+              <Divider />
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
                   logout();
                 }}
               >
@@ -228,6 +274,10 @@ export function AppLayout() {
           <Outlet />
         </Box>
       </Box>
+
+      {/* Tour + Onboarding — mounted once, controlled by context */}
+      <TourOverlay />
+      <OnboardingWizard onContextReady={setOnboardingCtx} />
     </Box>
   );
 }

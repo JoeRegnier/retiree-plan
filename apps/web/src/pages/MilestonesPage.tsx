@@ -221,13 +221,14 @@ export function MilestonesPage() {
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => openEdit(m)}>
+                        <IconButton size="small" aria-label="Edit milestone" onClick={() => openEdit(m)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
                         <IconButton
                           size="small"
+                          aria-label="Delete milestone"
                           color="error"
                           onClick={() => deleteMutation.mutate(m.id)}
                         >

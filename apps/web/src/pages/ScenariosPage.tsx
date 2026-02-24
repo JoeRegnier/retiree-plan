@@ -183,10 +183,10 @@ export function ScenariosPage() {
                       <Typography variant="h6">{s.name}</Typography>
                       <Box>
                         <Tooltip title="Edit">
-                          <IconButton size="small" onClick={() => openDialog(s)}><EditIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" aria-label="Edit scenario" onClick={() => openDialog(s)}><EditIcon fontSize="small" /></IconButton>
                         </Tooltip>
                         <Tooltip title="Delete">
-                          <IconButton size="small" onClick={() => deleteScenario.mutate(s.id)}><DeleteIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" aria-label="Delete scenario" onClick={() => deleteScenario.mutate(s.id)}><DeleteIcon fontSize="small" /></IconButton>
                         </Tooltip>
                       </Box>
                     </Box>

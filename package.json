@@ -26,6 +26,7 @@
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:push": "npm run db:push -w apps/api",
     "db:seed": "node prisma/seed.js",
+    "db:seed-test": "node prisma/seed-test-account.js",
     "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules e2e/node_modules"
   },
   "prisma": {

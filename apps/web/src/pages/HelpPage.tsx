@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import {
   Box, Typography, Accordion, AccordionSummary, AccordionDetails,
   Grid, Card, CardContent, Chip, Divider, Alert, Link,
@@ -173,6 +174,7 @@ const TIPS = [
 
 export function HelpPage() {
   const [expanded, setExpanded] = useState<string | false>(false);
+  const navigate = useNavigate();
 
   return (
     <Box>
@@ -244,10 +246,22 @@ export function HelpPage() {
       </Grid>
 
       <Box mt={3} textAlign="center">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          New to RetireePlan?{' '}
+          <Link
+            component="button"
+            variant="body2"
+            onClick={() => navigate('/overview')}
+            sx={{ verticalAlign: 'baseline' }}
+          >
+            View the feature overview
+          </Link>
+          {' '}to see everything the app can do.
+        </Typography>
         <Typography variant="body2" color="text.secondary">
           Have feedback?{' '}
-          <Link href="https://github.com/joeregnier/retiree-plan/issues" target="_blank" rel="noreferrer">
-            Open an issue on GitHub
+          <Link href="https://gitlab.com/fox-den/retireeplan/-/issues" target="_blank" rel="noreferrer">
+            Open an issue on GitLab
           </Link>
         </Typography>
       </Box>

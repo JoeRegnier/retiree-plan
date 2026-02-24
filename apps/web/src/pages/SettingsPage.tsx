@@ -115,10 +115,27 @@ export function SettingsPage() {
     mutationFn: () => apiFetch('/auth/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name || profile?.name }),
+      body: JSON.stringify({
+        ...(name ? { name } : {}),
+        ...(newPassword ? { currentPassword, newPassword } : {}),
+      }),
     }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['profile'] }); setSnack('Profile saved'); },
-    onError: () => setSnack('Failed to save profile'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] });
+      setCurrentPassword('');
+      setNewPassword('');
+      setSnack('Profile saved');
+    },
+    onError: (err: any) => {
+      const msg = err?.message ?? '';
+      if (msg.toLowerCase().includes('current password')) {
+        setSnack('Current password is incorrect');
+      } else if (msg.toLowerCase().includes('8 characters')) {
+        setSnack('New password must be at least 8 characters');
+      } else {
+        setSnack('Failed to save profile');
+      }
+    },
   });
 
   const handleExport = async () => {

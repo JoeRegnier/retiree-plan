@@ -4,6 +4,8 @@ import { CircularProgress, Box } from '@mui/material';
 import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { useAuth } from './contexts/AuthContext';
+import { TourProvider } from './contexts/TourContext';
+import { OverviewPage } from './pages/OverviewPage';
 
 // Route-level code splitting — each page chunk is loaded on demand
 const DashboardPage    = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
@@ -33,38 +35,40 @@ function PageSpinner() {
 export function App() {
   const { isAuthenticated } = useAuth();
 
-  if (!isAuthenticated) {
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
-
   return (
-    <Suspense fallback={<PageSpinner />}>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/household" element={<HouseholdPage />} />
-          <Route path="/accounts" element={<AccountsPage />} />
-          <Route path="/milestones" element={<MilestonesPage />} />
-          <Route path="/scenarios" element={<ScenariosPage />} />
-          <Route path="/projections" element={<ProjectionsPage />} />
-          <Route path="/simulations" element={<SimulationsPage />} />
-          <Route path="/tax-analytics" element={<TaxAnalyticsPage />} />
-          <Route path="/compare" element={<ComparePage />} />
-          <Route path="/estate" element={<EstatePage />} />
-          <Route path="/help" element={<HelpPage />} />
-          <Route path="/integrations" element={<IntegrationsPage />} />
-          <Route path="/ai-chat" element={<AiChatPage />} />
-          <Route path="/international" element={<InternationalPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-        <Route path="/login" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+    <TourProvider>
+      {!isAuthenticated ? (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/overview" element={<OverviewPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      ) : (
+        <Suspense fallback={<PageSpinner />}>
+          <Routes>
+            <Route path="/overview" element={<OverviewPage />} />
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/household" element={<HouseholdPage />} />
+              <Route path="/accounts" element={<AccountsPage />} />
+              <Route path="/milestones" element={<MilestonesPage />} />
+              <Route path="/scenarios" element={<ScenariosPage />} />
+              <Route path="/projections" element={<ProjectionsPage />} />
+              <Route path="/simulations" element={<SimulationsPage />} />
+              <Route path="/tax-analytics" element={<TaxAnalyticsPage />} />
+              <Route path="/compare" element={<ComparePage />} />
+              <Route path="/estate" element={<EstatePage />} />
+              <Route path="/help" element={<HelpPage />} />
+              <Route path="/integrations" element={<IntegrationsPage />} />
+              <Route path="/ai-chat" element={<AiChatPage />} />
+              <Route path="/international" element={<InternationalPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+            <Route path="/login" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      )}
+    </TourProvider>
   );
 }
 
