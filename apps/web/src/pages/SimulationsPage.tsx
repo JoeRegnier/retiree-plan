@@ -1,9 +1,13 @@
 import {
   Box, Typography, Card, CardContent, Grid, Button, FormControl, InputLabel, Select,
   MenuItem, Slider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Chip, CircularProgress, Alert, Divider, Tabs, Tab,
+  Paper, Chip, CircularProgress, Alert, Divider, Tabs, Tab, Collapse, List, ListItem, ListItemIcon, ListItemText,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import TuneIcon from '@mui/icons-material/Tune';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useApi } from '../hooks/useApi';
@@ -19,6 +23,71 @@ interface PercentileYear { age: number; p5: number; p25: number; p50: number; p7
 interface MCResult { percentilesByYear: PercentileYear[]; successRate: number; median: number; }
 interface BacktestResult { successRate: number; numWindows: number; windows: any[]; worstCase: any; bestCase: any; }
 interface GKResult { years: any[]; portfolioSurvived: boolean; initialWithdrawal: number; finalPortfolio: number; totalWithdrawn: number; }
+
+interface InfoPanelProps {
+  title: string;
+  what: string;
+  inputs: string[];
+  interpretation: string;
+  relevance: string;
+}
+
+function InfoPanel({ title, what, inputs, interpretation, relevance }: InfoPanelProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Box sx={{ mb: 2 }}>
+      <Button
+        size="small"
+        variant="text"
+        startIcon={<InfoOutlinedIcon />}
+        onClick={() => setOpen((o) => !o)}
+        sx={{ color: 'text.secondary', textTransform: 'none', fontWeight: 400, fontSize: '0.8rem' }}
+      >
+        {open ? 'Hide' : 'How does this work?'}
+      </Button>
+      <Collapse in={open}>
+        <Card variant="outlined" sx={{ mt: 1, bgcolor: 'background.default', borderColor: 'divider' }}>
+          <CardContent sx={{ pt: 2, pb: '12px !important' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{title}</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
+                  <BarChartIcon fontSize="small" color="primary" />
+                  <Typography variant="caption" fontWeight={600} color="primary">What it does</Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary">{what}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
+                  <TuneIcon fontSize="small" color="warning" />
+                  <Typography variant="caption" fontWeight={600} color="warning.main">Key inputs</Typography>
+                </Box>
+                <List dense disablePadding>
+                  {inputs.map((inp) => (
+                    <ListItem key={inp} disablePadding sx={{ alignItems: 'flex-start', mb: 0.25 }}>
+                      <ListItemIcon sx={{ minWidth: 18, mt: '2px' }}>
+                        <CheckCircleOutlineIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
+                      </ListItemIcon>
+                      <ListItemText primary={inp} primaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
+                  <CheckCircleOutlineIcon fontSize="small" color="success" />
+                  <Typography variant="caption" fontWeight={600} color="success.main">How to read results</Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.75 }}>{interpretation}</Typography>
+                <Typography variant="caption" color="text.secondary" fontStyle="italic">{relevance}</Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Collapse>
+    </Box>
+  );
+}
 
 function useCommonData() {
   const { apiFetch } = useApi();
@@ -85,6 +154,21 @@ function MonteCarloTab() {
 
   return (
     <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <InfoPanel
+          title="Monte Carlo Simulation"
+          what="Runs thousands of randomised annual-return sequences through your cash-flow model. Each trial uses a different random return path drawn from a normal distribution, revealing the full spectrum of possible retirement outcomes."
+          inputs={[
+            'Retirement age & life expectancy (set in your scenario)',
+            'Annual expenses in retirement',
+            'Expected return & volatility (scenario parameters)',
+            'RRSP, TFSA, and non-registered account balances',
+            'Number of simulations (more = more precise, slower)',
+          ]}
+          interpretation="Success rate >= 90% = strong plan. 75-89% = acceptable with some risk. < 75% = consider adjusting spending or retirement age. The fan chart shows the p5-p95 wealth range at each age - a wide fan means high uncertainty."
+          relevance="Addresses sequence-of-returns risk: the same average return can produce very different outcomes depending on whether bad years come early or late in retirement."
+        />
+      </Grid>
       <Grid item xs={12} md={4}>
         <Card>
           <CardContent>
@@ -218,6 +302,21 @@ function BacktestingTab() {
 
   return (
     <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <InfoPanel
+          title="Historical Backtesting"
+          what="Tests your retirement plan against every overlapping historical return window from 1970-2024 using real TSX Composite and FTSE Canada Bond data. Each window represents a complete retirement starting from a different year in history."
+          inputs={[
+            'Retirement age & life expectancy',
+            'Annual expenses in retirement',
+            'Current RRSP, TFSA, non-reg balances',
+            'Annual savings rate (pre-retirement accumulation)',
+            'Equity fraction (% in stocks vs bonds)',
+          ]}
+          interpretation="Success rate = % of historical windows where your portfolio never depleted. Worst-case start year (often mid-1960s or 1999) reveals sequence-of-returns risk. Best-case shows upside. Unlike Monte Carlo, these are real market returns - not simulated."
+          relevance="Complements Monte Carlo by grounding results in actual history. A plan that survived 1966 (worst sequence ever recorded) or 2000-2002 is genuinely stress-tested."
+        />
+      </Grid>
       <Grid item xs={12} md={4}>
         <Card>
           <CardContent>
@@ -338,6 +437,21 @@ function GuytonKlingerTab() {
 
   return (
     <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <InfoPanel
+          title="Guyton-Klinger Guardrails"
+          what="Models a flexible spending strategy where withdrawals adapt each year based on portfolio performance. If your withdrawal rate exceeds the upper guardrail (default 7%), spending is cut by 10%. If it drops below the lower guardrail (default 4%), you can spend 10% more - allowing you to enjoy good markets while preserving capital in bad ones."
+          inputs={[
+            'Initial portfolio value (projected from current accounts to retirement)',
+            'Initial annual withdrawal (annual expenses in retirement)',
+            'Expected return and volatility',
+            'Inflation rate',
+            'Retirement duration (life expectancy minus retirement age)',
+          ]}
+          interpretation="Portfolio Survived means balance stayed positive through all years. Watch the cut/increase counts - frequent cuts signal the plan is stressed. Flat withdrawal periods after cuts confirm the guardrails are working. Compare final portfolio to initial to judge legacy value."
+          relevance="Demonstrates why rigid 4% fixed-withdrawal rules can fail in volatile markets, and how dynamic spending rules give a plan much greater longevity."
+        />
+      </Grid>
       <Grid item xs={12} md={4}>
         <Card>
           <CardContent>
@@ -521,6 +635,20 @@ function HeatmapTab() {
 
   return (
     <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <InfoPanel
+          title="Success Rate Heatmap"
+          what="Runs 36 Monte Carlo simulations across a grid of 6 withdrawal rates (2.5%-5.0%) x 6 equity fractions (30%-80%). Each cell shows the probability your portfolio survives the full retirement period. Reveals how sensitive your plan is to both spending rate and asset allocation simultaneously."
+          inputs={[
+            'Scenario retirement age & life expectancy (determines retirement duration)',
+            'Current account balances (RRSP + TFSA + non-reg = total portfolio)',
+            'Inflation rate from scenario',
+            'No other inputs needed - withdrawal rate and equity mix are swept automatically',
+          ]}
+          interpretation="Green cells = high success (>90%). Red = dangerous. Look for the boundary between green and yellow - that is your safe withdrawal rate range for a given allocation. If the entire grid is green, your portfolio is likely large relative to spending. If mostly red, consider delaying retirement or reducing expenses."
+          relevance="Uniquely powerful for understanding trade-offs: you can see at a glance whether shifting from 60% to 70% equities meaningfully improves your success rate, or whether withdrawing 3.5% vs 4.0% is the more impactful lever."
+        />
+      </Grid>
       <Grid item xs={12} md={4}>
         <Card>
           <CardContent>

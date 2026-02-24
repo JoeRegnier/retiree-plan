@@ -17,7 +17,17 @@ export class ProjectionsController {
     // Accept both naming conventions from the frontend
     const normalized = {
       ...body,
-      stdDevReturn: body.stdDevReturn ?? body.volatility,
+      // Core field aliases
+      endAge: body.endAge ?? body.lifeExpectancy ?? 90,
+      annualExpenses: body.annualExpenses ?? body.annualExpensesInRetirement ?? 60_000,
+      employmentIncome: body.employmentIncome ?? body.annualIncome ?? 0,
+      nominalReturnRate: body.nominalReturnRate ?? body.expectedReturn ?? 0.06,
+      // Government benefit defaults
+      cppStartAge: body.cppStartAge ?? 65,
+      oasStartAge: body.oasStartAge ?? 65,
+      province: body.province ?? 'ON',
+      // Simulation params
+      stdDevReturn: body.stdDevReturn ?? body.volatility ?? 0.12,
       trials: body.trials ?? body.numSimulations ?? 1000,
     };
     return this.projectionsService.runMonteCarlo(normalized);
@@ -34,7 +44,19 @@ export class ProjectionsController {
       ...body,
       stdDevReturn: body.stdDevReturn ?? body.volatility ?? 0.12,
     };
-    return this.projectionsService.runGKSimulation(normalized);
+    const result = this.projectionsService.runGKSimulation(normalized);
+    // Normalise response to match frontend expectations
+    return {
+      ...result,
+      portfolioSurvived: result.finalPortfolio > 0,
+      initialWithdrawal: body.initialWithdrawal ?? 0,
+      totalWithdrawn: result.totalWithdrawals,
+      years: result.years.map((y: any, i: number) => ({
+        ...y,
+        portfolioBalance: y.portfolioValue ?? y.portfolioBalance ?? 0,
+        age: body.retirementAge != null ? body.retirementAge + i : undefined,
+      })),
+    };
   }
 
   @Post('estate')

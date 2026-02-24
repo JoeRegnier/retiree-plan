@@ -49,11 +49,11 @@ export function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/household" element={<HouseholdPage />} />
           <Route path="/accounts" element={<AccountsPage />} />
+          <Route path="/milestones" element={<MilestonesPage />} />
           <Route path="/scenarios" element={<ScenariosPage />} />
           <Route path="/projections" element={<ProjectionsPage />} />
           <Route path="/simulations" element={<SimulationsPage />} />
           <Route path="/tax-analytics" element={<TaxAnalyticsPage />} />
-          <Route path="/milestones" element={<MilestonesPage />} />
           <Route path="/compare" element={<ComparePage />} />
           <Route path="/estate" element={<EstatePage />} />
           <Route path="/help" element={<HelpPage />} />

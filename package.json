@@ -25,6 +25,10 @@
     "db:generate": "npm run db:generate -w apps/api",
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:push": "npm run db:push -w apps/api",
+    "db:seed": "node prisma/seed.js",
     "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules e2e/node_modules"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }
