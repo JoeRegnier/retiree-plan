@@ -1,0 +1,331 @@
+openapi: 3.1.0
+info:
+  title: RetireePlan API
+  version: 0.1.0
+  description: Canadian Financial & Retirement Planning API
+  contact:
+    name: RetireePlan Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+
+  /auth/register:
+    post:
+      summary: Register a new user
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '201':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/login:
+    post:
+      summary: Log in
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /households:
+    get:
+      summary: List user households
+      operationId: listHouseholds
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of households
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Household'
+    post:
+      summary: Create a household
+      operationId: createHousehold
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHouseholdInput'
+      responses:
+        '201':
+          description: Household created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Household'
+
+  /projections/cash-flow:
+    post:
+      summary: Run cash-flow projection
+      operationId: runCashFlowProjection
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashFlowInput'
+      responses:
+        '200':
+          description: Projection results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectionYear'
+
+  /projections/monte-carlo:
+    post:
+      summary: Run Monte Carlo simulation
+      operationId: runMonteCarlo
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonteCarloInput'
+      responses:
+        '200':
+          description: Simulation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonteCarloResult'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            name:
+              type: string
+
+    Household:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        userId:
+          type: string
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/HouseholdMember'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    HouseholdMember:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        province:
+          type: string
+
+    CreateHouseholdInput:
+      type: object
+      required: [name, members]
+      properties:
+        name:
+          type: string
+        members:
+          type: array
+          items:
+            type: object
+            required: [name, dateOfBirth, province]
+            properties:
+              name:
+                type: string
+              dateOfBirth:
+                type: string
+                format: date
+              province:
+                type: string
+
+    CashFlowInput:
+      type: object
+      required: [currentAge, endAge, province, employmentIncome, retirementAge, annualExpenses]
+      properties:
+        currentAge:
+          type: integer
+        endAge:
+          type: integer
+        province:
+          type: string
+        employmentIncome:
+          type: number
+        retirementAge:
+          type: integer
+        annualExpenses:
+          type: number
+        inflationRate:
+          type: number
+        nominalReturnRate:
+          type: number
+        cppStartAge:
+          type: integer
+        oasStartAge:
+          type: integer
+        rrspBalance:
+          type: number
+        tfsaBalance:
+          type: number
+        nonRegBalance:
+          type: number
+
+    MonteCarloInput:
+      allOf:
+        - $ref: '#/components/schemas/CashFlowInput'
+        - type: object
+          properties:
+            trials:
+              type: integer
+            meanReturn:
+              type: number
+            stdDevReturn:
+              type: number
+            seed:
+              type: integer
+
+    ProjectionYear:
+      type: object
+      properties:
+        year:
+          type: integer
+        age:
+          type: integer
+        totalIncome:
+          type: number
+        totalTax:
+          type: number
+        netIncome:
+          type: number
+        expenses:
+          type: number
+        totalNetWorth:
+          type: number
+
+    MonteCarloResult:
+      type: object
+      properties:
+        trials:
+          type: integer
+        successRate:
+          type: number
+        distributionByYear:
+          type: array
+          items:
+            type: object
+            properties:
+              year:
+                type: integer
+              p5:
+                type: number
+              p25:
+                type: number
+              median:
+                type: number
+              p75:
+                type: number
+              p95:
+                type: number

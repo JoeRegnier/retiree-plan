@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+*.db
+*.db-journal
+coverage/
+.turbo/
+.next/
+playwright-report/
+test-results/

@@ -1,0 +1,30 @@
+{
+  "name": "retiree-plan",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DIY Canadian Financial & Retirement Planning Application",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "e2e"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test -w e2e",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "npm run db:generate -w apps/api",
+    "db:migrate": "npm run db:migrate -w apps/api",
+    "db:push": "npm run db:push -w apps/api",
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules e2e/node_modules"
+  }
+}

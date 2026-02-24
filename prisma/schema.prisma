@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(cuid())
+  email           String           @unique
+  password        String
+  name            String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  households      Household[]
+  ynabConnection  YnabConnection?
+  aiMessages      AiMessage[]
+}
+
+model Household {
+  id               String            @id @default(cuid())
+  name             String
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members          HouseholdMember[]
+  accounts         Account[]
+  scenarios        Scenario[]
+  expenses              Expense[]
+  milestoneEvents       MilestoneEvent[]
+  ynabCategoryMappings  YnabCategoryMapping[]
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+}
+
+model HouseholdMember {
+  id            String         @id @default(cuid())
+  name          String
+  dateOfBirth   DateTime
+  province      String
+  householdId   String
+  household     Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  incomeSources IncomeSource[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model IncomeSource {
+  id               String          @id @default(cuid())
+  name             String
+  type             String
+  annualAmount     Float
+  startAge         Int?
+  endAge           Int?
+  indexToInflation Boolean         @default(true)
+  memberId         String
+  member           HouseholdMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model Expense {
+  id               String    @id @default(cuid())
+  name             String
+  category         String
+  annualAmount     Float
+  startAge         Int?
+  endAge           Int?
+  indexToInflation Boolean   @default(true)
+  householdId      String
+  household        Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Account {
+  id                 String    @id @default(cuid())
+  name               String
+  type               String
+  balance            Float     @default(0)
+  currency           String    @default("CAD")
+  annualContribution Float     @default(0)
+  householdId        String
+  household          Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  // Optional link to a YNAB account — balance synced automatically
+  ynabAccountId      String?
+  ynabAccountName    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Scenario {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  parameters  String
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model HistoricalReturn {
+  id         String @id @default(cuid())
+  year       Int
+  asset      String
+  returnRate Float
+}
+
+model MilestoneEvent {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  age         Int
+  amount      Float
+  type        String    // 'income' | 'expense' | 'lump_sum_in' | 'lump_sum_out'
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ─── Phase 5: YNAB Integration ───────────────────────────────────────────────
+
+model YnabConnection {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken  String
+  refreshToken String?
+  budgetId     String?
+  budgetName   String?
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model YnabCategoryMapping {
+  id               String    @id @default(cuid())
+  ynabCategoryId   String
+  ynabCategoryName String
+  localCategory    String    // maps to Expense.category
+  householdId      String
+  household        Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([householdId, ynabCategoryId])
+}
+
+// ─── Phase 5: AI Chat ────────────────────────────────────────────────────────
+
+model AiMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // 'user' | 'assistant' | 'system'
+  content   String
+  createdAt DateTime @default(now())
+}
