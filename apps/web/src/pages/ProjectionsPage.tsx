@@ -47,6 +47,7 @@ function exportCsv(data: ProjectionYear[]) {
 }
 
 import type { WaterfallYear } from '../components/charts/WaterfallChart';
+import { calcAge } from '../utils/age';
 
 function WaterfallSection({
   projectionData, nwHistory, memberDob,
@@ -170,7 +171,7 @@ export function ProjectionsPage() {
     const p = parseParams(scenario);
     const member = household.members?.[0];
     if (!member) return null;
-    const currentAge = new Date().getFullYear() - new Date(member.dateOfBirth).getFullYear();
+    const currentAge = calcAge(member.dateOfBirth);
     const rrsp = household.accounts?.filter((a: any) => a.type === 'RRSP' || a.type === 'RRIF').reduce((s: number, a: any) => s + a.balance, 0) ?? 0;
     const tfsa = household.accounts?.filter((a: any) => a.type === 'TFSA').reduce((s: number, a: any) => s + a.balance, 0) ?? 0;
     const nonReg = household.accounts?.filter((a: any) => a.type === 'NON_REG').reduce((s: number, a: any) => s + a.balance, 0) ?? 0;

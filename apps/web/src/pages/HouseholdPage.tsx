@@ -16,6 +16,7 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../hooks/useApi';
 import { PROVINCE_NAMES } from '@retiree-plan/shared';
+import { calcAge } from '../utils/age';
 
 const PROVINCE_OPTIONS = Object.entries(PROVINCE_NAMES).map(([code, name]) => ({ code, name }));
 
@@ -331,7 +332,7 @@ export function HouseholdPage() {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', pr: 1 }}>
                       <Typography fontWeight={600}>{m.name}</Typography>
                       <Chip label={PROVINCE_NAMES[m.province as keyof typeof PROVINCE_NAMES] ?? m.province} size="small" />
-                      <Chip label={`${new Date().getFullYear() - new Date(m.dateOfBirth).getFullYear()} yrs`} size="small" variant="outlined" />
+                      <Chip label={`${calcAge(m.dateOfBirth)} yrs`} size="small" variant="outlined" />
                       <Box sx={{ ml: 'auto' }}>
                         <IconButton size="small" onClick={(e) => { e.stopPropagation(); deleteMember.mutate(m.id); }}>
                           <DeleteIcon fontSize="small" />
