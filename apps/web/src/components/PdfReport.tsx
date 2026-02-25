@@ -220,7 +220,6 @@ const fmt = (n: number) =>
 
 const ColW = {
   income: ['30%', '20%', '20%', '15%', '15%'],
-  account: ['35%', '25%', '25%', '15%'],
   projection: ['15%', '22%', '22%', '22%', '19%'],
 };
 
@@ -302,17 +301,15 @@ export function PdfDocument({ plan }: { plan: RetirementPlanData }) {
           <Text style={styles.sectionTitle}>Accounts &amp; Savings</Text>
           <View style={styles.table}>
             <View style={[styles.tableRow, styles.tableHeader]}>
-              <Text style={[styles.tableHeaderCell, { width: ColW.account[0] }]}>Account</Text>
-              <Text style={[styles.tableHeaderCell, { width: ColW.account[1] }]}>Member</Text>
-              <Text style={[styles.tableHeaderCell, { width: ColW.account[2] }]}>Type</Text>
-              <Text style={[styles.tableHeaderCell, { width: ColW.account[3] }]}>Balance</Text>
+              <Text style={[styles.tableHeaderCell, { width: '45%' }]}>Account</Text>
+              <Text style={[styles.tableHeaderCell, { width: '30%' }]}>Type</Text>
+              <Text style={[styles.tableHeaderCell, { width: '25%' }]}>Balance</Text>
             </View>
             {plan.accounts.map((acc, i) => (
               <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowEven : {}]}>
-                <Text style={[styles.tableCell, { width: ColW.account[0] }]}>{acc.name}</Text>
-                <Text style={[styles.tableCell, { width: ColW.account[1] }]}>{acc.memberName ?? '—'}</Text>
-                <Text style={[styles.tableCell, { width: ColW.account[2] }]}>{acc.type}</Text>
-                <Text style={[styles.tableCell, { width: ColW.account[3] }]}>{fmt(acc.balance)}</Text>
+                <Text style={[styles.tableCell, { width: '45%' }]}>{acc.name}</Text>
+                <Text style={[styles.tableCell, { width: '30%' }]}>{acc.type}</Text>
+                <Text style={[styles.tableCell, { width: '25%' }]}>{fmt(acc.balance)}</Text>
               </View>
             ))}
           </View>

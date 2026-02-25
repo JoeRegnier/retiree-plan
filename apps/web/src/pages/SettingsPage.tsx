@@ -82,7 +82,10 @@ export function SettingsPage() {
       generatedAt: new Date().toLocaleDateString('en-CA'),
       members: (hh.members ?? []).map((m: any) => ({
         name: m.name,
-        birthYear: m.birthYear ?? new Date().getFullYear() - 50,
+        // Schema stores dateOfBirth (DateTime), not birthYear
+        birthYear: m.dateOfBirth
+          ? new Date(m.dateOfBirth).getFullYear()
+          : new Date().getFullYear() - 50,
         retirementAge: m.retirementAge ?? 65,
         province: m.province,
         country: m.country,
@@ -92,19 +95,23 @@ export function SettingsPage() {
           name: src.name,
           type: src.type ?? 'Other',
           annualAmount: src.annualAmount ?? 0,
-          startYear: src.startYear,
-          endYear: src.endYear,
+          // Schema uses startAge/endAge, not startYear/endYear
+          startYear: src.startAge,
+          endYear: src.endAge,
           memberName: m.name,
         }))
       ),
-      accounts: (hh.members ?? []).flatMap((m: any) =>
-        (m.accounts ?? []).map((acc: any) => ({
-          name: acc.name,
-          type: acc.type ?? 'Other',
-          balance: acc.balance ?? 0,
-          memberName: m.name,
-        }))
-      ),
+      // Accounts belong to the household, not individual members
+      accounts: (hh.accounts ?? []).map((acc: any) => ({
+        name: acc.name,
+        type: acc.type ?? 'Other',
+        balance: acc.balance ?? 0,
+      })),
+      // Include saved scenarios so PDF Page 3 is populated
+      scenarios: (hh.scenarios ?? []).map((s: any) => ({
+        name: s.name,
+        description: s.description,
+      })),
       annualExpenses: hh.annualExpenses ?? 0,
       notes: hh.notes,
     };
