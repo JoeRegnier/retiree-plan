@@ -80,6 +80,7 @@ interface Household {
 // ── Local expense categories ──────────────────────────────────────────────────
 
 const LOCAL_CATEGORIES = [
+  // Living Expenses
   'Housing',
   'Food',
   'Transportation',
@@ -92,9 +93,17 @@ const LOCAL_CATEGORIES = [
   'Utilities',
   'Personal Care',
   'Subscriptions',
-  'Gifts & Charity',
   'Savings',
+  'Gifts',
+  'Charitable',
   'Other',
+  // Debt Payments
+  'Mortgage',
+  'Car Loan',
+  'Student Loan',
+  'Government Loan',
+  'Line of Credit',
+  'Other Debt',
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────

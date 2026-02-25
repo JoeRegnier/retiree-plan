@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, MenuItem, Stepper, Step, StepLabel, Grid, Chip,
+  DialogActions, TextField, MenuItem, ListSubheader, Stepper, Step, StepLabel, Grid, Chip,
   IconButton, List, ListItem, ListItemText, ListItemSecondaryAction, Divider,
   Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails,
   FormControlLabel, Switch,
@@ -25,11 +25,23 @@ const INCOME_TYPES = [
   'Investment', 'Rental', 'Other',
 ];
 
-const EXPENSE_CATEGORIES = [
-  'Housing', 'Food', 'Transportation', 'Healthcare', 'Travel', 'Entertainment',
-  'Clothing', 'Insurance', 'Utilities', 'Personal Care', 'Education', 'Gifts',
-  'Charitable', 'Other',
-];
+const EXPENSE_CATEGORY_GROUPS = [
+  {
+    group: 'Living Expenses',
+    items: ['Housing', 'Food', 'Transportation', 'Healthcare', 'Travel', 'Entertainment',
+            'Clothing', 'Insurance', 'Utilities', 'Personal Care', 'Education', 'Gifts',
+            'Charitable', 'Other'],
+  },
+  {
+    group: 'Debt Payments',
+    items: ['Mortgage', 'Car Loan', 'Student Loan', 'Government Loan', 'Line of Credit', 'Other Debt'],
+  },
+] as const;
+
+const DEBT_CATEGORIES = new Set(EXPENSE_CATEGORY_GROUPS[1].items as readonly string[]);
+
+// Flat list for backwards-compat (category select, etc.)
+const EXPENSE_CATEGORIES = EXPENSE_CATEGORY_GROUPS.flatMap((g) => g.items);
 
 const WIZARD_STEPS = ['Household Name', 'Members', 'Income Sources', 'Expenses'];
 
@@ -79,7 +91,7 @@ export function HouseholdPage() {
   const [newHouseholdId, setNewHouseholdId] = useState('');
   const [memberForm, setMemberForm] = useState({ name: '', dateOfBirth: '', province: 'ON' });
   const [incomeForm, setIncomeForm] = useState({ name: '', type: 'Employment', annualAmount: '', startAge: '', endAge: '', indexToInflation: true, memberId: '' });
-  const [expenseForm, setExpenseForm] = useState({ name: '', category: 'Housing', annualAmount: '', startAge: '', endAge: '', indexToInflation: true });
+  const [expenseForm, setExpenseForm] = useState({ name: '', category: 'Housing', annualAmount: '', startAge: '', endAge: '', indexToInflation: true as boolean });
   const [wizardError, setWizardError] = useState('');
 
   const [memberDialog, setMemberDialog] = useState(false);
@@ -386,7 +398,14 @@ export function HouseholdPage() {
                       {i > 0 && <Divider />}
                       <ListItem disableGutters>
                         <ListItemText
-                          primary={exp.name}
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <span>{exp.name}</span>
+                              {DEBT_CATEGORIES.has(exp.category) && (
+                                <Chip label="Debt" size="small" color="warning" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
+                              )}
+                            </Box>
+                          }
                           secondary={`${exp.category} • $${exp.annualAmount.toLocaleString()}/yr${exp.indexToInflation ? ' • Indexed' : ''}`}
                         />
                         <ListItemSecondaryAction>
@@ -555,8 +574,27 @@ export function HouseholdPage() {
         <DialogTitle>{editingExpense ? 'Edit Expense' : 'Add Expense'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
           <TextField label="Description" value={expenseForm.name} onChange={(e) => setExpenseForm({ ...expenseForm, name: e.target.value })} fullWidth />
-          <TextField label="Category" select value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} fullWidth>
-            {EXPENSE_CATEGORIES.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+          <TextField
+            label="Category"
+            select
+            value={expenseForm.category}
+            onChange={(e) => {
+              const cat = e.target.value;
+              setExpenseForm({
+                ...expenseForm,
+                category: cat,
+                // Debt payments are fixed — default indexToInflation off
+                indexToInflation: DEBT_CATEGORIES.has(cat) ? false : expenseForm.indexToInflation,
+              });
+            }}
+            fullWidth
+          >
+            {EXPENSE_CATEGORY_GROUPS.map(({ group, items }) => [
+              <ListSubheader key={group} sx={{ fontWeight: 700, lineHeight: '32px', fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                {group}
+              </ListSubheader>,
+              ...items.map((c) => <MenuItem key={c} value={c} sx={{ pl: 3 }}>{c}</MenuItem>),
+            ])}
           </TextField>
           <TextField label="Annual Amount ($)" type="number" value={expenseForm.annualAmount}
             onChange={(e) => setExpenseForm({ ...expenseForm, annualAmount: e.target.value })} fullWidth />
