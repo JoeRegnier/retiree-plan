@@ -2,11 +2,15 @@ import {
   Box, Typography, Card, CardContent, Grid, TextField,
   Button, FormControl, InputLabel, Select, MenuItem, Divider, Alert, Snackbar,
   List, ListItem, ListItemText, Chip, Stack,
+  CircularProgress, Tooltip, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, IconButton,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import BackupIcon from '@mui/icons-material/Backup';
+import RestoreIcon from '@mui/icons-material/Restore';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router';
 import { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +21,8 @@ import { PdfDownloadButton, RetirementPlanData } from '../components/PdfReport';
 interface UserProfile { id: string; email: string; name?: string; }
 
 interface YnabStatus { connected: boolean; budgetName?: string; }
+
+interface BackupInfo { filename: string; sizeBytes: number; createdAt: string; label?: string; }
 
 export function SettingsPage() {
   const { apiFetch } = useApi();
@@ -138,6 +144,37 @@ export function SettingsPage() {
     },
   });
 
+  // ── Database backup & restore ─────────────────────────────────────────────
+  const { data: backups = [], refetch: refetchBackups, isFetching: backupsFetching } = useQuery<BackupInfo[]>({
+    queryKey: ['db-backups'],
+    queryFn: () => apiFetch('/database/backups'),
+    refetchOnWindowFocus: false,
+  });
+
+  const backupNowMutation = useMutation({
+    mutationFn: (label?: string) =>
+      apiFetch('/database/backup', { method: 'POST', body: JSON.stringify({ label }) }),
+    onSuccess: () => { setSnack('Backup created'); void refetchBackups(); },
+    onError: () => setSnack('Backup failed'),
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (filename: string) =>
+      apiFetch('/database/restore', { method: 'POST', body: JSON.stringify({ filename }) }),
+    onSuccess: () => {
+      setSnack('Restored — reloading in 2 s…');
+      setTimeout(() => window.location.reload(), 2000);
+    },
+    onError: () => setSnack('Restore failed'),
+  });
+
+  const deleteBackupMutation = useMutation({
+    mutationFn: (filename: string) =>
+      apiFetch(`/database/backups/${encodeURIComponent(filename)}`, { method: 'DELETE' }),
+    onSuccess: () => { setSnack('Backup deleted'); void refetchBackups(); },
+    onError: () => setSnack('Failed to delete backup'),
+  });
+
   const handleExport = async () => {
     try {
       const households = await apiFetch<unknown[]>('/households');
@@ -169,6 +206,7 @@ export function SettingsPage() {
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>Profile</Typography>
               <TextField
+                key={profile?.name ?? ''}
                 label="Display Name"
                 fullWidth
                 defaultValue={profile?.name ?? ''}
@@ -317,9 +355,106 @@ export function SettingsPage() {
             </CardContent>
           </Card>
         </Grid>
+        {/* ── Database Backup & Restore ── */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                <Typography variant="h6">Database Backup &amp; Restore</Typography>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <Tooltip title="Daily backups run automatically at 02:00. The most recent 7 daily backups are retained.">
+                    <Chip label="Auto: daily at 02:00 · 7 kept" size="small" color="success" variant="outlined" />
+                  </Tooltip>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={backupNowMutation.isPending ? <CircularProgress size={14} color="inherit" /> : <BackupIcon />}
+                    disabled={backupNowMutation.isPending}
+                    onClick={() => backupNowMutation.mutate(undefined)}
+                  >
+                    Backup Now
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => refetchBackups()} disabled={backupsFetching}>
+                    {backupsFetching ? <CircularProgress size={14} /> : 'Refresh'}
+                  </Button>
+                </Stack>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Backups are stored in <code>data/backups/</code> on the server. Restoring overwrites the live database — a
+                <strong> pre-restore backup is created automatically</strong> before any restore.
+              </Typography>
+              {backups.length === 0 ? (
+                <Alert severity="info">No backups yet. Click "Backup Now" to create one.</Alert>
+              ) : (
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Filename</TableCell>
+                        <TableCell>Label</TableCell>
+                        <TableCell>Size</TableCell>
+                        <TableCell>Created</TableCell>
+                        <TableCell align="right">Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {backups.map((b) => (
+                        <TableRow key={b.filename} hover>
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 11, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {b.filename}
+                          </TableCell>
+                          <TableCell>
+                            {b.label
+                              ? <Chip label={b.label} size="small" />
+                              : <Typography variant="caption" color="text.disabled">—</Typography>}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">{(b.sizeBytes / 1024).toFixed(0)} KB</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">{new Date(b.createdAt).toLocaleString('en-CA')}</Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                              <Button
+                                size="small"
+                                startIcon={restoreMutation.isPending ? <CircularProgress size={12} /> : <RestoreIcon fontSize="small" />}
+                                disabled={restoreMutation.isPending}
+                                onClick={() => {
+                                  if (window.confirm(`Restore "${b.filename}"?\n\nThe current database will be backed up first.`)) {
+                                    restoreMutation.mutate(b.filename);
+                                  }
+                                }}
+                              >
+                                Restore
+                              </Button>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                title="Delete backup"
+                                disabled={deleteBackupMutation.isPending}
+                                onClick={() => {
+                                  if (window.confirm(`Delete "${b.filename}"? This cannot be undone.`)) {
+                                    deleteBackupMutation.mutate(b.filename);
+                                  }
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
-      <Snackbar open={!!snack} autoHideDuration={3000} onClose={() => setSnack('')} message={snack} />
+      <Snackbar open={!!snack} autoHideDuration={4000} onClose={() => setSnack('')} message={snack} />
     </Box>
   );
 }

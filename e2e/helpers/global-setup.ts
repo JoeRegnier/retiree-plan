@@ -7,8 +7,10 @@ import path from 'path';
 
 export default async function globalSetup() {
   const root = path.resolve(__dirname, '../../');
+  // Use npm script so the predb:seed-test lifecycle hook fires and
+  // auto-backs up the database before overwriting it.
   console.log('[global-setup] Re-seeding regression test account…');
-  execSync('node prisma/seed-test-account.js', {
+  execSync('npm run db:seed-test', {
     cwd: root,
     stdio: 'inherit',
   });

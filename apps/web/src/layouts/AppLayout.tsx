@@ -56,7 +56,6 @@ const NAV_ITEMS = [
   { label: 'Compare',      path: '/compare',       icon: <CompareIcon />,                tourId: 'nav-compare' },
   { label: 'AI Assistant', path: '/ai-chat',       icon: <SmartToyIcon />,               tourId: 'nav-ai' },
   { label: 'Integrations', path: '/integrations',  icon: <IntegrationInstructionsIcon /> },
-  { label: 'Settings',     path: '/settings',      icon: <SettingsIcon /> },
   { label: 'Help',         path: '/help',          icon: <HelpOutlineIcon /> },
 ];
 
@@ -256,6 +255,16 @@ export function AppLayout() {
                 }}
               >
                 Take a Tour
+              </MenuItem>
+              <Divider />
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                  navigate('/settings');
+                }}
+              >
+                <SettingsIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                Settings
               </MenuItem>
               <Divider />
               <MenuItem

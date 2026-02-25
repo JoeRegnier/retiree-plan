@@ -63,4 +63,24 @@ export class ProjectionsController {
   runEstate(@Body() body: any) {
     return this.projectionsService.runEstateCalculation(body);
   }
+
+  @Post('historical-scenarios')
+  runHistoricalScenarios(@Body() body: any) {
+    const normalized = {
+      ...body,
+      endAge: body.endAge ?? body.lifeExpectancy ?? 90,
+      annualExpenses: body.annualExpenses ?? body.annualExpensesInRetirement ?? 60_000,
+      employmentIncome: body.employmentIncome ?? body.annualIncome ?? 0,
+      nominalReturnRate: body.nominalReturnRate ?? body.expectedReturn ?? 0.06,
+      cppStartAge: body.cppStartAge ?? 65,
+      oasStartAge: body.oasStartAge ?? 65,
+      province: body.province ?? 'ON',
+      trials: body.trials ?? 500,
+      equityFraction: body.equityFraction ?? 0.6,
+      equityAsset: body.equityAsset ?? 'TSX',
+      bondAsset: body.bondAsset ?? 'CA_BOND',
+      label: body.label,
+    };
+    return this.projectionsService.runHistoricalBootstrap(normalized);
+  }
 }

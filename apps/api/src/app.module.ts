@@ -14,12 +14,15 @@ import { OptimizationModule } from './optimization/optimization.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { YnabModule } from './ynab/ynab.module';
 import { AiModule } from './ai/ai.module';
+import { MarketDataModule } from './market-data/market-data.module';
+import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    DatabaseModule,
     AuthModule,
     HouseholdsModule,
     MembersModule,
@@ -29,6 +32,7 @@ import { HealthController } from './health.controller';
     ScenariosModule,
     ProjectionsModule,
     HistoricalReturnsModule,
+    MarketDataModule,
     OptimizationModule,
     MilestonesModule,
     YnabModule,

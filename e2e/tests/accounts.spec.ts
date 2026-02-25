@@ -27,7 +27,7 @@ test.describe('Accounts Page', () => {
   test('displays correct account types', async ({ page }) => {
     await expect(page.getByText('RRSP').first()).toBeVisible();
     await expect(page.getByText('TFSA').first()).toBeVisible();
-    await expect(page.getByText('NON_REG')).toBeVisible();
+    await expect(page.getByText('NON_REG').first()).toBeVisible();
   });
 
   test('total net worth is displayed and non-zero', async ({ page }) => {

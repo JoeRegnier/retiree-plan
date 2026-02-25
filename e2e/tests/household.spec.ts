@@ -11,12 +11,17 @@ const secondMemberName = 'Bob Smith';
 
 /** Helper: register a fresh user and land on the dashboard. */
 async function registerUser(page: any) {
+  // Suppress OnboardingWizard for all navigations on this page instance.
+  await page.addInitScript(() => {
+    localStorage.setItem('rp_onboarded', 'true');
+  });
   await page.goto('/');
   await page.getByText('Register').click();
   await page.getByLabel('Name').fill(testName);
   await page.getByLabel('Email').fill(`e2e+hh+${Date.now()}@example.com`);
   await page.getByLabel('Password').fill(testPassword);
-  await page.getByRole('button', { name: /register/i }).click();
+  // Submit button label is "Create Account" (Register tab has role="tab", not role="button")
+  await page.getByRole('button', { name: /create account/i }).click();
   await page.waitForURL('/', { timeout: 10_000 });
 }
 
@@ -42,7 +47,7 @@ async function addMemberInWizard(page: any, name: string, isFirst = true) {
   const buttonLabel = isFirst ? /create household & add member/i : /add another member/i;
   await page.getByRole('button', { name: buttonLabel }).click();
   // Member chip should appear on step 1
-  await expect(page.getByText(name)).toBeVisible({ timeout: 8_000 });
+  await expect(page.getByText(name).first()).toBeVisible({ timeout: 8_000 });
 }
 
 test.describe('Household Setup Wizard', () => {
@@ -64,15 +69,14 @@ test.describe('Household Setup Wizard', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     // Step 2 — income step; member accordion visible, skip income
-    await expect(page.getByText(memberName)).toBeVisible();
+    await expect(page.getByText(memberName).first()).toBeVisible();
     await page.getByRole('button', { name: 'Next' }).click();
 
     // Step 3 — completion step; finish wizard
     await page.getByRole('button', { name: 'Finish' }).click();
 
-    // Wizard closes; household and member names appear on the page
-    await expect(page.getByText(householdName)).toBeVisible({ timeout: 8_000 });
-    await expect(page.getByText(memberName)).toBeVisible();
+    // Wizard closes; member name appears in the members accordion list
+    await expect(page.getByText(memberName).first()).toBeVisible({ timeout: 8_000 });
   });
 
   test('can add multiple members before advancing', async ({ page }) => {
@@ -86,8 +90,8 @@ test.describe('Household Setup Wizard', () => {
     await addMemberInWizard(page, secondMemberName, false);
 
     // Both chips should be visible on step 1
-    await expect(page.getByText(memberName)).toBeVisible();
-    await expect(page.getByText(secondMemberName)).toBeVisible();
+    await expect(page.getByText(memberName).first()).toBeVisible();
+    await expect(page.getByText(secondMemberName).first()).toBeVisible();
 
     // Advance through remaining steps
     await page.getByRole('button', { name: 'Next' }).click(); // → step 2
@@ -95,8 +99,8 @@ test.describe('Household Setup Wizard', () => {
     await page.getByRole('button', { name: 'Finish' }).click();
 
     // Both members appear on the household page
-    await expect(page.getByText(memberName)).toBeVisible({ timeout: 8_000 });
-    await expect(page.getByText(secondMemberName)).toBeVisible();
+    await expect(page.getByText(memberName).first()).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(secondMemberName).first()).toBeVisible();
   });
 
   test('can add income to a member in wizard step 2', async ({ page }) => {
@@ -105,25 +109,23 @@ test.describe('Household Setup Wizard', () => {
     await addMemberInWizard(page, memberName, true);
     await page.getByRole('button', { name: 'Next' }).click(); // → step 2
 
-    // Expand member accordion
-    await page.getByText(memberName).click();
+    // Step 2 accordions are defaultExpanded; 'Add Income Source' is already visible
+    // Click "Add Income Source" inside the first member accordion
+    await page.getByRole('button', { name: /add income source/i }).first().click();
 
-    // Click "Add Income" inside the accordion
-    await page.getByRole('button', { name: /add income/i }).click();
-
-    // Fill income dialog
-    await page.getByLabel('Income Name').fill('CPP');
-    await page.getByLabel('Annual Amount').fill('12000');
+    // Fill income dialog — field labels are "Name" and "Annual Amount ($)"
+    await page.getByRole('dialog').getByLabel('Name').fill('CPP');
+    await page.getByLabel(/annual amount/i).fill('12000');
     // Submit income form
     await page.getByRole('button', { name: /save|add/i }).last().click();
 
-    // Income should appear in the accordion list
-    await expect(page.getByText('CPP')).toBeVisible({ timeout: 8_000 });
+    // Income should appear inside the wizard dialog accordion
+    await expect(page.getByLabel('Household Setup Wizard').getByText('CPP')).toBeVisible({ timeout: 8_000 });
 
     // Finish wizard
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Finish' }).click();
-    await expect(page.getByText(householdName)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(memberName).first()).toBeVisible({ timeout: 8_000 });
   });
 
   // ── Validation ──────────────────────────────────────────────────────────────

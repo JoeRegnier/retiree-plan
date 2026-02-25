@@ -27,6 +27,13 @@
     "db:push": "npm run db:push -w apps/api",
     "db:seed": "node prisma/seed.js",
     "db:seed-test": "node prisma/seed-test-account.js",
+    "db:backup": "node prisma/backup.js",
+    "db:restore": "node prisma/restore.js",
+    "db:restore:list": "node prisma/restore.js --list",
+    "db:reset": "node prisma/backup.js --label pre-reset && npx prisma migrate reset --force",
+    "predb:seed": "node prisma/backup.js --label pre-seed",
+    "predb:seed-test": "node prisma/backup.js --label pre-seed-test",
+    "predb:migrate": "node prisma/backup.js --label pre-migrate",
     "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules e2e/node_modules"
   },
   "prisma": {

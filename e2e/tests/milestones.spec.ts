@@ -29,12 +29,14 @@ test.describe('Milestones Page', () => {
   });
 
   test('milestone type chips are displayed', async ({ page }) => {
+    // Wait for milestone data to finish loading before checking chips
+    await expect(page.getByText('David Retires')).toBeVisible({ timeout: 10_000 });
     // Seeded milestones include lump_sum_in (Inheritance), expense, income types
     const chipLabels = ['Lump Sum In', 'Expense', 'Income', 'Lump Sum Out'];
     // At least one chip type should be visible
     let found = false;
     for (const label of chipLabels) {
-      if (await page.getByText(label).isVisible({ timeout: 2_000 }).catch(() => false)) {
+      if (await page.getByText(label).first().isVisible({ timeout: 2_000 }).catch(() => false)) {
         found = true;
         break;
       }

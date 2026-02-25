@@ -42,6 +42,11 @@ function makePrismaMock() {
   } as any;
 }
 
+/** MarketDataService mock — not used by unit tests, injected for DI */
+function makeMarketDataMock() {
+  return {} as any;
+}
+
 // ─── ProjectionsService — cash flow ──────────────────────────────────────────
 describe('ProjectionsService.runProjection', () => {
   let service: ProjectionsService;
@@ -49,7 +54,7 @@ describe('ProjectionsService.runProjection', () => {
 
   beforeEach(() => {
     prisma = makePrismaMock();
-    service = new ProjectionsService(prisma);
+    service = new ProjectionsService(prisma, makeMarketDataMock());
   });
 
   it('returns an array covering currentAge to endAge', () => {
@@ -112,7 +117,7 @@ describe('ProjectionsService.runMonteCarlo', () => {
 
   beforeEach(() => {
     prisma = makePrismaMock();
-    service = new ProjectionsService(prisma);
+    service = new ProjectionsService(prisma, makeMarketDataMock());
   });
 
   const monteCarloInput: MonteCarloInput = {
@@ -199,7 +204,7 @@ describe('ProjectionsService.runBacktest', () => {
   beforeEach(() => {
     prisma = makePrismaMock();
     prisma.historicalReturn.findMany.mockResolvedValue(makeHistoricalRows());
-    service = new ProjectionsService(prisma);
+    service = new ProjectionsService(prisma, makeMarketDataMock());
   });
 
   const backtestInput = {
@@ -255,7 +260,7 @@ describe('ProjectionsService.runGKSimulation', () => {
 
   beforeEach(() => {
     prisma = makePrismaMock();
-    service = new ProjectionsService(prisma);
+    service = new ProjectionsService(prisma, makeMarketDataMock());
   });
 
   const gkInput: GKInput = {
@@ -306,7 +311,7 @@ describe('ProjectionsService.runEstateCalculation', () => {
 
   beforeEach(() => {
     prisma = makePrismaMock();
-    service = new ProjectionsService(prisma);
+    service = new ProjectionsService(prisma, makeMarketDataMock());
   });
 
   const estateInput: EstateInput = {

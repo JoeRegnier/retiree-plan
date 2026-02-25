@@ -27,7 +27,7 @@ test.describe('Tax Analytics Page', () => {
 
   test('income field is pre-populated with a non-zero value', async ({ page }) => {
     await expect(page.getByText('From household')).toBeVisible({ timeout: 10_000 });
-    const incomeField = page.getByLabel(/income/i).first();
+    const incomeField = page.getByLabel("Annual Income");
     const value = await incomeField.inputValue();
     expect(Number(value)).toBeGreaterThan(0);
   });
@@ -35,7 +35,7 @@ test.describe('Tax Analytics Page', () => {
   test('modifying income shows "Customized" chip', async ({ page }) => {
     await expect(page.getByText('From household')).toBeVisible({ timeout: 10_000 });
 
-    const incomeField = page.getByLabel(/income/i).first();
+    const incomeField = page.getByLabel("Annual Income");
     await incomeField.clear();
     await incomeField.fill('200000');
     await incomeField.press('Tab'); // trigger change event
@@ -47,7 +47,7 @@ test.describe('Tax Analytics Page', () => {
     await expect(page.getByText('From household')).toBeVisible({ timeout: 10_000 });
 
     // Grab the original value before modifying
-    const incomeField = page.getByLabel(/income/i).first();
+    const incomeField = page.getByLabel("Annual Income");
     const originalValue = await incomeField.inputValue();
 
     // Modify

@@ -42,10 +42,10 @@ async function main() {
 
   const rows = [
     ...Object.entries(TSX_RETURNS).map(([year, returnRate]) => ({
-      year: parseInt(year), asset: 'TSX', returnRate,
+      year: parseInt(year), asset: 'TSX', returnRate, source: 'SEED', ticker: 'TSX',
     })),
     ...Object.entries(CA_BOND_RETURNS).map(([year, returnRate]) => ({
-      year: parseInt(year), asset: 'CA_BOND', returnRate,
+      year: parseInt(year), asset: 'CA_BOND', returnRate, source: 'SEED', ticker: 'CA_BOND',
     })),
   ];
 

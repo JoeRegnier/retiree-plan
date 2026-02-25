@@ -38,6 +38,11 @@ export interface CashFlowInput {
   rrspContribution?: number;
   /** Annual TFSA contribution (pre-retirement) */
   tfsaContribution?: number;
+  /**
+   * Optional per-year return sequence. When provided, index i is used for year i
+   * instead of nominalReturnRate (enables historical bootstrap / block-bootstrap).
+   */
+  yearlyReturnRates?: number[];
 }
 
 /**
@@ -54,8 +59,13 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
   let nonReg = input.nonRegBalance;
 
   for (let age = input.currentAge; age <= input.endAge; age++) {
-    const year = currentYear + (age - input.currentAge);
-    const inflationFactor = Math.pow(1 + input.inflationRate, age - input.currentAge);
+    const yearIndex = age - input.currentAge;
+    const year = currentYear + yearIndex;
+    const returnRate =
+      input.yearlyReturnRates != null && input.yearlyReturnRates[yearIndex] != null
+        ? input.yearlyReturnRates[yearIndex]
+        : input.nominalReturnRate;
+    const inflationFactor = Math.pow(1 + input.inflationRate, yearIndex);
 
     // Income
     const isWorking = age < input.retirementAge;
@@ -83,9 +93,9 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     }
 
     // Investment growth
-    rrsp *= 1 + input.nominalReturnRate;
-    tfsa *= 1 + input.nominalReturnRate;
-    nonReg *= 1 + input.nominalReturnRate;
+    rrsp *= 1 + returnRate;
+    tfsa *= 1 + returnRate;
+    nonReg *= 1 + returnRate;
 
     // Calculate total known income
     const knownIncome = employmentIncome + cppIncome + oasIncome;

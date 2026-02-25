@@ -2,12 +2,16 @@ import {
   Box, Typography, Card, CardContent, Grid, Button, FormControl, InputLabel, Select,
   MenuItem, Slider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Chip, CircularProgress, Alert, Divider, Tabs, Tab, Collapse, List, ListItem, ListItemIcon, ListItemText,
+  TextField, IconButton,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import TuneIcon from '@mui/icons-material/Tune';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useApi } from '../hooks/useApi';
@@ -15,6 +19,8 @@ import { MonteCarloChart } from '../components/charts/MonteCarloChart';
 import { BacktestChart } from '../components/charts/BacktestChart';
 import { GuytonKlingerChart } from '../components/charts/GuytonKlingerChart';
 import { HeatmapChart, type HeatmapData } from '../components/charts/HeatmapChart';
+import { HistoricalFanChart } from '../components/charts/HistoricalFanChart';
+import { OutcomeGauge } from '../components/charts/OutcomeGauge';
 
 interface Scenario { id: string; name: string; parameters: string; }
 interface Household { id: string; members: { id: string; dateOfBirth: string; }[]; }
@@ -23,6 +29,33 @@ interface PercentileYear { age: number; p5: number; p25: number; p50: number; p7
 interface MCResult { percentilesByYear: PercentileYear[]; successRate: number; median: number; }
 interface BacktestResult { successRate: number; numWindows: number; windows: any[]; worstCase: any; bestCase: any; }
 interface GKResult { years: any[]; portfolioSurvived: boolean; initialWithdrawal: number; finalPortfolio: number; totalWithdrawn: number; }
+
+interface OutcomeCategory { count: number; pct: number; }
+interface HistoricalScenariosResult {
+  successRate: number;
+  trials: number;
+  initialNetWorth: number;
+  percentilesByYear: Array<{ age: number; year: number; p1: number; p5: number; p25: number; p50: number; p75: number; p95: number }>;
+  outcomeCategories: {
+    largeSurplus: OutcomeCategory;
+    comfortable: OutcomeCategory;
+    barelyMadeIt: OutcomeCategory;
+    almostMadeIt: OutcomeCategory;
+    failedInTheMiddle: OutcomeCategory;
+  };
+  // returned by backend when equityAsset/bondAsset/label are forwarded
+  label?: string;
+  equityAsset?: string;
+  bondAsset?: string;
+  dataYears?: number;
+}
+
+interface SeriesInfo {
+  asset: string;
+  source: string;
+  count: number;
+  methodology: string;
+}
 
 interface InfoPanelProps {
   title: string;
@@ -708,6 +741,480 @@ function HeatmapTab() {
   );
 }
 
+// ─── Historical Scenarios Tab ─────────────────────────────────────────────────
+
+const OUTCOME_ROWS: { key: keyof HistoricalScenariosResult['outcomeCategories']; label: string; color: string }[] = [
+  { key: 'largeSurplus',      label: 'Large Surplus',        color: '#2e7d32' },
+  { key: 'comfortable',       label: 'Comfortable',          color: '#388e3c' },
+  { key: 'barelyMadeIt',      label: 'Barely Made It',       color: '#f9a825' },
+  { key: 'almostMadeIt',      label: 'Almost Made It',       color: '#e65100' },
+  { key: 'failedInTheMiddle', label: 'Failed in the Middle', color: '#c62828' },
+];
+
+const RUN_COLORS = ['#1565c0', '#2e7d32', '#b71c1c', '#6a1b9a'];
+
+type RunResult = HistoricalScenariosResult & {
+  label: string;
+  equityAsset: string;
+  bondAsset: string;
+  dataYears: number;
+};
+
+interface RunConfig {
+  id: string;
+  label: string;
+  color: string;
+  scenarioId: string;
+  equityAsset: string;
+  bondAsset: string;
+  equityFraction: number;
+  trials: number;
+  result: RunResult | null;
+  isPending: boolean;
+  error: string;
+}
+
+function mkRun(idx: number): RunConfig {
+  return {
+    id: generateId(),
+    label: `Run ${idx + 1}`,
+    color: RUN_COLORS[idx % RUN_COLORS.length],
+    scenarioId: '',
+    equityAsset: 'TSX',
+    bondAsset: 'CA_BOND',
+    equityFraction: 0.6,
+    trials: 500,
+    result: null,
+    isPending: false,
+    error: '',
+  };
+}
+
+function generateId(): string {
+  const c = (globalThis as any).crypto;
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+  if (c && typeof c.getRandomValues === 'function') {
+    const bytes = new Uint8Array(16);
+    c.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
+    const hex = Array.from(bytes).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  return 'id-' + Math.random().toString(36).slice(2, 9);
+}
+
+function HistoricalScenariosTab() {
+  const { scenarios, household, accounts, apiFetch } = useCommonData();
+  const [runs, setRuns] = useState<RunConfig[]>([mkRun(0)]);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [tickerInput, setTickerInput] = useState('');
+  const [fetchingTicker, setFetchingTicker] = useState('');
+  const [fetchMsg, setFetchMsg] = useState('');
+
+  const { data: sources, refetch: refetchSources } = useQuery<SeriesInfo[]>({
+    queryKey: ['market-data-sources'],
+    queryFn: () => apiFetch('/market-data/sources'),
+    enabled: sourcesOpen,
+  });
+
+  function updateRun(id: string, patch: Partial<RunConfig>) {
+    setRuns(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+  }
+
+  function addRun() {
+    if (runs.length >= 4) return;
+    setRuns(prev => [...prev, mkRun(prev.length)]);
+  }
+
+  function removeRun(id: string) {
+    setRuns(prev => prev.filter(r => r.id !== id));
+  }
+
+  async function handleFetchTicker(ticker: string) {
+    if (!ticker.trim()) return;
+    setFetchingTicker(ticker.trim());
+    setFetchMsg('');
+    try {
+      await apiFetch('/market-data/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker: ticker.trim() }),
+      });
+      setFetchMsg(`✓ Fetched data for ${ticker.trim()}`);
+      if (sourcesOpen) refetchSources();
+    } catch (e: any) {
+      setFetchMsg(`Error: ${e.message}`);
+    } finally {
+      setFetchingTicker('');
+    }
+  }
+
+  async function handleFetchBoC() {
+    setFetchingTicker('BOC');
+    setFetchMsg('');
+    try {
+      await apiFetch('/market-data/fetch-boc', { method: 'POST' });
+      setFetchMsg('✓ BoC data fetched (BOC_OVERNIGHT, BOC_10Y_BOND)');
+      if (sourcesOpen) refetchSources();
+    } catch (e: any) {
+      setFetchMsg(`Error: ${e.message}`);
+    } finally {
+      setFetchingTicker('');
+    }
+  }
+
+  async function runScenario(runId: string) {
+    const run = runs.find(r => r.id === runId);
+    if (!run || !run.scenarioId || !household) return;
+    const scenario = scenarios?.find(s => s.id === run.scenarioId);
+    if (!scenario) return;
+
+    updateRun(runId, { isPending: true, error: '', result: null });
+    try {
+      const params = JSON.parse(scenario.parameters ?? '{}');
+      const member = household.members[0];
+      const currentAge = member
+        ? Math.floor((Date.now() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 3600 * 1000))
+        : 45;
+      const rrspBalance = (accounts ?? []).filter(a => a.type === 'RRSP' || a.type === 'RRIF').reduce((s, a) => s + a.balance, 0);
+      const tfsaBalance = (accounts ?? []).filter(a => a.type === 'TFSA').reduce((s, a) => s + a.balance, 0);
+      const nonRegBalance = (accounts ?? []).filter(a => a.type === 'NON_REG').reduce((s, a) => s + a.balance, 0);
+      const data = await apiFetch<RunResult>('/projections/historical-scenarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentAge,
+          retirementAge: params.retirementAge ?? 65,
+          endAge: params.lifeExpectancy ?? 90,
+          annualExpensesInRetirement: params.annualExpensesInRetirement ?? 60000,
+          annualIncome: params.annualIncome ?? 100000,
+          province: params.province ?? 'ON',
+          rrspBalance, tfsaBalance, nonRegBalance,
+          inflationRate: params.inflationRate ?? 0.025,
+          nominalReturnRate: params.expectedReturn ?? 0.06,
+          cppStartAge: params.cppStartAge ?? 65,
+          oasStartAge: params.oasStartAge ?? 65,
+          trials: run.trials,
+          equityFraction: run.equityFraction,
+          equityAsset: run.equityAsset,
+          bondAsset: run.bondAsset,
+          label: run.label,
+        }),
+      });
+      updateRun(runId, { result: data, isPending: false });
+    } catch (e: any) {
+      updateRun(runId, { error: e.message, isPending: false });
+    }
+  }
+
+  const completedRuns = runs.filter(r => r.result);
+  const fanSeries = completedRuns.map(r => ({
+    label: r.label,
+    color: r.color,
+    data: r.result!.percentilesByYear,
+    successRate: r.result!.successRate,
+  }));
+
+  const successColor = (rate: number) => (rate >= 90 ? 'success' : rate >= 75 ? 'warning' : 'error') as 'success' | 'warning' | 'error';
+  const successMsg = (rate: number) => {
+    if (rate >= 90) return 'Excellent — survives the vast majority of historical environments.';
+    if (rate >= 75) return 'Solid but carries some risk. Consider modest adjustments.';
+    if (rate >= 50) return 'At risk — a significant fraction of histories result in depletion.';
+    return 'Needs attention — most historical scenarios result in depletion.';
+  };
+
+  return (
+    <Grid container spacing={3}>
+
+      {/* ── InfoPanel ── */}
+      <Grid item xs={12}>
+        <InfoPanel
+          title="Historical Scenarios (Bootstrap Simulation)"
+          what="Samples random annual returns from the actual historical record — including real crises, inflation shocks, and bull markets. Add up to 4 comparison runs with different asset mixes or ETF proxies, then overlay them in a single fan chart for direct perspective comparison."
+          inputs={[
+            'Scenario (retirement age, expenses, balances)',
+            'Equity asset: TSX (seeded) or any Yahoo Finance ticker (e.g. XIC.TO, SPY)',
+            'Bond asset: CA_BOND (seeded), BOC_10Y_BOND, BOC_OVERNIGHT, or a fetched ticker',
+            'Equity fraction (% stocks vs bonds)',
+            'Number of bootstrap trials',
+          ]}
+          interpretation="Overlay multiple runs to compare asset class assumptions side by side. Wide fan = high uncertainty. Green/yellow/red gauge = overall success rate. Outcome breakdown shows how trials ended across the full distribution."
+          relevance="Bootstrap resampling from real history preserves fat tails and regime shifts (1970s stagflation, dot-com bust) that parametric models consistently underestimate."
+        />
+      </Grid>
+
+      {/* ── Data Sources & Live Fetch ── */}
+      <Grid item xs={12}>
+        <Card variant="outlined">
+          <CardContent sx={{ '&:last-child': { pb: 1.5 } }}>
+            <Box
+              sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', py: 0.5 }}
+              onClick={() => setSourcesOpen(p => !p)}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TuneIcon fontSize="small" color="action" />
+                <Typography variant="subtitle2">Data Sources &amp; Live Fetch</Typography>
+              </Box>
+              <ExpandMoreIcon sx={{ color: 'text.secondary', transform: sourcesOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+            </Box>
+            <Collapse in={sourcesOpen}>
+              <Box sx={{ mt: 1.5 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Fetch live data from Yahoo Finance (equities) or the Bank of Canada Valet API (bond/rate proxies).
+                  Fetched series are stored by their asset key and available to any run.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <TextField
+                    size="small" label="Yahoo ticker (e.g. XIC.TO)" variant="outlined" sx={{ minWidth: 240 }}
+                    value={tickerInput}
+                    onChange={e => setTickerInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleFetchTicker(tickerInput); }}
+                  />
+                  <Button
+                    variant="outlined" size="small"
+                    disabled={!!fetchingTicker || !tickerInput.trim()}
+                    startIcon={fetchingTicker && fetchingTicker !== 'BOC' ? <CircularProgress size={14} /> : undefined}
+                    onClick={() => handleFetchTicker(tickerInput)}
+                  >
+                    Fetch Equity
+                  </Button>
+                  <Button
+                    variant="outlined" size="small"
+                    disabled={!!fetchingTicker}
+                    startIcon={fetchingTicker === 'BOC' ? <CircularProgress size={14} /> : undefined}
+                    onClick={handleFetchBoC}
+                  >
+                    Fetch BoC Rates
+                  </Button>
+                  {fetchMsg && (
+                    <Typography variant="caption" color={fetchMsg.startsWith('✓') ? 'success.main' : 'error.main'}>
+                      {fetchMsg}
+                    </Typography>
+                  )}
+                </Box>
+
+                {sources && sources.length > 0 && (
+                  <Table size="small" sx={{ mb: 1.5 }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Asset Key</TableCell>
+                        <TableCell>Source</TableCell>
+                        <TableCell align="right">Years</TableCell>
+                        <TableCell>Methodology</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {sources.map((s: SeriesInfo) => (
+                        <TableRow key={s.asset}>
+                          <TableCell>
+                            <Typography variant="caption" fontWeight={700} sx={{ fontFamily: 'monospace' }}>{s.asset}</Typography>
+                          </TableCell>
+                          <TableCell><Chip size="small" label={s.source} /></TableCell>
+                          <TableCell align="right"><Typography variant="caption">{s.count}</Typography></TableCell>
+                          <TableCell><Typography variant="caption" color="text.secondary">{s.methodology}</Typography></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+
+                <Alert severity="info" icon={false} sx={{ py: 0.5 }}>
+                  <Typography variant="caption">
+                    <strong>Methodology transparency:</strong> Yahoo Finance equity returns are year-over-year from monthly adjusted-close prices (unofficial v8 API).
+                    Bond proxy uses BoC V39056 10-year GoC yield converted via modified-duration formula: <em>TR ≈ avg_yield − 8 × Δyield</em> (duration ≈ 8 for universe bond index).
+                    GIC proxy uses BoC V122514 overnight rate averaged annually. Data is best-effort; always verify with official sources.
+                  </Typography>
+                </Alert>
+              </Box>
+            </Collapse>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* ── Run Configuration Cards ── */}
+      {runs.map((run, idx) => (
+        <Grid item xs={12} md={6} key={run.id}>
+          <Card variant="outlined" sx={{ borderLeft: `4px solid ${run.color}` }}>
+            <CardContent>
+              {/* Card header: editable label + remove button */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: run.color, flexShrink: 0 }} />
+                  <TextField
+                    size="small" variant="standard" value={run.label}
+                    onChange={e => updateRun(run.id, { label: e.target.value })}
+                    inputProps={{ style: { fontWeight: 600, fontSize: 15 } }}
+                    sx={{ width: 130 }}
+                  />
+                  <Typography variant="caption" color="text.disabled">#{idx + 1}</Typography>
+                </Box>
+                {runs.length > 1 && (
+                  <IconButton size="small" onClick={() => removeRun(run.id)} title="Remove this run">
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+
+              {/* Scenario select */}
+              <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                <InputLabel>Scenario</InputLabel>
+                <Select value={run.scenarioId} label="Scenario" onChange={e => updateRun(run.id, { scenarioId: e.target.value })}>
+                  {(scenarios ?? []).map(s => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+
+              {/* Asset key inputs */}
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <TextField
+                  size="small" label="Equity asset" fullWidth
+                  value={run.equityAsset}
+                  onChange={e => updateRun(run.id, { equityAsset: e.target.value })}
+                  helperText="TSX or Yahoo ticker"
+                />
+                <TextField
+                  size="small" label="Bond asset" fullWidth
+                  value={run.bondAsset}
+                  onChange={e => updateRun(run.id, { bondAsset: e.target.value })}
+                  helperText="CA_BOND or ticker"
+                />
+              </Box>
+
+              {/* Equity fraction slider */}
+              <Typography variant="body2" gutterBottom>
+                Equity: <strong>{(run.equityFraction * 100).toFixed(0)}%</strong> stocks / {((1 - run.equityFraction) * 100).toFixed(0)}% bonds
+              </Typography>
+              <Slider
+                value={run.equityFraction} min={0.2} max={1} step={0.1}
+                marks={[{ value: 0.2, label: '20%' }, { value: 0.6, label: '60%' }, { value: 1.0, label: '100%' }]}
+                valueLabelDisplay="auto" valueLabelFormat={v => `${(v * 100).toFixed(0)}%`}
+                onChange={(_, v) => updateRun(run.id, { equityFraction: v as number })}
+                sx={{ mb: 2 }}
+              />
+
+              {/* Trials slider */}
+              <Typography variant="body2" gutterBottom>Trials: <strong>{run.trials.toLocaleString()}</strong></Typography>
+              <Slider
+                value={run.trials} min={100} max={1000} step={null}
+                marks={[{ value: 100, label: '100' }, { value: 250, label: '250' }, { value: 500, label: '500' }, { value: 1000, label: '1K' }]}
+                valueLabelDisplay="auto"
+                onChange={(_, v) => updateRun(run.id, { trials: v as number })}
+                sx={{ mb: 2.5 }}
+              />
+
+              {/* Run button */}
+              <Button
+                variant="contained" fullWidth size="large"
+                sx={{ bgcolor: run.color, '&:hover': { bgcolor: run.color, filter: 'brightness(0.85)' } }}
+                startIcon={run.isPending ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+                disabled={!run.scenarioId || run.isPending}
+                onClick={() => runScenario(run.id)}
+              >
+                {run.isPending ? 'Running…' : 'Run'}
+              </Button>
+              {run.error && <Alert severity="error" sx={{ mt: 1.5 }}>{run.error}</Alert>}
+
+              {/* Result summary */}
+              {run.result && (
+                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                    <OutcomeGauge successRate={run.result.successRate} size={80} />
+                    <Box>
+                      <Chip
+                        label={`${run.result.successRate.toFixed(1)}% success`}
+                        color={successColor(run.result.successRate)}
+                        size="small"
+                        sx={{ mb: 0.5 }}
+                      />
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        {run.result.dataYears ? `${run.result.dataYears} data yrs · ` : ''}{run.result.trials} trials
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Eq: <strong>{run.result.equityAsset ?? run.equityAsset}</strong> · Bd: <strong>{run.result.bondAsset ?? run.bondAsset}</strong>
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                    {successMsg(run.result.successRate)}
+                  </Typography>
+                  <Divider sx={{ mb: 1 }} />
+                  <Table size="small">
+                    <TableBody>
+                      {OUTCOME_ROWS.map(({ key, label, color }) => (
+                        <TableRow key={key}>
+                          <TableCell sx={{ py: 0.3, border: 0 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+                              <Typography variant="caption">{label}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="right" sx={{ py: 0.3, border: 0 }}>
+                            <Typography variant="caption" fontWeight={600}>
+                              {run.result!.outcomeCategories[key].pct.toFixed(1)}%
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+
+      {/* Add Run tile */}
+      {runs.length < 4 && (
+        <Grid item xs={12} md={6}>
+          <Box
+            sx={{
+              border: '2px dashed', borderColor: 'divider', borderRadius: 2,
+              minHeight: 160, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', transition: 'all 0.15s',
+              '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
+            }}
+            onClick={addRun}
+          >
+            <Box sx={{ textAlign: 'center', py: 3 }}>
+              <AddCircleOutlineIcon sx={{ color: 'text.disabled', fontSize: 36, mb: 0.5 }} />
+              <Typography variant="body2" color="text.secondary">Add Comparison Run</Typography>
+              <Typography variant="caption" color="text.disabled">Up to 4 overlays</Typography>
+            </Box>
+          </Box>
+        </Grid>
+      )}
+
+      {/* ── Multi-series Fan Chart ── */}
+      <Grid item xs={12}>
+        {fanSeries.length === 0 ? (
+          <Card variant="outlined" sx={{ height: 440, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <BarChartIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+              <Typography color="text.secondary" sx={{ mb: 0.5 }}>No simulations run yet</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Configure a run above and click the play button — completed runs appear here as overlays
+              </Typography>
+            </Box>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent>
+              <Box sx={{ mb: 1.5 }}>
+                <Typography variant="subtitle2">Net Worth — Percentile Fan Chart</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {fanSeries.length} scenario{fanSeries.length > 1 ? 's' : ''} overlaid · medians + p5–p95 bands per series
+                </Typography>
+              </Box>
+              <HistoricalFanChart series={fanSeries} />
+            </CardContent>
+          </Card>
+        )}
+      </Grid>
+    </Grid>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export function SimulationsPage() {
   const [tab, setTab] = useState(0);
@@ -724,12 +1231,14 @@ export function SimulationsPage() {
         <Tab label="Historical Backtesting" />
         <Tab label="Guyton-Klinger" />
         <Tab label="Success Rate Heatmap" />
+        <Tab label="Historical Scenarios" />
       </Tabs>
 
       {tab === 0 && <MonteCarloTab />}
       {tab === 1 && <BacktestingTab />}
       {tab === 2 && <GuytonKlingerTab />}
       {tab === 3 && <HeatmapTab />}
+      {tab === 4 && <HistoricalScenariosTab />}
     </Box>
   );
 }

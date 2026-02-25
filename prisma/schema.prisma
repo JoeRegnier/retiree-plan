@@ -102,10 +102,18 @@ model Scenario {
 }
 
 model HistoricalReturn {
-  id         String @id @default(cuid())
+  id         String    @id @default(cuid())
   year       Int
   asset      String
   returnRate Float
+  /// 'SEED' | 'YAHOO' | 'BOC'
+  source     String    @default("SEED")
+  /// Ticker symbol for Yahoo-fetched series (e.g. 'XIC.TO'); empty for seeded series
+  ticker     String    @default("")
+  /// When this record was last fetched from an external source
+  fetchedAt  DateTime?
+
+  @@unique([year, asset])
 }
 
 model MilestoneEvent {

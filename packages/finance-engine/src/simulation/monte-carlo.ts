@@ -56,11 +56,13 @@ export function runMonteCarloSimulation(input: MonteCarloInput): MonteCarloResul
   let successCount = 0;
 
   for (let t = 0; t < trials; t++) {
-    // Generate random return for each year
-    const randomReturn = normalRandom(rand, meanReturn, stdDev);
+    // Generate a different random return for each year (correct MC)
+    const yearlyReturnRates = Array.from({ length: numYears }, () =>
+      normalRandom(rand, meanReturn, stdDev),
+    );
     const trialInput: CashFlowInput = {
       ...input,
-      nominalReturnRate: randomReturn,
+      yearlyReturnRates,
     };
 
     const projection = runCashFlowProjection(trialInput);

@@ -19,6 +19,12 @@ export const MEMBER_B      = 'Sarah Smith';
  * Waits until the dashboard URL is reached before returning.
  */
 export async function loginAsTestUser(page: Page): Promise<void> {
+  // Inject rp_onboarded before any page script runs so the OnboardingWizard
+  // never auto-opens during tests (it checks this key on mount).
+  await page.addInitScript(() => {
+    localStorage.setItem('rp_onboarded', 'true');
+  });
+
   await page.goto('/');
   // Make sure we're on the login page (unauthenticated redirect)
   await page.getByLabel('Email').fill(TEST_EMAIL);

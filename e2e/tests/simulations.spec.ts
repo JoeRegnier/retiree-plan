@@ -13,7 +13,7 @@ test.describe('Simulations Page', () => {
   });
 
   test('page header and all four tabs are visible', async ({ page }) => {
-    await expect(page.getByText('Simulations')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: 'Simulations' })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole('tab', { name: /monte carlo/i })).toBeVisible();
     await expect(page.getByRole('tab', { name: /historical backtesting/i })).toBeVisible();
     await expect(page.getByRole('tab', { name: /guyton.klinger/i })).toBeVisible();
@@ -38,7 +38,8 @@ test.describe('Simulations Page', () => {
 
       await page.getByRole('button', { name: /run|simulate/i }).first().click();
 
-      await expect(page.getByText(/success rate/i)).toBeVisible({ timeout: 30_000 });
+      // Wait for the Summary card with the exact 'Success Rate' label to appear
+      await expect(page.getByText('Success Rate', { exact: true })).toBeVisible({ timeout: 30_000 });
     });
 
     test('Monte Carlo chart (SVG) renders after run', async ({ page }) => {
@@ -46,7 +47,7 @@ test.describe('Simulations Page', () => {
       await scenarioSelect.click();
       await page.getByRole('option', { name: 'Base Case' }).click();
       await page.getByRole('button', { name: /run|simulate/i }).first().click();
-      await expect(page.getByText(/success rate/i)).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText('Success Rate', { exact: true })).toBeVisible({ timeout: 30_000 });
 
       const svg = page.locator('svg').first();
       await expect(svg).toBeVisible({ timeout: 10_000 });
@@ -92,7 +93,8 @@ test.describe('Simulations Page', () => {
 
       await page.getByRole('button', { name: /run|simulate/i }).first().click();
 
-      await expect(page.getByText(/survived|portfolio/i).first()).toBeVisible({ timeout: 30_000 });
+      // 'Portfolio Survived' label appears in results after the simulation completes
+      await expect(page.getByText('Portfolio Survived', { exact: true })).toBeVisible({ timeout: 30_000 });
     });
 
     test('Guyton-Klinger chart renders', async ({ page }) => {
@@ -100,7 +102,7 @@ test.describe('Simulations Page', () => {
       await scenarioSelect.click();
       await page.getByRole('option', { name: 'Base Case' }).click();
       await page.getByRole('button', { name: /run|simulate/i }).first().click();
-      await expect(page.getByText(/survived|portfolio/i).first()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText('Portfolio Survived', { exact: true })).toBeVisible({ timeout: 30_000 });
 
       await expect(page.locator('svg').first()).toBeVisible({ timeout: 10_000 });
     });
@@ -123,8 +125,8 @@ test.describe('Simulations Page', () => {
 
       await page.getByRole('button', { name: /generate|run|compute/i }).first().click();
 
-      // Heatmap cells should contain percentage strings, and not all be 100%
-      const cells = page.locator('[data-testid="heatmap-cell"], td, .heatmap-cell').filter({ hasText: /%/ });
+      // Heatmap cells are SVG <text> elements rendered by D3 with class 'htext'
+      const cells = page.locator('text.htext');
       await expect(cells.first()).toBeVisible({ timeout: 30_000 });
     });
   });

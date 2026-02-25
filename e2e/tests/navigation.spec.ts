@@ -22,10 +22,12 @@ test.describe('Navigation & Dashboard', () => {
     for (const label of [
       'Dashboard', 'Household', 'Accounts', 'Milestones', 'Scenarios',
       'Projections', 'Simulations', 'Tax Analytics', 'Estate',
-      'Compare', 'Integrations', 'Settings',
+      'Compare', 'Integrations',
     ]) {
       await expect(nav.getByText(label)).toBeVisible();
     }
+    // Settings is in the profile menu, not the sidebar
+    await expect(nav.getByText('Settings')).not.toBeVisible();
   });
 
   test('navigates to each main page without errors', async ({ page }) => {
@@ -38,7 +40,6 @@ test.describe('Navigation & Dashboard', () => {
       ['Simulations',   '/simulations'],
       ['Tax Analytics', '/tax-analytics'],
       ['Estate',        '/estate'],
-      ['Settings',      '/settings'],
     ];
 
     for (const [label, path] of routes) {
@@ -47,6 +48,12 @@ test.describe('Navigation & Dashboard', () => {
       // No crash-level error overlay
       await expect(page.locator('[data-testid="error-boundary"]')).not.toBeVisible();
     }
+
+    // Settings is accessed via the profile menu, not the sidebar
+    await page.getByRole('button', { name: /user account/i }).click();
+    await page.getByRole('menuitem', { name: /settings/i }).click();
+    await page.waitForURL('/settings', { timeout: 10_000 });
+    await expect(page.locator('[data-testid="error-boundary"]')).not.toBeVisible();
   });
 
   test('user menu shows email and sign-out option', async ({ page }) => {
@@ -65,6 +72,11 @@ test.describe('Navigation & Dashboard', () => {
   });
 
   test('unauthenticated access redirects to login', async ({ page: freshPage }) => {
+    // Clear auth so this page behaves as unauthenticated (beforeEach already logged in)
+    await freshPage.evaluate(() => {
+      localStorage.removeItem('rp_token');
+      localStorage.removeItem('rp_user');
+    });
     await freshPage.goto('/accounts');
     await freshPage.waitForURL('/login', { timeout: 8_000 });
   });

@@ -86,9 +86,9 @@ export class HistoricalReturnsService {
     ];
 
     const entries = [
-      ...tsxData.map(([year, returnRate]) => ({ year, asset: 'TSX', returnRate })),
-      ...caBondData.map(([year, returnRate]) => ({ year, asset: 'CA_BOND', returnRate })),
-      ...gicData.map(([year, returnRate]) => ({ year, asset: 'GIC', returnRate })),
+      ...tsxData.map(([year, returnRate]) => ({ year, asset: 'TSX', returnRate, source: 'SEED', ticker: 'TSX' })),
+      ...caBondData.map(([year, returnRate]) => ({ year, asset: 'CA_BOND', returnRate, source: 'SEED', ticker: 'CA_BOND' })),
+      ...gicData.map(([year, returnRate]) => ({ year, asset: 'GIC', returnRate, source: 'SEED', ticker: 'GIC' })),
     ];
 
     // Upsert using deleteMany + createMany for simplicity
