@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 const API_BASE = '/api';
 
 export function useApi() {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
 
   const apiFetch = async <T = unknown>(path: string, options: RequestInit = {}): Promise<T> => {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -14,6 +14,11 @@ export function useApi() {
         ...options.headers,
       },
     });
+
+    if (res.status === 401) {
+      logout();
+      throw new Error('Session expired. Please log in again.');
+    }
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: 'Request failed' }));

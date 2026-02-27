@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -69,6 +69,8 @@ interface CategoryMapping {
   ynabCategoryId: string;
   ynabCategoryName: string;
   localCategory: string;
+  startAge?: number | null;
+  endAge?: number | null;
   householdId: string;
 }
 
@@ -120,6 +122,9 @@ export function IntegrationsPage() {
   const [tokenVisible, setTokenVisible] = useState(false);
   const [tokenError, setTokenError] = useState('');
 
+  // Local state for in-progress age edits keyed by ynabCategoryId
+  const [ageEdits, setAgeEdits] = useState<Record<string, { startAge: string; endAge: string }>>({});
+
   // ── Queries ───────────────────────────────────────────────────────────────
 
   const { data: status, isLoading: statusLoading } = useQuery<YnabStatus>({
@@ -152,6 +157,23 @@ export function IntegrationsPage() {
     queryFn: () => apiFetch(`/ynab/mappings?householdId=${householdId}`),
     enabled: !!householdId && status?.connected === true,
   });
+
+  // Seed ageEdits from server data whenever mappings are loaded/refreshed
+  useEffect(() => {
+    if (!mappings) return;
+    setAgeEdits((prev) => {
+      const next = { ...prev };
+      for (const m of mappings) {
+        if (!(m.ynabCategoryId in next)) {
+          next[m.ynabCategoryId] = {
+            startAge: m.startAge?.toString() ?? '',
+            endAge:   m.endAge?.toString()   ?? '',
+          };
+        }
+      }
+      return next;
+    });
+  }, [mappings]);
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 
@@ -207,14 +229,18 @@ export function IntegrationsPage() {
       ynabCategoryId,
       ynabCategoryName,
       localCategory,
+      startAge,
+      endAge,
     }: {
       ynabCategoryId: string;
       ynabCategoryName: string;
       localCategory: string;
+      startAge?: number | null;
+      endAge?: number | null;
     }) =>
       apiFetch('/ynab/mappings', {
         method: 'POST',
-        body: JSON.stringify({ householdId, ynabCategoryId, ynabCategoryName, localCategory }),
+        body: JSON.stringify({ householdId, ynabCategoryId, ynabCategoryName, localCategory, startAge, endAge }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['ynab-mappings'] }),
   });
@@ -382,6 +408,8 @@ export function IntegrationsPage() {
                       <TableCell>YNAB Category</TableCell>
                       <TableCell>Monthly Budget</TableCell>
                       <TableCell>Map to</TableCell>
+                      <TableCell sx={{ width: 96 }}>Start Age</TableCell>
+                      <TableCell sx={{ width: 96 }}>End Age</TableCell>
                       <TableCell />
                     </TableRow>
                   </TableHead>
@@ -407,10 +435,13 @@ export function IntegrationsPage() {
                                 label="Local category"
                                 onChange={(e) => {
                                   if (e.target.value) {
+                                    const edits = ageEdits[cat.id] ?? { startAge: '', endAge: '' };
                                     upsertMappingMutation.mutate({
                                       ynabCategoryId: cat.id,
                                       ynabCategoryName: cat.name,
                                       localCategory: e.target.value,
+                                      startAge: edits.startAge ? Number(edits.startAge) : null,
+                                      endAge:   edits.endAge   ? Number(edits.endAge)   : null,
                                     });
                                   }
                                 }}
@@ -425,6 +456,62 @@ export function IntegrationsPage() {
                                 ))}
                               </Select>
                             </FormControl>
+                          </TableCell>
+                          {/* Start Age */}
+                          <TableCell sx={{ width: 96 }}>
+                            {existing && (
+                              <TextField
+                                size="small"
+                                type="number"
+                                placeholder="e.g. 40"
+                                value={ageEdits[cat.id]?.startAge ?? existing.startAge?.toString() ?? ''}
+                                onChange={(e) =>
+                                  setAgeEdits((prev) => ({
+                                    ...prev,
+                                    [cat.id]: { ...(prev[cat.id] ?? { startAge: '', endAge: '' }), startAge: e.target.value },
+                                  }))
+                                }
+                                onBlur={() => {
+                                  const edits = ageEdits[cat.id] ?? { startAge: '', endAge: '' };
+                                  upsertMappingMutation.mutate({
+                                    ynabCategoryId: cat.id,
+                                    ynabCategoryName: cat.name,
+                                    localCategory: existing.localCategory,
+                                    startAge: edits.startAge ? Number(edits.startAge) : null,
+                                    endAge:   edits.endAge   ? Number(edits.endAge)   : null,
+                                  });
+                                }}
+                                inputProps={{ min: 0, max: 120, style: { width: 60 } }}
+                              />
+                            )}
+                          </TableCell>
+                          {/* End Age */}
+                          <TableCell sx={{ width: 96 }}>
+                            {existing && (
+                              <TextField
+                                size="small"
+                                type="number"
+                                placeholder="e.g. 65"
+                                value={ageEdits[cat.id]?.endAge ?? existing.endAge?.toString() ?? ''}
+                                onChange={(e) =>
+                                  setAgeEdits((prev) => ({
+                                    ...prev,
+                                    [cat.id]: { ...(prev[cat.id] ?? { startAge: '', endAge: '' }), endAge: e.target.value },
+                                  }))
+                                }
+                                onBlur={() => {
+                                  const edits = ageEdits[cat.id] ?? { startAge: '', endAge: '' };
+                                  upsertMappingMutation.mutate({
+                                    ynabCategoryId: cat.id,
+                                    ynabCategoryName: cat.name,
+                                    localCategory: existing.localCategory,
+                                    startAge: edits.startAge ? Number(edits.startAge) : null,
+                                    endAge:   edits.endAge   ? Number(edits.endAge)   : null,
+                                  });
+                                }}
+                                inputProps={{ min: 0, max: 120, style: { width: 60 } }}
+                              />
+                            )}
                           </TableCell>
                           <TableCell>
                             {existing && (

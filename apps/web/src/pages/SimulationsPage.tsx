@@ -23,8 +23,19 @@ import { HistoricalFanChart } from '../components/charts/HistoricalFanChart';
 import { OutcomeGauge } from '../components/charts/OutcomeGauge';
 
 interface Scenario { id: string; name: string; parameters: string; }
-interface Household { id: string; members: { id: string; dateOfBirth: string; }[]; }
+interface HouseholdMember { id: string; dateOfBirth: string; incomeSources?: { annualAmount: number }[]; }
+interface Household { id: string; members: HouseholdMember[]; }
 interface Account { id: string; type: string; balance: number; }
+
+/** Returns the member with the highest total income; falls back to the first member. */
+function primaryMember(members: HouseholdMember[]): HouseholdMember | undefined {
+  if (!members.length) return undefined;
+  return [...members].sort(
+    (a, b) =>
+      (b.incomeSources?.reduce((s, i) => s + i.annualAmount, 0) ?? 0) -
+      (a.incomeSources?.reduce((s, i) => s + i.annualAmount, 0) ?? 0),
+  )[0];
+}
 interface PercentileYear { age: number; p5: number; p25: number; p50: number; p75: number; p95: number; }
 interface MCResult { percentilesByYear: PercentileYear[]; successRate: number; median: number; }
 interface BacktestResult { successRate: number; numWindows: number; windows: any[]; worstCase: any; bestCase: any; }
@@ -155,7 +166,7 @@ function MonteCarloTab() {
       const scenario = scenarios?.find((s) => s.id === scenarioId);
       if (!scenario) throw new Error('Scenario not found');
       const params = JSON.parse(scenario.parameters ?? '{}');
-      const member = household.members[0];
+      const member = primaryMember(household.members);
       const currentAge = member
         ? Math.floor((Date.now() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 3600 * 1000))
         : 45;
@@ -306,7 +317,7 @@ function BacktestingTab() {
       const scenario = scenarios?.find((s) => s.id === scenarioId);
       if (!scenario) throw new Error('Scenario not found');
       const params = JSON.parse(scenario.parameters ?? '{}');
-      const member = household.members[0];
+      const member = primaryMember(household.members);
       const currentAge = member
         ? Math.floor((Date.now() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 3600 * 1000))
         : 45;
@@ -435,7 +446,7 @@ function GuytonKlingerTab() {
       const scenario = scenarios?.find((s) => s.id === scenarioId);
       if (!scenario) throw new Error('Scenario not found');
       const params = JSON.parse(scenario.parameters ?? '{}');
-      const member = household.members[0];
+      const member = primaryMember(household.members);
       const currentAge = member
         ? Math.floor((Date.now() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 3600 * 1000))
         : 45;
@@ -610,7 +621,7 @@ function HeatmapTab() {
     const scenario = scenarios?.find((s) => s.id === scenarioId);
     if (!scenario) return;
     const params = JSON.parse(scenario.parameters ?? '{}');
-    const member = household.members[0];
+    const member = primaryMember(household.members);
     const currentAge = member
       ? Math.floor((Date.now() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 3600 * 1000))
       : 45;
@@ -873,7 +884,7 @@ function HistoricalScenariosTab() {
     updateRun(runId, { isPending: true, error: '', result: null });
     try {
       const params = JSON.parse(scenario.parameters ?? '{}');
-      const member = household.members[0];
+      const member = primaryMember(household.members);
       const currentAge = member
         ? Math.floor((Date.now() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 3600 * 1000))
         : 45;

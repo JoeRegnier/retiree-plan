@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { Box, useTheme } from '@mui/material';
+import type { ChartMilestone } from './CashFlowChart';
 
 export interface MonteCarloPercentiles {
   age: number;
@@ -16,9 +17,10 @@ interface Props {
   data: MonteCarloPercentiles[];
   successRate?: number;
   height?: number;
+  milestones?: ChartMilestone[];
 }
 
-export function MonteCarloChart({ data, successRate, height = 340 }: Props) {
+export function MonteCarloChart({ data, successRate, height = 340, milestones = [] }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const theme = useTheme();
@@ -83,6 +85,32 @@ export function MonteCarloChart({ data, successRate, height = 340 }: Props) {
       .selectAll('line').attr('stroke', theme.palette.divider).attr('stroke-opacity', 0.4);
     g.select('.domain').remove();
 
+    // ── Milestone markers ─────────────────────────────────────────────────────
+    const byAge = new Map<number, ChartMilestone[]>();
+    milestones.forEach((m) => {
+      if (!byAge.has(m.age)) byAge.set(m.age, []);
+      byAge.get(m.age)!.push(m);
+    });
+    byAge.forEach((ms, age) => {
+      const cx = x(age);
+      if (cx < 0 || cx > innerW) return;
+      const primary = ms.find((m) => m.type === 'event') ?? ms[0];
+      const isDashed = primary.type !== 'event';
+      g.append('line')
+        .attr('x1', cx).attr('x2', cx).attr('y1', 0).attr('y2', innerH)
+        .attr('stroke', primary.color).attr('stroke-width', isDashed ? 1 : 1.5)
+        .attr('stroke-dasharray', isDashed ? '3,4' : '4,3').attr('opacity', 0.7);
+      ms.forEach((m, li) => {
+        g.append('text')
+          .attr('x', cx).attr('y', -6 - li * 11)
+          .attr('text-anchor', 'middle')
+          .attr('fill', m.color).attr('font-size', 9)
+          .attr('font-weight', m.type === 'event' ? '600' : '400')
+          .attr('opacity', 0.85)
+          .text(m.label);
+      });
+    });
+
     // X-axis label
     g.append('text').attr('x', innerW / 2).attr('y', innerH + 40)
       .attr('text-anchor', 'middle').attr('fill', theme.palette.text.secondary)
@@ -144,7 +172,7 @@ export function MonteCarloChart({ data, successRate, height = 340 }: Props) {
           5th: $${d.p5.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
         `);
     }).on('mouseleave', () => { focus.style('display', 'none'); tooltip.style('display', 'none'); });
-  }, [data, height, successRate, theme]);
+  }, [data, height, milestones, successRate, theme]);
 
   return (
     <Box ref={containerRef} sx={{ position: 'relative', width: '100%' }}>

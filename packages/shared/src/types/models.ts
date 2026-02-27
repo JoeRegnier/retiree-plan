@@ -37,6 +37,14 @@ export interface Account {
   type: AccountType;
   balance: number;
   currency: string;
+  annualContribution: number;
+  /**
+   * Optional per-account annual return/interest rate.
+   * When set, the projection engine uses this rate for this account's growth
+   * instead of the scenario's base expected return rate.
+   * Null = use the scenario default.
+   */
+  estimatedReturnRate: number | null;
   householdId: string;
   createdAt: string;
   updatedAt: string;
@@ -76,6 +84,32 @@ export interface ProjectionYear {
   tfsaBalance: number;
   nonRegBalance: number;
   totalNetWorth: number;
+  /** Mandatory RRIF minimum withdrawal applied this year (0 before age 71) */
+  rrifMinimum?: number;
+  /** OAS clawback (recovery tax) deducted from OAS this year */
+  oasClawback?: number;
+  /** Annual tax drag applied to non-registered account growth */
+  nonRegTaxDrag?: number;
+  /** Nominal portfolio return rate actually used this year (glide path aware) */
+  appliedReturnRate?: number;
+  /** Spending step-down factor in effect this year */
+  spendingFactor?: number;
+  /** RRSP contribution made this year (0 during retirement) */
+  rrspContributionYear?: number;
+  /** TFSA contribution made this year (0 during retirement) */
+  tfsaContributionYear?: number;
+  /** After-expenses surplus reinvested to non-reg this year */
+  surplusToNonReg?: number;
+  /** RRSP room generated this year that was not used (0 during retirement) */
+  unusedRrspRoom?: number;
+  /** TFSA annual room not used this year (0 during retirement) */
+  unusedTfsaRoom?: number;
+  /** Balance in the cash/savings bucket (bank accounts not actively invested) */
+  cashBalance?: number;
+  /** Cash withdrawn from savings bucket to cover shortfall this year */
+  cashWithdrawal?: number;
+  /** Surplus directed to the cash savings bucket (when investSurplus=false) */
+  surplusToCash?: number;
 }
 
 /** Result of a cash-flow projection */

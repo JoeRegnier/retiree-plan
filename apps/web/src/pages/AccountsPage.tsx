@@ -3,7 +3,7 @@ import {
   Box, Typography, Card, CardContent, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, Grid, IconButton, List, ListItem, ListItemText,
   ListItemSecondaryAction, Chip, CircularProgress, Alert, Divider, Tooltip, Stack,
-  FormControl, InputLabel, Select,
+  FormControl, InputLabel, Select, InputAdornment,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -45,6 +45,8 @@ interface Account {
   balance: number;
   currency: string;
   annualContribution: number;
+  /** User-supplied annual return rate for this account. Null = use scenario default. */
+  estimatedReturnRate: number | null;
   householdId: string;
   ynabAccountId?: string | null;
   ynabAccountName?: string | null;
@@ -62,7 +64,7 @@ interface YnabStatus { connected: boolean; budgetId?: string; budgetName?: strin
 
 interface Household { id: string; name: string; }
 
-const emptyForm = { name: '', type: 'RRSP', balance: '', annualContribution: '', currency: 'CAD', householdId: '', ynabAccountId: '' };
+const emptyForm = { name: '', type: 'RRSP', balance: '', annualContribution: '', estimatedReturnRate: '', currency: 'CAD', householdId: '', ynabAccountId: '' };
 
 export function AccountsPage() {
   const { apiFetch } = useApi();
@@ -124,7 +126,7 @@ export function AccountsPage() {
     setError('');
     if (account) {
       setEditingAccount(account);
-      setForm({ name: account.name, type: account.type, balance: String(account.balance), annualContribution: String(account.annualContribution), currency: account.currency, householdId: account.householdId, ynabAccountId: account.ynabAccountId ?? '' });
+      setForm({ name: account.name, type: account.type, balance: String(account.balance), annualContribution: String(account.annualContribution), estimatedReturnRate: account.estimatedReturnRate != null ? String(account.estimatedReturnRate * 100) : '', currency: account.currency, householdId: account.householdId, ynabAccountId: account.ynabAccountId ?? '' });
     } else {
       setEditingAccount(null);
       setForm({ ...emptyForm, householdId: household?.id ?? '' });
@@ -142,6 +144,7 @@ export function AccountsPage() {
       name: form.name, type: form.type,
       balance: Number(form.balance) || (ynabAccounts?.find((a) => a.id === form.ynabAccountId)?.balance ?? 0),
       annualContribution: Number(form.annualContribution || 0),
+      estimatedReturnRate: form.estimatedReturnRate !== '' ? Number(form.estimatedReturnRate) / 100 : null,
       currency: form.currency,
       householdId: household?.id,
       ynabAccountId: form.ynabAccountId || null,
@@ -243,7 +246,7 @@ export function AccountsPage() {
                               )}
                             </Stack>
                           }
-                          secondary={`Balance: $${acc.balance.toLocaleString('en-CA', { maximumFractionDigits: 0 })} ${acc.currency}${acc.annualContribution > 0 ? ` • Contributes $${acc.annualContribution.toLocaleString()}/yr` : ''}`}
+                          secondary={`Balance: $${acc.balance.toLocaleString('en-CA', { maximumFractionDigits: 0 })} ${acc.currency}${acc.annualContribution > 0 ? ` • Contributes $${acc.annualContribution.toLocaleString()}/yr` : ''}${acc.estimatedReturnRate != null ? ` • ${(acc.estimatedReturnRate * 100).toFixed(1)}% est. return` : ''}`}
                         />
                         <ListItemSecondaryAction>
                           <Tooltip title="Edit">
@@ -297,6 +300,21 @@ export function AccountsPage() {
             sx={form.ynabAccountId ? { '& .MuiOutlinedInput-root': { bgcolor: 'action.disabledBackground' } } : undefined}
           />
           <TextField label="Annual Contribution ($)" type="number" value={form.annualContribution} onChange={(e) => setForm({ ...form, annualContribution: e.target.value })} fullWidth helperText="How much you contribute per year" />
+          <TextField
+            label="Estimated Annual Return (%)"
+            type="number"
+            value={form.estimatedReturnRate}
+            onChange={(e) => setForm({ ...form, estimatedReturnRate: e.target.value })}
+            fullWidth
+            placeholder="Leave blank to use scenario default"
+            helperText={
+              form.type === 'CASH'
+                ? 'Interest rate for this savings/chequing account (e.g. 3.5 for 3.5%)'
+                : 'Override the scenario’s expected return for this account (e.g. 6 for 6%). Leave blank to use the scenario default.'
+            }
+            inputProps={{ min: 0, max: 30, step: 0.1 }}
+            InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+          />
           <TextField label="Currency" select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} fullWidth>
             <MenuItem value="CAD">CAD – Canadian Dollar</MenuItem>
             <MenuItem value="USD">USD – US Dollar</MenuItem>

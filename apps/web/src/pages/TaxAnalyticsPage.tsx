@@ -13,6 +13,9 @@ interface IncomeSource { type: string; annualAmount: number; }
 interface HouseholdMember { province?: string; incomeSources?: IncomeSource[]; }
 interface Household { id: string; members?: HouseholdMember[]; }
 
+// Types excluded from the taxable-income total (non-taxable or modelled separately)
+const NON_TAXABLE_TYPES = new Set(['RRSP/RRIF']); // RRSP withdrawals taxable but handled separately
+
 const PROVINCE_OPTIONS = Object.entries(PROVINCE_NAMES).map(([code, name]) => ({ code, name }));
 
 // 2024 Federal brackets
@@ -97,17 +100,30 @@ export function TaxAnalyticsPage() {
     queryKey: ['households'],
     queryFn: () => apiFetch('/households'),
   });
-  const member = households?.[0]?.members?.[0];
+  const members = households?.[0]?.members ?? [];
 
   const householdIncome = useMemo(() => {
-    if (!member?.incomeSources?.length) return null;
-    const total = member.incomeSources
-      .filter((s) => s.type === 'Employment' || s.type === 'Self-Employment')
+    if (!members.length) return null;
+    const total = members
+      .flatMap((m) => m.incomeSources ?? [])
+      .filter((s) => !NON_TAXABLE_TYPES.has(s.type))
       .reduce((sum, s) => sum + s.annualAmount, 0);
     return total > 0 ? total : null;
-  }, [member]);
+  }, [members]);
 
-  const householdProvince = member?.province ?? null;
+  // Use province from the member with the highest total income; fall back to first member
+  const householdProvince = useMemo(() => {
+    if (!members.length) return null;
+    const withIncome = members
+      .map((m) => ({
+        province: m.province,
+        total: (m.incomeSources ?? []).reduce((s, i) => s + i.annualAmount, 0),
+      }))
+      .filter((m) => m.province);
+    if (!withIncome.length) return null;
+    withIncome.sort((a, b) => b.total - a.total);
+    return withIncome[0].province ?? null;
+  }, [members]);
 
   useEffect(() => {
     if (customized) return;

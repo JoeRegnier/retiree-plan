@@ -5,13 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AccountsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: { name: string; type: string; balance: number; annualContribution?: number; currency?: string; householdId: string; ynabAccountId?: string; ynabAccountName?: string }) {
+  async create(data: { name: string; type: string; balance: number; annualContribution?: number; estimatedReturnRate?: number | null; currency?: string; householdId: string; ynabAccountId?: string; ynabAccountName?: string }) {
     return this.prisma.account.create({
       data: {
         name: data.name,
         type: data.type as any,
         balance: data.balance,
         annualContribution: data.annualContribution ?? 0,
+        estimatedReturnRate: data.estimatedReturnRate ?? null,
         currency: data.currency ?? 'CAD',
         householdId: data.householdId,
         ynabAccountId: data.ynabAccountId ?? null,
@@ -30,7 +31,7 @@ export class AccountsService {
     return account;
   }
 
-  async update(id: string, data: { name?: string; type?: string; balance?: number; annualContribution?: number; ynabAccountId?: string | null; ynabAccountName?: string | null }) {
+  async update(id: string, data: { name?: string; type?: string; balance?: number; annualContribution?: number; estimatedReturnRate?: number | null; ynabAccountId?: string | null; ynabAccountName?: string | null }) {
     await this.findOne(id);
     return this.prisma.account.update({ where: { id }, data: data as any });
   }

@@ -8,7 +8,7 @@ export class AccountsController {
   constructor(private accountsService: AccountsService) {}
 
   @Post()
-  create(@Body() body: { name: string; type: string; balance: number; currency?: string; householdId: string; ynabAccountId?: string; ynabAccountName?: string }) {
+  create(@Body() body: { name: string; type: string; balance: number; annualContribution?: number; estimatedReturnRate?: number | null; currency?: string; householdId: string; ynabAccountId?: string; ynabAccountName?: string }) {
     return this.accountsService.create(body);
   }
 
@@ -23,7 +23,7 @@ export class AccountsController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: { name?: string; type?: string; balance?: number; ynabAccountId?: string | null; ynabAccountName?: string | null }) {
+  update(@Param('id') id: string, @Body() body: { name?: string; type?: string; balance?: number; annualContribution?: number; estimatedReturnRate?: number | null; ynabAccountId?: string | null; ynabAccountName?: string | null }) {
     return this.accountsService.update(id, body);
   }
 

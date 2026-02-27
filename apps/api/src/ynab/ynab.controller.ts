@@ -102,6 +102,8 @@ export class YnabController {
       ynabCategoryId: string;
       ynabCategoryName: string;
       localCategory: string;
+      startAge?: number | null;
+      endAge?: number | null;
     },
   ) {
     return this.ynab.upsertMapping(
@@ -109,6 +111,8 @@ export class YnabController {
       body.ynabCategoryId,
       body.ynabCategoryName,
       body.localCategory,
+      body.startAge,
+      body.endAge,
     );
   }
 

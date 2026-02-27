@@ -7,12 +7,20 @@ export interface SankeyProjectionYear {
   year: number;
   age: number;
   totalIncome: number;
-  expenses?: number;      // engine field name
-  totalTax?: number;      // engine field name
+  employmentIncome?: number;
+  expenses?: number;
+  totalTax?: number;
   netCashFlow: number;
   rrspBalance?: number;
   tfsaBalance?: number;
   nonRegBalance?: number;
+  rrspContributionYear?: number;
+  tfsaContributionYear?: number;
+  surplusToNonReg?: number;
+  /** Surplus that went to the cash/savings bucket instead of non-reg */
+  surplusToCash?: number;
+  unusedRrspRoom?: number;
+  unusedTfsaRoom?: number;
 }
 
 interface SankeyChartProps {
@@ -27,22 +35,40 @@ function buildSankeyData(avgYear: SankeyProjectionYear) {
   const income = Math.abs(avgYear.totalIncome);
   const tax = Math.abs(avgYear.totalTax ?? 0);
   const livingExpenses = Math.abs(avgYear.expenses ?? 0);
-  const savings = Math.max(0, income - tax - livingExpenses);
+  const rrspContrib = Math.abs(avgYear.rrspContributionYear ?? 0);
+  const tfsaContrib = Math.abs(avgYear.tfsaContributionYear ?? 0);
+  const surplusNonReg = Math.max(0, avgYear.surplusToNonReg ?? 0);
+  const surplusCash   = Math.max(0, avgYear.surplusToCash   ?? 0);
+  // Fall back to netCashFlow only when both surplus fields are absent (legacy data)
+  const legacySurplus = (avgYear.surplusToNonReg == null && avgYear.surplusToCash == null)
+    ? Math.max(0, avgYear.netCashFlow) : 0;
 
   const nodes: NodeDatum[] = [
-    { name: 'Total Income' },      // 0
-    { name: 'Tax' },               // 1
-    { name: 'Living Expenses' },   // 2
-    { name: 'Net Savings' },       // 3
+    { name: 'Total Income' },    // 0
+    { name: 'Tax' },             // 1
+    { name: 'Living Expenses' }, // 2
+    { name: 'RRSP' },            // 3
+    { name: 'TFSA' },            // 4
+    { name: 'NonReg Invest.' },  // 5
+    { name: 'Savings Acct' },    // 6
   ];
 
   const links: Array<{ source: number; target: number; value: number }> = [];
-
-  if (tax > 0) links.push({ source: 0, target: 1, value: tax });
-  if (livingExpenses > 0) links.push({ source: 0, target: 2, value: Math.max(1, livingExpenses) });
-  if (savings > 0) links.push({ source: 0, target: 3, value: savings });
+  if (tax > 0)                    links.push({ source: 0, target: 1, value: tax });
+  if (livingExpenses > 0)         links.push({ source: 0, target: 2, value: Math.max(1, livingExpenses) });
+  if (rrspContrib > 0)            links.push({ source: 0, target: 3, value: rrspContrib });
+  if (tfsaContrib > 0)            links.push({ source: 0, target: 4, value: tfsaContrib });
+  if (surplusNonReg + legacySurplus > 0) links.push({ source: 0, target: 5, value: surplusNonReg + legacySurplus });
+  if (surplusCash > 0)            links.push({ source: 0, target: 6, value: surplusCash });
 
   return { nodes, links };
+}
+
+/** Pick the midpoint working year (employmentIncome > 0). Falls back to first year. */
+function pickRepresentativeYear(data: SankeyProjectionYear[]): SankeyProjectionYear {
+  const workingYears = data.filter((d) => (d.employmentIncome ?? 0) > 0);
+  const pool = workingYears.length > 0 ? workingYears : data;
+  return pool[Math.floor(pool.length / 2)];
 }
 
 export function SankeyChart({ data }: SankeyChartProps) {
@@ -61,8 +87,8 @@ export function SankeyChart({ data }: SankeyChartProps) {
 
         d3.select(el).selectAll('*').remove();
 
-        // Use midpoint year as representative
-        const midYear = data[Math.floor(data.length / 2)];
+        // Use midpoint working year (pre-retirement) as representative
+        const midYear = pickRepresentativeYear(data);
         const { nodes, links } = buildSankeyData(midYear);
         if (links.length === 0) return;
 
@@ -84,7 +110,7 @@ export function SankeyChart({ data }: SankeyChartProps) {
           links: links.map((d) => ({ ...d })),
         });
 
-        const colors = ['#1976d2', '#d32f2f', '#388e3c', '#f57c00'];
+        const colors = ['#1976d2', '#d32f2f', '#388e3c', '#7B1FA2', '#00BCD4', '#f57c00', '#81D4FA'];
 
         svg.selectAll<SVGPathElement, SLink>('.link')
           .data(sankeyLinks)

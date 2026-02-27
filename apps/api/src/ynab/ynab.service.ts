@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { encryptToken, decryptToken } from '../crypto/token-cipher';
 
 const YNAB_API = 'https://api.youneedabudget.com/v1';
 
@@ -26,12 +27,13 @@ export class YnabService {
    * after being submitted once.
    */
   async saveToken(userId: string, token: string): Promise<void> {
+    const encrypted = encryptToken(token);
     await this.prisma.ynabConnection.upsert({
       where: { userId },
-      create: { userId, accessToken: token, refreshToken: null },
-      update: { accessToken: token },
+      create: { userId, accessToken: encrypted, refreshToken: null },
+      update: { accessToken: encrypted },
     });
-    this.logger.log(`YNAB token saved for user ${userId}`);
+    this.logger.log(`YNAB token saved (encrypted) for user ${userId}`);
   }
 
   /** Return current connection status for a user. */
@@ -55,8 +57,9 @@ export class YnabService {
 
   private async ynabGet<T>(userId: string, path: string): Promise<T> {
     const conn = await this.requireConnection(userId);
+    const bearerToken = decryptToken(conn.accessToken);
     const resp = await fetch(`${YNAB_API}${path}`, {
-      headers: { Authorization: `Bearer ${conn.accessToken}` },
+      headers: { Authorization: `Bearer ${bearerToken}` },
     });
     if (!resp.ok) {
       const text = await resp.text();
@@ -213,11 +216,13 @@ export class YnabService {
     ynabCategoryId: string,
     ynabCategoryName: string,
     localCategory: string,
+    startAge?: number | null,
+    endAge?: number | null,
   ) {
     return this.prisma.ynabCategoryMapping.upsert({
       where: { householdId_ynabCategoryId: { householdId, ynabCategoryId } },
-      create: { householdId, ynabCategoryId, ynabCategoryName, localCategory },
-      update: { localCategory, ynabCategoryName },
+      create: { householdId, ynabCategoryId, ynabCategoryName, localCategory, startAge, endAge },
+      update: { localCategory, ynabCategoryName, startAge, endAge },
     });
   }
 
@@ -236,53 +241,54 @@ export class YnabService {
     const conn = await this.requireConnection(userId);
     if (!conn.budgetId) throw new NotFoundException('No budget selected — choose a budget first');
 
-    const sinceDate = conn.lastSyncedAt
-      ? conn.lastSyncedAt.toISOString().split('T')[0]
-      : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const params = new URLSearchParams({ since_date: sinceDate });
-    const data = await this.ynabGet<{ data: { transactions: any[] } }>(
+    // Fetch the current month's budgeted amounts per category (monthly, in dollars)
+    const categoriesData = await this.ynabGet<{ data: { category_groups: any[] } }>(
       userId,
-      `/budgets/${conn.budgetId}/transactions?${params}`,
+      `/budgets/${conn.budgetId}/categories`,
     );
-
-    const transactions: any[] = data.data.transactions ?? [];
-    const mappings = await this.getMappings(householdId);
-    const mappingMap = new Map(mappings.map((m) => [m.ynabCategoryId, m.localCategory]));
-
-    // Aggregate annual amounts by category
-    const byCategory = new Map<string, { name: string; totalMilliunits: number }>();
-    for (const tx of transactions) {
-      if (!tx.category_id || tx.deleted) continue;
-      const current = byCategory.get(tx.category_id) ?? { name: tx.category_name ?? 'Unknown', totalMilliunits: 0 };
-      current.totalMilliunits += Math.abs(tx.amount); // outflows are negative
-      byCategory.set(tx.category_id, current);
+    const budgetedByCategory = new Map<string, { name: string; monthly: number }>();
+    for (const group of categoriesData.data.category_groups ?? []) {
+      for (const cat of group.categories ?? []) {
+        budgetedByCategory.set(cat.id, { name: cat.name, monthly: cat.budgeted / 1000 });
+      }
     }
+
+    const mappings = await this.getMappings(householdId);
+    // Keyed by ynabCategoryId for fast lookup — preserves full mapping (including age range)
+    const mappingMap = new Map(mappings.map((m) => [m.ynabCategoryId, m]));
 
     let synced = 0;
     let skipped = 0;
 
-    for (const [categoryId, { name, totalMilliunits }] of byCategory) {
-      const localCategory = mappingMap.get(categoryId);
+    // Build the rows to insert for all mapped categories
+    const rows: Array<{
+      id: string; name: string; category: string; annualAmount: number;
+      householdId: string; startAge?: number; endAge?: number;
+    }> = [];
+
+    for (const [categoryId, { name, monthly }] of budgetedByCategory) {
+      const mapping = mappingMap.get(categoryId);
+      const localCategory = mapping?.localCategory;
       if (!localCategory) { skipped++; continue; }
 
-      const annualAmount = (totalMilliunits / 1000) * (12 / 1); // rough annualisation
-      await this.prisma.expense.upsert({
-        where: {
-          // no unique on category+household by default — we'll use a
-          // name-based key via create/update pattern
-          id: `ynab-${householdId}-${categoryId}`,
-        },
-        create: {
-          id: `ynab-${householdId}-${categoryId}`,
-          name: `YNAB: ${name}`,
-          category: localCategory,
-          annualAmount,
-          householdId,
-        },
-        update: { annualAmount, category: localCategory },
+      rows.push({
+        id: `ynab-${householdId}-${categoryId}`,
+        name: `YNAB: ${name}`,
+        category: localCategory,
+        annualAmount: monthly * 12,
+        householdId,
+        ...(mapping?.startAge != null ? { startAge: mapping.startAge } : {}),
+        ...(mapping?.endAge   != null ? { endAge:   mapping.endAge   } : {}),
       });
       synced++;
+    }
+
+    // Wipe all previous YNAB-synced expenses for this household, then repopulate cleanly
+    await this.prisma.expense.deleteMany({
+      where: { householdId, id: { startsWith: `ynab-${householdId}-` } },
+    });
+    if (rows.length > 0) {
+      await this.prisma.expense.createMany({ data: rows });
     }
 
     await this.prisma.ynabConnection.update({

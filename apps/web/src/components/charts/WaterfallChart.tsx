@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
+import type { ChartMilestone } from './CashFlowChart';
 
 export interface WaterfallYear {
   year: number;
@@ -11,9 +12,10 @@ export interface WaterfallYear {
 
 interface WaterfallChartProps {
   data: WaterfallYear[];
+  milestones?: ChartMilestone[];
 }
 
-export function WaterfallChart({ data }: WaterfallChartProps) {
+export function WaterfallChart({ data, milestones = [] }: WaterfallChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -109,6 +111,36 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
             .text('Today');
         }
 
+        // ── Milestone markers ────────────────────────────────────────────────
+        if (milestones.length > 0 && bars.some((b) => b.age != null)) {
+          const byAge = new Map<number, ChartMilestone[]>();
+          milestones.forEach((m) => {
+            if (!byAge.has(m.age)) byAge.set(m.age, []);
+            byAge.get(m.age)!.push(m);
+          });
+          byAge.forEach((ms, age) => {
+            const nearest = bars.reduce((prev, curr) =>
+              Math.abs((curr.age ?? 0) - age) < Math.abs((prev.age ?? 0) - age) ? curr : prev
+            );
+            if (Math.abs((nearest.age ?? 0) - age) > 3) return;
+            const cx = (xScale(String(nearest.year)) ?? 0) + xScale.bandwidth() / 2;
+            const primary = ms.find((m) => m.type === 'event') ?? ms[0];
+            svg.append('line')
+              .attr('x1', cx).attr('x2', cx).attr('y1', 0).attr('y2', height)
+              .attr('stroke', primary.color).attr('stroke-width', 1.2)
+              .attr('stroke-dasharray', primary.type === 'event' ? '4,3' : '2,4')
+              .attr('opacity', 0.8);
+            ms.forEach((m, li) => {
+              svg.append('text')
+                .attr('x', cx + 4).attr('y', 14 + li * 11)
+                .attr('fill', m.color).attr('font-size', 9)
+                .attr('font-weight', m.type === 'event' ? '600' : '400')
+                .attr('opacity', 0.9)
+                .text(m.label);
+            });
+          });
+        }
+
         const tickFreq = Math.max(1, Math.floor(sampled.length / 10));
         svg.append('g').attr('transform', `translate(0,${height})`)
           .call(d3.axisBottom(xScale).tickValues(bars.filter((_, i) => i % tickFreq === 0).map((b) => String(b.year))))
@@ -143,7 +175,7 @@ export function WaterfallChart({ data }: WaterfallChartProps) {
     ro.observe(el);
     draw();
     return () => { ro.disconnect(); cancelAnimationFrame(rafId); };
-  }, [data]);
+  }, [data, milestones]);
 
   return <svg ref={svgRef} width="100%" height={320} />;
 }

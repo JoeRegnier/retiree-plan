@@ -80,9 +80,13 @@ model Account {
   type               String
   balance            Float     @default(0)
   currency           String    @default("CAD")
-  annualContribution Float     @default(0)
-  householdId        String
-  household          Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  annualContribution  Float   @default(0)
+  /// User-supplied annual return / interest rate for this specific account.
+  /// When set, the projection engine uses this rate instead of the scenario's
+  /// base expected return rate. Null means "use the scenario default".
+  estimatedReturnRate Float?
+  householdId         String
+  household           Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   // Optional link to a YNAB account — balance synced automatically
   ynabAccountId      String?
   ynabAccountName    String?
@@ -149,6 +153,10 @@ model YnabCategoryMapping {
   ynabCategoryId   String
   ynabCategoryName String
   localCategory    String    // maps to Expense.category
+  /// Age at which this expense begins (inclusive). Null = no lower bound.
+  startAge         Int?
+  /// Age at which this expense ends (inclusive). Null = no upper bound.
+  endAge           Int?
   householdId      String
   household        Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   createdAt        DateTime  @default(now())
