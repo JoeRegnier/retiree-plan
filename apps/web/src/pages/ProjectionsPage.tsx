@@ -1,11 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Alert, CircularProgress,
   Grid, Chip, Tab, Tabs, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, MenuItem, TextField, Tooltip,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { useApi } from '../hooks/useApi';
@@ -15,6 +14,7 @@ import { MonteCarloChart, type MonteCarloPercentiles } from '../components/chart
 import { SankeyChart } from '../components/charts/SankeyChart';
 import { WaterfallChart } from '../components/charts/WaterfallChart';
 import { IncomeAllocationChart } from '../components/charts/IncomeAllocationChart';
+import { useQuickActions } from '../contexts/QuickActionsContext';
 
 interface Household { id: string; name: string; members: any[]; accounts: any[]; }
 interface Scenario { id: string; name: string; parameters: string; }
@@ -114,6 +114,7 @@ function WaterfallSection({
 
 export function ProjectionsPage() {
   const { apiFetch } = useApi();
+  const { setCsvExport, setCsvLabel } = useQuickActions();
   const [searchParams] = useSearchParams();
   const defaultScenarioId = searchParams.get('scenarioId') ?? '';
   const [selectedScenarioId, setSelectedScenarioId] = useState(defaultScenarioId);
@@ -121,6 +122,17 @@ export function ProjectionsPage() {
   const [projectionData, setProjectionData] = useState<ProjectionYear[] | null>(null);
   const [mcData, setMcData] = useState<MonteCarloResult | null>(null);
   const [runError, setRunError] = useState('');
+
+  // Register CSV export with the global QuickActionsPanel
+  useEffect(() => {
+    setCsvLabel('Export Projection CSV');
+    if (projectionData) {
+      setCsvExport(() => exportCsv(projectionData));
+    } else {
+      setCsvExport(null);
+    }
+    return () => setCsvExport(null);
+  }, [projectionData, setCsvExport, setCsvLabel]);
 
   const { data: households } = useQuery<Household[]>({
     queryKey: ['households'],
@@ -316,13 +328,6 @@ export function ProjectionsPage() {
             Year-by-year income, expense, and net worth projections through retirement.
           </Typography>
         </Box>
-        {projectionData && (
-          <Tooltip title="Export to CSV">
-            <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={() => exportCsv(projectionData)}>
-              Export CSV
-            </Button>
-          </Tooltip>
-        )}
       </Box>
 
       {/* Controls */}

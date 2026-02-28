@@ -118,7 +118,7 @@ const SUGGESTIONS = [
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-export function AiChatPage() {
+export function AiChatPage({ inDrawer = false }: { inDrawer?: boolean }) {
   const { apiFetch } = useApi();
   const qc = useQueryClient();
   const endRef = useRef<HTMLDivElement>(null);
@@ -191,40 +191,42 @@ export function AiChatPage() {
   const isEmpty = localMessages.length === 0;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 128px)' }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AutoAwesomeIcon color="primary" /> AI Assistant
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Ask questions about your retirement plan — powered by Ollama (local) or the GitHub Copilot SDK.
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Chip
-            size="small"
-            label="Context-aware"
-            color="primary"
-            variant="outlined"
-            icon={<SmartToyIcon />}
-          />
-          {localMessages.length > 0 && (
-            <Tooltip title="Clear conversation">
-              <IconButton
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: inDrawer ? '100%' : 'calc(100vh - 128px)' }}>
+      {!inDrawer && (
+        <>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Box>
+              <Typography variant="h4" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AutoAwesomeIcon color="primary" /> AI Assistant
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ask questions about your retirement plan — powered by Ollama (local) or the GitHub Copilot SDK.
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Chip
                 size="small"
-                onClick={() => clearMutation.mutate()}
-                disabled={clearMutation.isPending}
-              >
-                <DeleteOutlineIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-        </Stack>
-      </Box>
-
-      <Divider sx={{ mb: 2 }} />
+                label="Context-aware"
+                color="primary"
+                variant="outlined"
+                icon={<SmartToyIcon />}
+              />
+              {localMessages.length > 0 && (
+                <Tooltip title="Clear conversation">
+                  <IconButton
+                    size="small"
+                    onClick={() => clearMutation.mutate()}
+                    disabled={clearMutation.isPending}
+                  >
+                    <DeleteOutlineIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Stack>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+        </>
+      )}
 
       {/* Message list */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: 1 }}>

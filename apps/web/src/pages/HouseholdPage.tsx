@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, MenuItem, ListSubheader, Stepper, Step, StepLabel, Grid, Chip,
+  DialogActions, TextField, MenuItem, ListSubheader, Stepper, Step, StepLabel, Grid, Chip, Tooltip,
   IconButton, List, ListItem, ListItemText, ListItemSecondaryAction, Divider,
   Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails,
   FormControlLabel, Switch,
@@ -24,6 +24,9 @@ const INCOME_TYPES = [
   'Employment', 'Self-Employment', 'CPP', 'OAS', 'Pension', 'RRSP/RRIF',
   'Investment', 'Rental', 'Other',
 ];
+
+/** These types represent earned/employment income that should stop at retirement. */
+const EMPLOYMENT_INCOME_TYPES = new Set(['Employment', 'Self-Employment']);
 
 const EXPENSE_CATEGORY_GROUPS = [
   {
@@ -366,7 +369,16 @@ export function HouseholdPage() {
                         {(m.incomeSources ?? []).map((inc) => (
                           <ListItem key={inc.id} disableGutters>
                             <ListItemText
-                              primary={inc.name}
+                              primary={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <span>{inc.name}</span>
+                                  {EMPLOYMENT_INCOME_TYPES.has(inc.type) && (
+                                    <Tooltip title="Employment income is automatically capped at your retirement age in projections" arrow>
+                                      <Chip label="Stops at retirement" size="small" color="info" variant="outlined" sx={{ height: 18, fontSize: 10, cursor: 'default' }} />
+                                    </Tooltip>
+                                  )}
+                                </Box>
+                              }
                               secondary={`${inc.type} • $${inc.annualAmount.toLocaleString()}/yr${inc.startAge ? ` • Age ${inc.startAge}–${inc.endAge ?? '∞'}` : ''}`}
                             />
                             <ListItemSecondaryAction>
@@ -543,7 +555,8 @@ export function HouseholdPage() {
         <DialogTitle>{editingIncome ? 'Edit Income Source' : 'Add Income Source'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
           <TextField label="Name" value={incomeForm.name} onChange={(e) => setIncomeForm({ ...incomeForm, name: e.target.value })} fullWidth />
-          <TextField label="Type" select value={incomeForm.type} onChange={(e) => setIncomeForm({ ...incomeForm, type: e.target.value })} fullWidth>
+          <TextField label="Type" select value={incomeForm.type} onChange={(e) => setIncomeForm({ ...incomeForm, type: e.target.value })} fullWidth
+            helperText={EMPLOYMENT_INCOME_TYPES.has(incomeForm.type) ? 'This income type will automatically stop at your retirement age in projections.' : undefined}>
             {INCOME_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
           </TextField>
           <TextField label="Annual Amount ($)" type="number" value={incomeForm.annualAmount}

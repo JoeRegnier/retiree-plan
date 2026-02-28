@@ -4,6 +4,8 @@ import { useTour } from '../contexts/TourContext';
 import { APP_TOUR_STEPS } from '../data/tourSteps';
 import { TourOverlay } from '../components/TourOverlay';
 import { OnboardingWizard } from '../components/OnboardingWizard';
+import { QuickActionsPanel } from '../components/QuickActionsPanel';
+import { QuickActionsProvider } from '../contexts/QuickActionsContext';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import {
   Box,
@@ -28,6 +30,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import CasinoIcon from '@mui/icons-material/Casino';
+import EmojiPeopleIcon from '@mui/icons-material/EmojiPeople';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -50,6 +53,7 @@ const NAV_ITEMS = [
   { label: 'Scenarios',    path: '/scenarios',     icon: <CompareArrowsIcon />,          tourId: 'nav-scenarios' },
   { label: 'Projections',  path: '/projections',   icon: <TimelineIcon />,               tourId: 'nav-projections' },
   { label: 'Simulations',  path: '/simulations',   icon: <CasinoIcon />,                 tourId: 'nav-simulations' },
+  { label: 'Retire Finder',path: '/retire-finder', icon: <EmojiPeopleIcon /> },
   { label: 'Tax Analytics',path: '/tax-analytics', icon: <BarChartIcon />,               tourId: 'nav-tax' },
   { label: 'Estate',       path: '/estate',        icon: <AccountTreeIcon />,            tourId: 'nav-estate' },
   { label: 'International',path: '/international', icon: <PublicIcon /> },
@@ -132,7 +136,8 @@ export function AppLayout() {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <QuickActionsProvider>
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       {/* Skip navigation for keyboard users */}
       <Box
         component="a"
@@ -284,9 +289,11 @@ export function AppLayout() {
         </Box>
       </Box>
 
-      {/* Tour + Onboarding — mounted once, controlled by context */}
+      {/* Tour + Onboarding + Quick Actions — mounted once, controlled by context */}
       <TourOverlay />
       <OnboardingWizard onContextReady={setOnboardingCtx} />
     </Box>
+    <QuickActionsPanel />
+  </QuickActionsProvider>
   );
 }

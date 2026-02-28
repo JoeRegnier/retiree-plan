@@ -3,7 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const ROOT       = path.resolve(__dirname, '../../../../../..');
+// __dirname at runtime = apps/api/dist/database  →  4 levels up = project root
+const ROOT       = path.resolve(__dirname, '../../../..');
 const DB_PATH    = path.join(ROOT, 'data', 'retiree-plan.db');
 const BACKUP_DIR = path.join(ROOT, 'data', 'backups');
 /** Keep the N most recent backups from the scheduled job. Manual backups are never auto-pruned. */

@@ -12,11 +12,10 @@ import BackupIcon from '@mui/icons-material/Backup';
 import RestoreIcon from '@mui/icons-material/Restore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router';
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../hooks/useApi';
 import { PROVINCE_NAMES } from '@retiree-plan/shared';
-import { PdfDownloadButton, RetirementPlanData } from '../components/PdfReport';
 
 interface UserProfile { id: string; email: string; name?: string; }
 
@@ -74,48 +73,7 @@ export function SettingsPage() {
     retry: false,
   });
 
-  const planData = useMemo((): RetirementPlanData | null => {
-    const hh = households?.[0];
-    if (!hh) return null;
-    return {
-      householdName: hh.name ?? 'My Household',
-      generatedAt: new Date().toLocaleDateString('en-CA'),
-      members: (hh.members ?? []).map((m: any) => ({
-        name: m.name,
-        // Schema stores dateOfBirth (DateTime), not birthYear
-        birthYear: m.dateOfBirth
-          ? new Date(m.dateOfBirth).getFullYear()
-          : new Date().getFullYear() - 50,
-        retirementAge: m.retirementAge ?? 65,
-        province: m.province,
-        country: m.country,
-      })),
-      incomeSources: (hh.members ?? []).flatMap((m: any) =>
-        (m.incomeSources ?? []).map((src: any) => ({
-          name: src.name,
-          type: src.type ?? 'Other',
-          annualAmount: src.annualAmount ?? 0,
-          // Schema uses startAge/endAge, not startYear/endYear
-          startYear: src.startAge,
-          endYear: src.endAge,
-          memberName: m.name,
-        }))
-      ),
-      // Accounts belong to the household, not individual members
-      accounts: (hh.accounts ?? []).map((acc: any) => ({
-        name: acc.name,
-        type: acc.type ?? 'Other',
-        balance: acc.balance ?? 0,
-      })),
-      // Include saved scenarios so PDF Page 3 is populated
-      scenarios: (hh.scenarios ?? []).map((s: any) => ({
-        name: s.name,
-        description: s.description,
-      })),
-      annualExpenses: hh.annualExpenses ?? 0,
-      notes: hh.notes,
-    };
-  }, [households]);
+  // PDF export is available globally via the QuickActionsPanel
 
   const [name, setName] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -334,7 +292,6 @@ export function SettingsPage() {
                   <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExport}>
                     Export to JSON
                   </Button>
-                  {planData && <PdfDownloadButton plan={planData} label="Export to PDF" />}
                 </Stack>
                 <Box>
                   <input

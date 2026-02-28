@@ -14,6 +14,7 @@ const AccountsPage     = lazy(() => import('./pages/AccountsPage').then((m) => (
 const ScenariosPage    = lazy(() => import('./pages/ScenariosPage').then((m) => ({ default: m.ScenariosPage })));
 const ProjectionsPage  = lazy(() => import('./pages/ProjectionsPage').then((m) => ({ default: m.ProjectionsPage })));
 const SimulationsPage  = lazy(() => import('./pages/SimulationsPage').then((m) => ({ default: m.SimulationsPage })));
+const EarliestRetirePage = lazy(() => import('./pages/EarliestRetirePage').then((m) => ({ default: m.EarliestRetirePage })));
 const TaxAnalyticsPage = lazy(() => import('./pages/TaxAnalyticsPage').then((m) => ({ default: m.TaxAnalyticsPage })));
 const SettingsPage     = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const MilestonesPage   = lazy(() => import('./pages/MilestonesPage').then((m) => ({ default: m.MilestonesPage })));
@@ -55,6 +56,7 @@ export function App() {
               <Route path="/scenarios" element={<ScenariosPage />} />
               <Route path="/projections" element={<ProjectionsPage />} />
               <Route path="/simulations" element={<SimulationsPage />} />
+              <Route path="/retire-finder" element={<EarliestRetirePage />} />
               <Route path="/tax-analytics" element={<TaxAnalyticsPage />} />
               <Route path="/compare" element={<ComparePage />} />
               <Route path="/estate" element={<EstatePage />} />
