@@ -17,6 +17,8 @@ export interface Household {
   members: HouseholdMember[];
   accounts: Account[];
   scenarios: Scenario[];
+  realEstateProperties?: RealEstate[];
+  goals?: Goal[];
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +51,10 @@ export interface Account {
    * Null = use the scenario default.
    */
   estimatedReturnRate: number | null;
+  equityPercent: number | null;
+  fixedIncomePercent: number | null;
+  alternativesPercent: number | null;
+  cashPercent: number | null;
   householdId: string;
   createdAt: string;
   updatedAt: string;
@@ -151,4 +157,46 @@ export interface MonteCarloResult {
     p95: number;
     max: number;
   }[];
+}
+
+/** Represents a real estate property */
+export interface RealEstate {
+  id: string;
+  name: string;
+  propertyType: string;
+  currentValue: number;
+  purchasePrice: number;
+  annualAppreciation: number;
+  grossRentalIncome: number | null;
+  rentalExpenses: number | null;
+  sellAtAge: number | null;
+  netProceedsPercent: number;
+  householdId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Represents a retirement goal */
+export interface Goal {
+  id: string;
+  name: string;
+  description: string | null;
+  targetAmount: number;
+  targetAge: number | null;
+  priority: string;
+  category: string;
+  householdId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A contextual retirement insight/recommendation */
+export interface Insight {
+  id: string;
+  title: string;
+  description: string;
+  dollarImpact: number;
+  priority: 'high' | 'medium' | 'low';
+  linkTo: string;
+  category: 'tax' | 'benefits' | 'investment' | 'estate';
 }

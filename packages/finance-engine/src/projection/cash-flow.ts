@@ -349,21 +349,70 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     const estimatedShortfall = Math.max(0, expenses - estimatedNetKnown);
 
     // ── Discretionary withdrawals (shortfall above RRIF minimum) ─────────────
-    // Withdrawal priority: TFSA (tax-free) → cash bucket (post-tax savings,
-    // no additional tax on withdrawal) → RRSP / RRIF (taxable) → non-reg.
-    const tfsaWithdrawal = Math.min(estimatedShortfall, tfsa);
-    const rem1 = estimatedShortfall - tfsaWithdrawal;
+    // Pre-retirement: investment accounts are locked — only the cash bucket
+    // bridges gaps.
+    //
+    // Post-retirement: OAS-clawback-aware drawdown order.
+    //
+    // The CRA OAS recovery tax claws back $0.15 for every $1 of net income
+    // above the threshold (~$90,997 in 2024). To minimise this:
+    //   1. Cash bucket — no withdrawal tax
+    //   2. RRSP/RRIF up to the OAS clawback threshold (taxable but optimal
+    //      when room is available — the "RRSP meltdown" zone)
+    //   3. TFSA — supplements RRSP when drawing more RRSP would push income
+    //      above the threshold; withdrawals are tax-free and don't affect OAS
+    //   4. Non-registered — capital gains treatment
+    //   5. RRSP/RRIF beyond threshold — last resort to avoid running out of money
+    //
+    // This blended RRSP + TFSA approach minimises lifetime tax by keeping
+    // annual taxable income just below the clawback zone.
 
-    // Cash bucket drawn next — already-taxed money, no withdrawal tax.
-    const cashWithdrawal = Math.min(rem1, cash);
-    const rem2 = rem1 - cashWithdrawal;
+    // OAS clawback threshold, inflation-adjusted from the 2024 base value.
+    const OAS_CLAWBACK_THRESHOLD_2024 = 90_997;
+    // Headroom = how much more RRSP we can draw this year before tipping into
+    // the OAS clawback zone (forced RRIF minimum is already committed).
+    const rrspHeadroom = !isWorking
+      ? Math.max(
+          0,
+          OAS_CLAWBACK_THRESHOLD_2024 * inflationFactor
+            - cppIncome
+            - oasBenefitGross
+            - forcedRrspWithdrawal,
+        )
+      : 0;
 
-    // Additional RRSP withdrawal on top of the forced RRIF minimum
-    const additionalRrsp = Math.min(rem2, Math.max(0, rrsp - forcedRrspWithdrawal));
+    // 1. Cash bucket — no tax on withdrawal
+    const cashWithdrawal = Math.min(estimatedShortfall, cash);
+    const rem1 = estimatedShortfall - cashWithdrawal;
+
+    // 2. RRSP voluntary draw, capped at OAS headroom
+    const additionalRrspBelowThreshold = isWorking
+      ? 0
+      : Math.min(rem1, Math.max(0, rrsp - forcedRrspWithdrawal), rrspHeadroom);
+    const rem2 = rem1 - additionalRrspBelowThreshold;
+
+    // 3. TFSA — tax-free, no clawback impact; use when RRSP headroom is
+    //    exhausted but shortfall still remains
+    const tfsaWithdrawal = isWorking ? 0 : Math.min(rem2, tfsa);
+    const rem3 = rem2 - tfsaWithdrawal;
+
+    // 4. Non-registered
+    const nonRegWithdrawal = isWorking ? 0 : Math.min(rem3, nonReg);
+    const rem4 = rem3 - nonRegWithdrawal;
+
+    // 5. RRSP beyond clawback threshold — last resort
+    const additionalRrspBeyondThreshold = isWorking
+      ? 0
+      : Math.min(
+          rem4,
+          Math.max(
+            0,
+            rrsp - forcedRrspWithdrawal - additionalRrspBelowThreshold,
+          ),
+        );
+
+    const additionalRrsp = additionalRrspBelowThreshold + additionalRrspBeyondThreshold;
     const rrspWithdrawal = forcedRrspWithdrawal + additionalRrsp;
-
-    const rem3 = rem2 - additionalRrsp;
-    const nonRegWithdrawal = Math.min(rem3, nonReg);
 
     tfsa   -= tfsaWithdrawal;
     cash   -= cashWithdrawal;

@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import TourIcon from '@mui/icons-material/Tour';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useTour } from '../contexts/TourContext';
 import { APP_TOUR_STEPS } from '../data/tourSteps';
 import { TourOverlay } from '../components/TourOverlay';
 import { OnboardingWizard } from '../components/OnboardingWizard';
 import { QuickActionsPanel } from '../components/QuickActionsPanel';
-import { QuickActionsProvider } from '../contexts/QuickActionsContext';
+import { QuickActionsProvider, useQuickActions } from '../contexts/QuickActionsContext';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import {
   Box,
@@ -22,6 +23,7 @@ import {
   Menu,
   MenuItem,
   Divider,
+  Badge,
   useTheme,
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -35,6 +37,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MenuIcon from '@mui/icons-material/Menu';
 import FlagIcon from '@mui/icons-material/Flag';
+import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import CompareIcon from '@mui/icons-material/Compare';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
@@ -42,8 +45,12 @@ import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstruct
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import PublicIcon from '@mui/icons-material/Public';
 import { useAuth } from '../contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { useApi } from '../hooks/useApi';
+import { WhatIfDrawer } from '../components/WhatIfDrawer';
 
 const DRAWER_WIDTH = 260;
+const INSIGHT_COUNT_STORAGE_KEY = 'retiree-plan-insight-count';
 
 const NAV_ITEMS = [
   { label: 'Dashboard',    path: '/',              icon: <DashboardIcon />,              tourId: 'nav-dashboard' },
@@ -56,12 +63,122 @@ const NAV_ITEMS = [
   { label: 'Retire Finder',path: '/retire-finder', icon: <EmojiPeopleIcon /> },
   { label: 'Tax Analytics',path: '/tax-analytics', icon: <BarChartIcon />,               tourId: 'nav-tax' },
   { label: 'Estate',       path: '/estate',        icon: <AccountTreeIcon />,            tourId: 'nav-estate' },
+  { label: 'Goals',        path: '/goals',         icon: <TrackChangesIcon /> },
   { label: 'International',path: '/international', icon: <PublicIcon /> },
   { label: 'Compare',      path: '/compare',       icon: <CompareIcon />,                tourId: 'nav-compare' },
   { label: 'AI Assistant', path: '/ai-chat',       icon: <SmartToyIcon />,               tourId: 'nav-ai' },
   { label: 'Integrations', path: '/integrations',  icon: <IntegrationInstructionsIcon /> },
   { label: 'Help',         path: '/help',          icon: <HelpOutlineIcon /> },
 ];
+
+/**
+ * Fetches the base-case projection once (shares the cache key with DashboardPage) and
+ * registers the What-If Calculator globally so it's available on every page.
+ * Must be rendered inside QuickActionsProvider.
+ */
+function GlobalWhatIfController() {
+  const { apiFetch } = useApi();
+  const { setWhatIfAction } = useQuickActions();
+  const [whatIfOpen, setWhatIfOpen] = useState(false);
+
+  const { data: households } = useQuery<any[]>({
+    queryKey: ['households'],
+    queryFn: () => apiFetch('/households'),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const hh = households?.[0];
+  const primaryMember = hh?.members?.[0];
+  const accounts: any[] = useMemo(() => hh?.accounts ?? [], [hh]);
+  const scenarios: any[] = useMemo(() => hh?.scenarios ?? [], [hh]);
+
+  const currentAge = useMemo(() => {
+    const dob = primaryMember?.dateOfBirth;
+    if (!dob) return 45;
+    return new Date().getFullYear() - new Date(dob).getFullYear();
+  }, [primaryMember?.dateOfBirth]);
+
+  const retirementAge: number = primaryMember?.retirementAge ?? 65;
+
+  const rrspTotal = useMemo(() => accounts.filter((a) => ['RRSP', 'RRIF'].includes(a.type)).reduce((s, a) => s + a.balance, 0), [accounts]);
+  const tfsaTotal = useMemo(() => accounts.filter((a) => a.type === 'TFSA').reduce((s, a) => s + a.balance, 0), [accounts]);
+  const nonRegTotal = useMemo(() => accounts.filter((a) => a.type === 'NON_REG').reduce((s, a) => s + a.balance, 0), [accounts]);
+  const cashTotal = useMemo(() => accounts.filter((a) => a.type === 'CASH').reduce((s, a) => s + a.balance, 0), [accounts]);
+  const totalPortfolio = rrspTotal + tfsaTotal + nonRegTotal + cashTotal;
+
+  const firstScenarioParams = useMemo<Record<string, any>>(() => {
+    const raw = scenarios[0]?.parameters;
+    if (!raw) return {};
+    if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return {}; } }
+    return raw as Record<string, any>;
+  }, [scenarios]);
+
+  const ENGINE_EXCLUDED = useMemo(() => new Set(['CPP', 'OAS']), []);
+
+  const projPayload = useMemo(() => {
+    if (!hh || !primaryMember) return null;
+    const p = firstScenarioParams;
+    return {
+      currentAge,
+      endAge: p.lifeExpectancy ?? 90,
+      province: primaryMember.province ?? 'ON',
+      employmentIncome: 0,
+      incomeSources: (hh.members ?? []).flatMap((m: any) =>
+        (m.incomeSources ?? [])
+          .filter((src: any) => !ENGINE_EXCLUDED.has(src.type))
+          .map((src: any) => ({ annualAmount: src.annualAmount, startAge: src.startAge, endAge: src.endAge, indexToInflation: true })),
+      ),
+      retirementAge,
+      annualExpenses: hh.annualExpenses ?? 60_000,
+      inflationRate: p.inflationRate ?? 0.02,
+      nominalReturnRate: p.expectedReturnRate ?? 0.06,
+      cppStartAge: p.cppStartAge ?? 65,
+      oasStartAge: p.oasStartAge ?? 65,
+      rrspBalance: rrspTotal,
+      tfsaBalance: tfsaTotal,
+      nonRegBalance: nonRegTotal,
+      cashBalance: cashTotal,
+      rrspContribution: accounts.find((a: any) => a.type === 'RRSP')?.annualContribution ?? 0,
+      tfsaContribution: accounts.find((a: any) => a.type === 'TFSA')?.annualContribution ?? 0,
+      rrifConversionAge: p.rrifStartAge ?? 71,
+      investSurplus: p.investSurplus ?? false,
+    };
+  }, [hh, primaryMember, currentAge, retirementAge, rrspTotal, tfsaTotal, nonRegTotal, cashTotal, firstScenarioParams, ENGINE_EXCLUDED, accounts]);
+
+  const { data: projData } = useQuery<any[]>({
+    queryKey: ['dash-projection', hh?.id],
+    queryFn: async () => {
+      const raw: any = await apiFetch('/projections/cash-flow', { method: 'POST', body: JSON.stringify(projPayload) });
+      return Array.isArray(raw) ? raw : (raw.years ?? raw.data ?? []);
+    },
+    enabled: !!projPayload && totalPortfolio > 0,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const baselineData = useMemo(
+    () =>
+      (projData ?? []).map((y: any) => ({
+        age: y.age as number,
+        totalNetWorth: Math.max(0, (y.totalNetWorth ?? y.netWorth ?? 0) as number),
+      })),
+    [projData],
+  );
+
+  useEffect(() => {
+    setWhatIfAction(() => setWhatIfOpen(true));
+    return () => setWhatIfAction(null);
+  }, [setWhatIfAction]);
+
+  return (
+    <WhatIfDrawer
+      open={whatIfOpen}
+      onClose={() => setWhatIfOpen(false)}
+      baselineInput={projPayload as any}
+      baselineData={baselineData}
+    />
+  );
+}
 
 export function AppLayout() {
   const theme = useTheme();
@@ -70,8 +187,42 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [insightCount, setInsightCount] = useState(0);
   const [onboardingCtx, setOnboardingCtx] = useState<{ openOnboarding: () => void } | null>(null);
   const { startTour } = useTour();
+
+  useEffect(() => {
+    const readStoredCount = () => {
+      const raw = window.localStorage.getItem(INSIGHT_COUNT_STORAGE_KEY) ?? '0';
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
+    };
+
+    setInsightCount(readStoredCount());
+
+    const handleInsightsCount = (event: Event) => {
+      const customEvent = event as CustomEvent<number>;
+      if (typeof customEvent.detail === 'number' && Number.isFinite(customEvent.detail)) {
+        setInsightCount(Math.max(0, Math.floor(customEvent.detail)));
+        return;
+      }
+      setInsightCount(readStoredCount());
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === INSIGHT_COUNT_STORAGE_KEY) {
+        setInsightCount(readStoredCount());
+      }
+    };
+
+    window.addEventListener('insights-count', handleInsightsCount as EventListener);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('insights-count', handleInsightsCount as EventListener);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -210,6 +361,16 @@ export function AppLayout() {
             </IconButton>
             <Box sx={{ flex: 1 }} />
             <IconButton
+              aria-label="View insights"
+              title="Automated insights"
+              onClick={() => navigate('/')}
+              sx={{ mr: 0.5 }}
+            >
+              <Badge badgeContent={insightCount} color="error" max={9} invisible={insightCount === 0}>
+                <NotificationsIcon fontSize="small" />
+              </Badge>
+            </IconButton>
+            <IconButton
               aria-label="Start guided tour"
               data-tour="tour-help"
               title="Start guided tour"
@@ -293,6 +454,7 @@ export function AppLayout() {
       <TourOverlay />
       <OnboardingWizard onContextReady={setOnboardingCtx} />
     </Box>
+    <GlobalWhatIfController />
     <QuickActionsPanel />
   </QuickActionsProvider>
   );

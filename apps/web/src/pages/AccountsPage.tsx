@@ -3,7 +3,8 @@ import {
   Box, Typography, Card, CardContent, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, Grid, IconButton, List, ListItem, ListItemText,
   ListItemSecondaryAction, Chip, CircularProgress, Alert, Divider, Tooltip, Stack,
-  FormControl, InputLabel, Select, InputAdornment,
+  FormControl, InputLabel, Select, InputAdornment, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -15,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calculateContributionRoom } from '@retiree-plan/finance-engine';
 import { useApi } from '../hooks/useApi';
 import { calcAge } from '../utils/age';
+import { AllocationDonut } from '../components/charts/AllocationDonut';
 
 const ACCOUNT_TYPES = [
   { value: 'RRSP', label: 'RRSP – Registered Retirement Savings Plan' },
@@ -49,6 +51,10 @@ interface Account {
   annualContribution: number;
   /** User-supplied annual return rate for this account. Null = use scenario default. */
   estimatedReturnRate: number | null;
+  equityPercent: number | null;
+  fixedIncomePercent: number | null;
+  alternativesPercent: number | null;
+  cashPercent: number | null;
   householdId: string;
   ynabAccountId?: string | null;
   ynabAccountName?: string | null;
@@ -93,6 +99,20 @@ interface Household {
   }[];
 }
 
+interface RealEstateProperty {
+  id: string;
+  name: string;
+  propertyType: 'PRIMARY_RESIDENCE' | 'RENTAL' | 'VACATION';
+  currentValue: number;
+  purchasePrice: number;
+  annualAppreciation: number;
+  grossRentalIncome: number | null;
+  rentalExpenses: number | null;
+  sellAtAge: number | null;
+  netProceedsPercent: number;
+  householdId: string;
+}
+
 /** Map brokerage provider to a display-friendly label. */
 const BROKERAGE_LABELS: Record<string, string> = {
   QUESTRADE:    'Questrade',
@@ -106,6 +126,12 @@ const BROKERAGE_COLORS: Record<string, string> = {
   TD:           '#1b6b32',
 };
 
+const PROPERTY_TYPES = [
+  { value: 'PRIMARY_RESIDENCE', label: 'Primary Residence' },
+  { value: 'RENTAL', label: 'Rental' },
+  { value: 'VACATION', label: 'Vacation' },
+];
+
 const emptyForm = { name: '', type: 'RRSP', balance: '', annualContribution: '', estimatedReturnRate: '', currency: 'CAD', householdId: '', ynabAccountId: '', brokerageProvider: '', brokerageAccountId: '' };
 
 export function AccountsPage() {
@@ -115,6 +141,39 @@ export function AccountsPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState('');
+  const [allocationEquity, setAllocationEquity] = useState<number | null>(null);
+  const [allocationFixedIncome, setAllocationFixedIncome] = useState<number | null>(null);
+  const [allocationAlternatives, setAllocationAlternatives] = useState<number | null>(null);
+  const [allocationCash, setAllocationCash] = useState<number | null>(null);
+
+  const [propertyDialogOpen, setPropertyDialogOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<RealEstateProperty | null>(null);
+  const [propertyError, setPropertyError] = useState('');
+  const [propertyForm, setPropertyForm] = useState({
+    name: '',
+    propertyType: 'PRIMARY_RESIDENCE' as RealEstateProperty['propertyType'],
+    currentValue: '',
+    purchasePrice: '',
+    annualAppreciation: '3',
+    grossRentalIncome: '',
+    rentalExpenses: '',
+    sellAtAge: '',
+    netProceedsPercent: '100',
+  });
+
+  const computedReturn = allocationEquity != null
+    ? (
+      allocationEquity * 0.07 +
+      (allocationFixedIncome ?? 0) * 0.035 +
+      (allocationAlternatives ?? 0) * 0.055 +
+      (allocationCash ?? 0) * 0.025
+    ) / 100
+    : null;
+  const allocationValues = [allocationEquity, allocationFixedIncome, allocationAlternatives, allocationCash];
+  const hasAnyAllocationInput = allocationValues.some((v) => v != null);
+  const hasAllAllocationInput = allocationValues.every((v) => v != null);
+  const allocationSumPercent = allocationValues.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+  const allocationIsValid = hasAllAllocationInput && Math.abs(allocationSumPercent - 100) <= 0.1;
 
   const { data: households } = useQuery<Household[]>({
     queryKey: ['households'],
@@ -159,6 +218,12 @@ export function AccountsPage() {
     enabled: !!household?.id,
   });
 
+  const { data: realEstate = [] } = useQuery<RealEstateProperty[]>({
+    queryKey: ['real-estate', household?.id],
+    queryFn: () => apiFetch(`/real-estate/household/${household!.id}`),
+    enabled: !!household?.id,
+  });
+
   const { data: scenarios } = useQuery<{ id: string; parameters: string }[]>({
     queryKey: ['scenarios', household?.id],
     queryFn: () => apiFetch(`/scenarios/household/${household!.id}`),
@@ -168,6 +233,10 @@ export function AccountsPage() {
   const invalidateAccounts = () => {
     queryClient.invalidateQueries({ queryKey: ['accounts'] });
     queryClient.invalidateQueries({ queryKey: ['households'] });
+  };
+
+  const invalidateRealEstate = () => {
+    queryClient.invalidateQueries({ queryKey: ['real-estate'] });
   };
 
   const createAccount = useMutation({
@@ -188,6 +257,36 @@ export function AccountsPage() {
     onSuccess: () => invalidateAccounts(),
   });
 
+  const createProperty = useMutation({
+    mutationFn: (data: any) => apiFetch('/real-estate', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      invalidateRealEstate();
+      closePropertyDialog();
+    },
+    onError: (e: Error) => setPropertyError(e.message),
+  });
+
+  const updateProperty = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      apiFetch(`/real-estate/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      invalidateRealEstate();
+      closePropertyDialog();
+    },
+    onError: (e: Error) => setPropertyError(e.message),
+  });
+
+  const deleteProperty = useMutation({
+    mutationFn: (id: string) => apiFetch(`/real-estate/${id}`, { method: 'DELETE' }),
+    onSuccess: () => invalidateRealEstate(),
+  });
+
+  const parseNullableNumber = (value: string): number | null => {
+    if (value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
   const openDialog = (account?: Account) => {
     setError('');
     if (account) {
@@ -206,10 +305,18 @@ export function AccountsPage() {
         brokerageProvider: providerForDialog,
         brokerageAccountId: account.brokerageAccountId ?? '',
       });
+      setAllocationEquity(account.equityPercent != null ? account.equityPercent * 100 : null);
+      setAllocationFixedIncome(account.fixedIncomePercent != null ? account.fixedIncomePercent * 100 : null);
+      setAllocationAlternatives(account.alternativesPercent != null ? account.alternativesPercent * 100 : null);
+      setAllocationCash(account.cashPercent != null ? account.cashPercent * 100 : null);
     } else {
       setEditingAccount(null);
       setActiveBrokerageProvider('');
       setForm({ ...emptyForm, householdId: household?.id ?? '' });
+      setAllocationEquity(null);
+      setAllocationFixedIncome(null);
+      setAllocationAlternatives(null);
+      setAllocationCash(null);
     }
     setDialogOpen(true);
   };
@@ -219,12 +326,84 @@ export function AccountsPage() {
     setEditingAccount(null);
     setForm(emptyForm);
     setActiveBrokerageProvider('');
+    setAllocationEquity(null);
+    setAllocationFixedIncome(null);
+    setAllocationAlternatives(null);
+    setAllocationCash(null);
+  };
+
+  const openPropertyDialog = (property?: RealEstateProperty) => {
+    setPropertyError('');
+    if (property) {
+      setEditingProperty(property);
+      setPropertyForm({
+        name: property.name,
+        propertyType: property.propertyType,
+        currentValue: String(property.currentValue),
+        purchasePrice: String(property.purchasePrice),
+        annualAppreciation: String(property.annualAppreciation * 100),
+        grossRentalIncome: property.grossRentalIncome != null ? String(property.grossRentalIncome) : '',
+        rentalExpenses: property.rentalExpenses != null ? String(property.rentalExpenses) : '',
+        sellAtAge: property.sellAtAge != null ? String(property.sellAtAge) : '',
+        netProceedsPercent: String(property.netProceedsPercent * 100),
+      });
+    } else {
+      setEditingProperty(null);
+      setPropertyForm({
+        name: '',
+        propertyType: 'PRIMARY_RESIDENCE',
+        currentValue: '',
+        purchasePrice: '',
+        annualAppreciation: '3',
+        grossRentalIncome: '',
+        rentalExpenses: '',
+        sellAtAge: '',
+        netProceedsPercent: '100',
+      });
+    }
+    setPropertyDialogOpen(true);
+  };
+
+  const closePropertyDialog = () => {
+    setPropertyDialogOpen(false);
+    setEditingProperty(null);
+    setPropertyError('');
+    setPropertyForm({
+      name: '',
+      propertyType: 'PRIMARY_RESIDENCE',
+      currentValue: '',
+      purchasePrice: '',
+      annualAppreciation: '3',
+      grossRentalIncome: '',
+      rentalExpenses: '',
+      sellAtAge: '',
+      netProceedsPercent: '100',
+    });
   };
 
   const handleSave = () => {
     if (!form.name.trim()) { setError('Name is required'); return; }
     const hasBrokerageBalance = form.brokerageAccountId && form.brokerageProvider !== 'TD';
     if (!form.balance && !form.ynabAccountId && !hasBrokerageBalance) { setError('Balance is required'); return; }
+
+    const allocationParts = [allocationEquity, allocationFixedIncome, allocationAlternatives, allocationCash];
+    const hasAnyAllocation = allocationParts.some((v) => v != null);
+    const hasFullAllocation = allocationParts.every((v) => v != null);
+    const allocationSum = allocationParts.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+
+    if (hasAnyAllocation && !hasFullAllocation) {
+      setError('When setting asset allocation, provide all four values (Equity, Fixed Income, Alternatives, Cash).');
+      return;
+    }
+    if (hasFullAllocation && allocationParts.some((v) => (v ?? 0) < 0 || (v ?? 0) > 100)) {
+      setError('Each allocation value must be between 0 and 100.');
+      return;
+    }
+    if (hasFullAllocation && Math.abs(allocationSum - 100) > 0.1) {
+      setError('Asset allocation must sum to 100%.');
+      return;
+    }
+
     const selectedYnab = ynabAccounts?.find((a) => a.id === form.ynabAccountId);
     const selectedBrokerage = (brokerageAccounts ?? []).find((a) => a.id === form.brokerageAccountId);
     const payload = {
@@ -234,6 +413,10 @@ export function AccountsPage() {
          selectedBrokerage?.balance ?? 0),
       annualContribution: Number(form.annualContribution || 0),
       estimatedReturnRate: form.estimatedReturnRate !== '' ? Number(form.estimatedReturnRate) / 100 : null,
+      equityPercent: hasFullAllocation ? (allocationEquity ?? 0) / 100 : null,
+      fixedIncomePercent: hasFullAllocation ? (allocationFixedIncome ?? 0) / 100 : null,
+      alternativesPercent: hasFullAllocation ? (allocationAlternatives ?? 0) / 100 : null,
+      cashPercent: hasFullAllocation ? (allocationCash ?? 0) / 100 : null,
       currency: form.currency,
       householdId: household?.id,
       ynabAccountId: form.ynabAccountId || null,
@@ -249,6 +432,43 @@ export function AccountsPage() {
     }
   };
 
+  const handleSaveProperty = () => {
+    setPropertyError('');
+    if (!household?.id) {
+      setPropertyError('Please create a household before adding properties.');
+      return;
+    }
+    if (!propertyForm.name.trim()) {
+      setPropertyError('Property name is required.');
+      return;
+    }
+
+    const currentValue = Number(propertyForm.currentValue);
+    if (!Number.isFinite(currentValue) || currentValue <= 0) {
+      setPropertyError('Current value must be greater than 0.');
+      return;
+    }
+
+    const payload = {
+      name: propertyForm.name,
+      propertyType: propertyForm.propertyType,
+      currentValue,
+      purchasePrice: Number(propertyForm.purchasePrice || 0),
+      annualAppreciation: Number(propertyForm.annualAppreciation || 0) / 100,
+      grossRentalIncome: propertyForm.grossRentalIncome === '' ? null : Number(propertyForm.grossRentalIncome),
+      rentalExpenses: propertyForm.rentalExpenses === '' ? null : Number(propertyForm.rentalExpenses),
+      sellAtAge: propertyForm.sellAtAge === '' ? null : Number(propertyForm.sellAtAge),
+      netProceedsPercent: Number(propertyForm.netProceedsPercent || 100) / 100,
+      householdId: household.id,
+    };
+
+    if (editingProperty) {
+      updateProperty.mutate({ id: editingProperty.id, data: payload });
+    } else {
+      createProperty.mutate(payload);
+    }
+  };
+
   // Group by type
   const byType = (accounts ?? []).reduce<Record<string, Account[]>>((acc, a) => {
     acc[a.type] = acc[a.type] ?? [];
@@ -258,10 +478,42 @@ export function AccountsPage() {
 
   const totalBalance = (accounts ?? []).reduce((s, a) => s + a.balance, 0);
   const totalContributions = (accounts ?? []).reduce((s, a) => s + a.annualContribution, 0);
+  const totalRealEstateValue = realEstate.reduce((sum, property) => sum + property.currentValue, 0);
+
+  const householdAllocation = useMemo(() => {
+    const allocAccounts = (accounts ?? []).filter((a) => (
+      a.equityPercent != null &&
+      a.fixedIncomePercent != null &&
+      a.alternativesPercent != null &&
+      a.cashPercent != null &&
+      a.balance > 0
+    ));
+
+    if (allocAccounts.length === 0) return null;
+
+    const balanceTotal = allocAccounts.reduce((sum, account) => sum + account.balance, 0);
+    if (balanceTotal <= 0) return null;
+
+    return allocAccounts.reduce(
+      (agg, account) => {
+        const weight = account.balance / balanceTotal;
+        return {
+          equityPercent: agg.equityPercent + (account.equityPercent ?? 0) * weight,
+          fixedIncomePercent: agg.fixedIncomePercent + (account.fixedIncomePercent ?? 0) * weight,
+          alternativesPercent: agg.alternativesPercent + (account.alternativesPercent ?? 0) * weight,
+          cashPercent: agg.cashPercent + (account.cashPercent ?? 0) * weight,
+        };
+      },
+      { equityPercent: 0, fixedIncomePercent: 0, alternativesPercent: 0, cashPercent: 0 },
+    );
+  }, [accounts]);
+
+  const member = household?.members?.[0];
+  const rrspFromPriorIncome = (member?.priorYearIncome ?? 0) * 0.18;
+  const rrspAnnualMax = 31560;
 
   const contributionRoom = useMemo(() => {
     try {
-      const member = household?.members?.[0];
       if (!member?.rrspContributionRoom && !member?.tfsaContributionRoom) return null;
 
       const retirementAge = (() => {
@@ -295,7 +547,7 @@ export function AccountsPage() {
       console.error('Failed to calculate contribution room:', error);
       return null;
     }
-  }, [household, scenarios, accounts]);
+  }, [member, scenarios, accounts]);
 
   if (isLoading) return <Box display="flex" justifyContent="center" mt={8}><CircularProgress /></Box>;
 
@@ -359,50 +611,82 @@ export function AccountsPage() {
                   </Alert>
                 ) : (
                   <Grid container spacing={3}>
-                    {/* RRSP Room */}
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
-                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>RRSP Contribution Room</Typography>
-                        <Typography variant="h5" sx={{ mb: 1 }}>
-                          ${contributionRoom.rrsp.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
-                        </Typography>
-                        <Divider sx={{ my: 1 }} />
-                        <Stack spacing={0.5}>
-                          <Typography variant="body2">
-                            New room this year: <strong>${contributionRoom.rrsp.annualNewRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
-                          </Typography>
-                          <Typography variant="body2">
-                            Projected room at retirement: <strong>${contributionRoom.rrsp.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
-                          </Typography>
-                        </Stack>
-                        {contributionRoom.rrsp.overContribution && (
-                          <Alert severity="error" sx={{ mt: 1 }}>Over-contribution detected! You may be subject to a 1%/month penalty tax.</Alert>
-                        )}
-                      </Box>
+                      <Typography variant="subtitle1" sx={{ mb: 1 }}>RRSP</Typography>
+                      <TableContainer>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Metric</TableCell>
+                              <TableCell align="right">Value</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell>Current Room</TableCell>
+                              <TableCell align="right">${contributionRoom.rrsp.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>18% of Prior Income</TableCell>
+                              <TableCell align="right">${rrspFromPriorIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Annual Max (2024)</TableCell>
+                              <TableCell align="right">${rrspAnnualMax.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>New Room This Year</TableCell>
+                              <TableCell align="right">${contributionRoom.rrsp.annualNewRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Projected At Retirement</TableCell>
+                              <TableCell align="right">${contributionRoom.rrsp.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      {contributionRoom.rrsp.currentRoom < 0 && (
+                        <Alert severity="error" sx={{ mt: 1 }}>
+                          Over-contribution alert: RRSP room is negative. You may be subject to penalty tax.
+                        </Alert>
+                      )}
                     </Grid>
-                    {/* TFSA Room */}
+
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
-                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>TFSA Contribution Room</Typography>
-                        <Typography variant="h5" sx={{ mb: 1 }}>
-                          ${contributionRoom.tfsa.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
-                        </Typography>
-                        <Divider sx={{ my: 1 }} />
-                        <Stack spacing={0.5}>
-                          <Typography variant="body2">
-                            Annual limit: <strong>${contributionRoom.tfsa.annualLimit.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
-                          </Typography>
-                          <Typography variant="body2">
-                            Cumulative room since 2009: <strong>${contributionRoom.tfsa.totalCumulativeRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
-                          </Typography>
-                          <Typography variant="body2">
-                            Projected room at retirement: <strong>${contributionRoom.tfsa.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
-                          </Typography>
-                        </Stack>
-                        {contributionRoom.tfsa.overContribution && (
-                          <Alert severity="error" sx={{ mt: 1 }}>Over-contribution detected! You may be subject to a 1%/month penalty tax.</Alert>
-                        )}
-                      </Box>
+                      <Typography variant="subtitle1" sx={{ mb: 1 }}>TFSA</Typography>
+                      <TableContainer>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Metric</TableCell>
+                              <TableCell align="right">Value</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell>Current Room</TableCell>
+                              <TableCell align="right">${contributionRoom.tfsa.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Annual Limit (2024)</TableCell>
+                              <TableCell align="right">$7,000</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Cumulative Room Since 18</TableCell>
+                              <TableCell align="right">${contributionRoom.tfsa.totalCumulativeRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Projected At Retirement</TableCell>
+                              <TableCell align="right">${contributionRoom.tfsa.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      {contributionRoom.tfsa.currentRoom < 0 && (
+                        <Alert severity="error" sx={{ mt: 1 }}>
+                          Over-contribution alert: TFSA room is negative.
+                        </Alert>
+                      )}
                     </Grid>
                   </Grid>
                 )}
@@ -484,6 +768,100 @@ export function AccountsPage() {
         </Card>
       )}
 
+      {household && (
+        <Card sx={{ mt: 3, mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 2 }}>Household Asset Allocation</Typography>
+            {householdAllocation ? (
+              <AllocationDonut allocation={householdAllocation} />
+            ) : (
+              <Alert severity="info">
+                Set allocation on individual accounts to see household-level allocation.
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {household && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Real Estate Properties</Typography>
+              <Button variant="outlined" startIcon={<AddIcon />} onClick={() => openPropertyDialog()}>
+                Add Property
+              </Button>
+            </Box>
+
+            <Card variant="outlined" sx={{ mb: 2 }}>
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">Total Property Value</Typography>
+                <Typography variant="h5">
+                  ${totalRealEstateValue.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+                </Typography>
+              </CardContent>
+            </Card>
+
+            {realEstate.length === 0 ? (
+              <Alert severity="info">No properties added yet.</Alert>
+            ) : (
+              <Grid container spacing={2}>
+                {realEstate.map((property) => (
+                  <Grid item xs={12} md={6} key={property.id}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <Typography variant="subtitle1" fontWeight={600}>{property.name}</Typography>
+                          <Chip
+                            size="small"
+                            label={PROPERTY_TYPES.find((t) => t.value === property.propertyType)?.label ?? property.propertyType}
+                          />
+                          <Box sx={{ ml: 'auto' }}>
+                            <Tooltip title="Edit property">
+                              <IconButton size="small" onClick={() => openPropertyDialog(property)}>
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete property">
+                              <IconButton size="small" onClick={() => deleteProperty.mutate(property.id)}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </Box>
+
+                        <Stack spacing={0.5}>
+                          <Typography variant="body2">
+                            Current value: <strong>${property.currentValue.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
+                          </Typography>
+                          <Typography variant="body2">
+                            Appreciation: <strong>{(property.annualAppreciation * 100).toFixed(2)}%/yr</strong>
+                          </Typography>
+                          {property.propertyType === 'RENTAL' && (
+                            <Typography variant="body2">
+                              Rental net cash flow: <strong>${((property.grossRentalIncome ?? 0) - (property.rentalExpenses ?? 0)).toLocaleString('en-CA', { maximumFractionDigits: 0 })}/yr</strong>
+                              {' '}({`$${(property.grossRentalIncome ?? 0).toLocaleString('en-CA', { maximumFractionDigits: 0 })}`}
+                              {' income - '}
+                              {`$${(property.rentalExpenses ?? 0).toLocaleString('en-CA', { maximumFractionDigits: 0 })}`}
+                              {' expenses)'}
+                            </Typography>
+                          )}
+                          {property.sellAtAge != null && (
+                            <Typography variant="body2">
+                              Downsizing plan: sell at age <strong>{property.sellAtAge}</strong> with <strong>{(property.netProceedsPercent * 100).toFixed(0)}%</strong> net proceeds.
+                            </Typography>
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Dialog open={dialogOpen} maxWidth="xs" fullWidth onClose={closeDialog}>
         <DialogTitle>{editingAccount ? 'Edit Account' : 'Add Account'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
@@ -522,6 +900,61 @@ export function AccountsPage() {
             inputProps={{ min: 0, max: 30, step: 0.1 }}
             InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
           />
+
+          <Divider />
+          <Typography variant="subtitle2">Asset Allocation (optional)</Typography>
+          <Grid container spacing={1}>
+            <Grid item xs={6}>
+              <TextField
+                label="Equity %"
+                type="number"
+                fullWidth
+                value={allocationEquity ?? ''}
+                onChange={(e) => setAllocationEquity(parseNullableNumber(e.target.value))}
+                inputProps={{ min: 0, max: 100, step: 1 }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Fixed Income %"
+                type="number"
+                fullWidth
+                value={allocationFixedIncome ?? ''}
+                onChange={(e) => setAllocationFixedIncome(parseNullableNumber(e.target.value))}
+                inputProps={{ min: 0, max: 100, step: 1 }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Alternatives %"
+                type="number"
+                fullWidth
+                value={allocationAlternatives ?? ''}
+                onChange={(e) => setAllocationAlternatives(parseNullableNumber(e.target.value))}
+                inputProps={{ min: 0, max: 100, step: 1 }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Cash %"
+                type="number"
+                fullWidth
+                value={allocationCash ?? ''}
+                onChange={(e) => setAllocationCash(parseNullableNumber(e.target.value))}
+                inputProps={{ min: 0, max: 100, step: 1 }}
+              />
+            </Grid>
+          </Grid>
+
+          {hasAnyAllocationInput && (
+            <Alert severity={allocationIsValid ? 'success' : 'warning'}>
+              Allocation total: {allocationSumPercent.toFixed(1)}%. Set all 4 fields and ensure they sum to 100%.
+              {computedReturn != null && hasAllAllocationInput && allocationIsValid
+                ? ` Expected return: ${(computedReturn * 100).toFixed(2)}%`
+                : ''}
+            </Alert>
+          )}
+
           <TextField label="Currency" select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} fullWidth>
             <MenuItem value="CAD">CAD – Canadian Dollar</MenuItem>
             <MenuItem value="USD">USD – US Dollar</MenuItem>
@@ -631,6 +1064,116 @@ export function AccountsPage() {
           <Button onClick={closeDialog}>Cancel</Button>
           <Button variant="contained" onClick={handleSave} disabled={createAccount.isPending || updateAccount.isPending}>
             {editingAccount ? 'Update' : 'Add Account'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={propertyDialogOpen} maxWidth="sm" fullWidth onClose={closePropertyDialog}>
+        <DialogTitle>{editingProperty ? 'Edit Property' : 'Add Property'}</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          {propertyError && <Alert severity="error">{propertyError}</Alert>}
+
+          <TextField
+            label="Property Name"
+            value={propertyForm.name}
+            onChange={(e) => setPropertyForm({ ...propertyForm, name: e.target.value })}
+            fullWidth
+          />
+
+          <TextField
+            label="Property Type"
+            select
+            value={propertyForm.propertyType}
+            onChange={(e) => setPropertyForm({ ...propertyForm, propertyType: e.target.value as RealEstateProperty['propertyType'] })}
+            fullWidth
+          >
+            {PROPERTY_TYPES.map((type) => (
+              <MenuItem key={type.value} value={type.value}>{type.label}</MenuItem>
+            ))}
+          </TextField>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Current Value ($)"
+                type="number"
+                fullWidth
+                value={propertyForm.currentValue}
+                onChange={(e) => setPropertyForm({ ...propertyForm, currentValue: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Purchase Price ($)"
+                type="number"
+                fullWidth
+                value={propertyForm.purchasePrice}
+                onChange={(e) => setPropertyForm({ ...propertyForm, purchasePrice: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Annual Appreciation (%)"
+                type="number"
+                fullWidth
+                value={propertyForm.annualAppreciation}
+                onChange={(e) => setPropertyForm({ ...propertyForm, annualAppreciation: e.target.value })}
+                inputProps={{ min: -20, max: 30, step: 0.1 }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Net Proceeds (%)"
+                type="number"
+                fullWidth
+                value={propertyForm.netProceedsPercent}
+                onChange={(e) => setPropertyForm({ ...propertyForm, netProceedsPercent: e.target.value })}
+                inputProps={{ min: 0, max: 100, step: 1 }}
+                helperText="Percent of sale value you keep after costs"
+              />
+            </Grid>
+          </Grid>
+
+          {propertyForm.propertyType === 'RENTAL' && (
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Gross Rental Income ($/yr)"
+                  type="number"
+                  fullWidth
+                  value={propertyForm.grossRentalIncome}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, grossRentalIncome: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Rental Expenses ($/yr)"
+                  type="number"
+                  fullWidth
+                  value={propertyForm.rentalExpenses}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, rentalExpenses: e.target.value })}
+                />
+              </Grid>
+            </Grid>
+          )}
+
+          <TextField
+            label="Sell At Age (optional)"
+            type="number"
+            fullWidth
+            value={propertyForm.sellAtAge}
+            onChange={(e) => setPropertyForm({ ...propertyForm, sellAtAge: e.target.value })}
+            helperText="Set this to model downsizing or sale proceeds"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closePropertyDialog}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveProperty}
+            disabled={createProperty.isPending || updateProperty.isPending}
+          >
+            {editingProperty ? 'Update' : 'Add Property'}
           </Button>
         </DialogActions>
       </Dialog>

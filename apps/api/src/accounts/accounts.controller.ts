@@ -14,6 +14,10 @@ export class AccountsController {
     balance: number;
     annualContribution?: number;
     estimatedReturnRate?: number | null;
+    equityPercent?: number | null;
+    fixedIncomePercent?: number | null;
+    alternativesPercent?: number | null;
+    cashPercent?: number | null;
     currency?: string;
     householdId: string;
     ynabAccountId?: string;
@@ -42,6 +46,10 @@ export class AccountsController {
     balance?: number;
     annualContribution?: number;
     estimatedReturnRate?: number | null;
+    equityPercent?: number | null;
+    fixedIncomePercent?: number | null;
+    alternativesPercent?: number | null;
+    cashPercent?: number | null;
     ynabAccountId?: string | null;
     ynabAccountName?: string | null;
     brokerageAccountId?: string | null;

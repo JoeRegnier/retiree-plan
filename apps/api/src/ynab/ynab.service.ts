@@ -283,13 +283,17 @@ export class YnabService {
       synced++;
     }
 
-    // Wipe all previous YNAB-synced expenses for this household, then repopulate cleanly
-    await this.prisma.expense.deleteMany({
-      where: { householdId, id: { startsWith: `ynab-${householdId}-` } },
+    // Wipe all previous YNAB-synced expenses for this household, then repopulate cleanly.
+    // Wrapped in a transaction to prevent a unique-constraint race condition when two
+    // concurrent sync requests delete-then-insert the same set of IDs.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.expense.deleteMany({
+        where: { householdId, id: { startsWith: `ynab-${householdId}-` } },
+      });
+      if (rows.length > 0) {
+        await tx.expense.createMany({ data: rows });
+      }
     });
-    if (rows.length > 0) {
-      await this.prisma.expense.createMany({ data: rows });
-    }
 
     await this.prisma.ynabConnection.update({
       where: { userId },

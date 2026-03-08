@@ -14,6 +14,7 @@ import { MonteCarloChart, type MonteCarloPercentiles } from '../components/chart
 import { SankeyChart } from '../components/charts/SankeyChart';
 import { WaterfallChart } from '../components/charts/WaterfallChart';
 import { IncomeAllocationChart } from '../components/charts/IncomeAllocationChart';
+import { DrawdownWaterfallChart } from '../components/charts/DrawdownWaterfallChart';
 import { useQuickActions } from '../contexts/QuickActionsContext';
 
 interface Household { id: string; name: string; members: any[]; accounts: any[]; }
@@ -405,6 +406,7 @@ export function ProjectionsPage() {
             <Tab label="Sankey" />
             <Tab label="Waterfall" />
             <Tab label="Year-by-Year" />
+            <Tab label="Drawdown" />
           </Tabs>
 
           {tab === 0 && (
@@ -443,7 +445,7 @@ export function ProjectionsPage() {
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
                   Where does income go each year? Stacked by use — ghosted sections show unused tax-sheltered room.
                 </Typography>
-                <IncomeAllocationChart data={projectionData} height={380} milestones={milestones} />
+                <IncomeAllocationChart data={projectionData} milestones={milestones} />
               </CardContent>
             </Card>
           )}
@@ -505,6 +507,26 @@ export function ProjectionsPage() {
                     </TableBody>
                   </Table>
                 </TableContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {tab === 6 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+                  Account drawdown across retirement years with age-by-age depletion playback.
+                </Typography>
+                <DrawdownWaterfallChart
+                  data={projectionData.map((yr) => ({
+                    age: yr.age,
+                    rrsp: yr.rrspBalance ?? 0,
+                    tfsa: yr.tfsaBalance ?? 0,
+                    nonReg: yr.nonRegBalance ?? 0,
+                    cash: yr.cashBalance ?? 0,
+                  }))}
+                  retirementAge={primaryMember?.retirementAge ?? 65}
+                />
               </CardContent>
             </Card>
           )}

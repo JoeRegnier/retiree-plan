@@ -18,6 +18,8 @@ import { MarketDataModule } from './market-data/market-data.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
 import { BrokerageModule } from './brokerage/brokerage.module';
+import { RealEstateModule } from './real-estate/real-estate.module';
+import { GoalsModule } from './goals/goals.module';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { BrokerageModule } from './brokerage/brokerage.module';
     YnabModule,
     AiModule,
     BrokerageModule,
+    RealEstateModule,
+    GoalsModule,
   ],
   controllers: [HealthController],
 })

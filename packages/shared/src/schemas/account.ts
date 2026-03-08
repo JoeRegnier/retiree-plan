@@ -19,6 +19,10 @@ export const createAccountSchema = z.object({
   type: z.enum(ACCOUNT_TYPES),
   balance: z.number().min(0),
   currency: z.string().default('CAD'),
+  equityPercent: z.number().min(0).max(1).nullable().default(null),
+  fixedIncomePercent: z.number().min(0).max(1).nullable().default(null),
+  alternativesPercent: z.number().min(0).max(1).nullable().default(null),
+  cashPercent: z.number().min(0).max(1).nullable().default(null),
   householdId: z.string().min(1),
 });
 

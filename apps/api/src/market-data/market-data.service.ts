@@ -354,4 +354,21 @@ export class MarketDataService {
     });
     return rows.map((r) => ({ year: r.year, returnRate: r.returnRate }));
   }
+
+  getCurrentAssumptions() {
+    return {
+      equity: { expectedReturn: 0.07, label: 'Canadian Equity (TSX Composite)' },
+      fixedIncome: { expectedReturn: 0.035, label: '10-Year GoC Bond' },
+      alternatives: { expectedReturn: 0.055, label: 'Real Estate / REITs' },
+      cash: { expectedReturn: 0.025, label: 'HISA / GIC (1-Year)' },
+      inflation: 0.02,
+      tfsaAnnualLimit: 7_000,
+      rrspMaxContribution: 31_560,
+      cppMaxMonthlyAt65: 1_364.60,
+      oasMaxMonthly: 713.34,
+      oasClawbackThreshold: 90_997,
+      federalBasicPersonalAmount: 15_705,
+      lastUpdated: '2026-01-01',
+    };
+  }
 }

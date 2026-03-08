@@ -66,7 +66,7 @@ Gauge dial, per-component score bars, projection stat tiles (Monte Carlo %, port
 
 ---
 
-#### 1.2 Automated Insights Engine  
+#### 1.2 Automated Insights Engine ✅ SHIPPED
 **Impact: H | Effort: M**
 
 A rule-based engine that fires contextual recommendations. Examples:
@@ -82,7 +82,9 @@ A rule-based engine that fires contextual recommendations. Examples:
 
 Surface a maximum of 5 insights at a time, ordered by estimated dollar impact. Each insight links to the relevant page.
 
-**Proposed UI:** "Insights" card on Dashboard, also accessible from a bell icon in the nav bar.
+7-rule engine (`insights-engine.ts`) covering RRSP meltdown, OAS clawback, TFSA room, RRIF reminder, CPP timing, pension splitting, and RRSP room. Dashboard InsightsCard with category icons, dollar impact chips, and priority indicators. AppBar notification bell badge with insight count.
+
+**Shipped:** March 2026. Location: Dashboard full-width card + AppBar bell badge.
 
 ---
 
@@ -173,7 +175,7 @@ Currently the engine tracks OAS but appears to not compute GIS clawback. Add `ca
 
 Retirement planning requires a realistic spending model, not just one flat "annual expenses" number.
 
-#### 3.1 Phased Retirement Spending Template  
+#### 3.1 Phased Retirement Spending Template ✅ SHIPPED
 **Impact: H | Effort: M**
 
 The "smile curve" of retirement spending: most retirees spend more in early retirement (active years, travel), less in mid-retirement (slower), then more again in late retirement (healthcare).
@@ -186,7 +188,9 @@ Phase 2: Age 75–84  — 80% of base expenses
 Phase 3: Age 85+    — 90% of base + $8,000/yr healthcare escalation
 ```
 
-The engine already has partial `SpendingPhase` support in `CashFlowInput` — expose and connect it fully in the UI.
+ScenariosPage spending phases section renamed to "Phased Retirement Spending" with explanatory text about the smile curve, phase labels, and a "Travel Heavy Early" preset added alongside existing Conservative and Moderate presets.
+
+**Shipped:** March 2026. Location: Scenarios page spending section.
 
 ---
 
@@ -225,7 +229,7 @@ Four sliders (extra monthly savings, return rate change ±3%, retirement age shi
 
 ### Theme 4 — Account & Asset Management
 
-#### 4.1 RRSP/TFSA Contribution Room Tracker  
+#### 4.1 RRSP/TFSA Contribution Room Tracker ✅ SHIPPED
 **Impact: H | Effort: M**
 
 A dedicated section (on AccountsPage or a new sub-page) that shows:
@@ -234,11 +238,13 @@ A dedicated section (on AccountsPage or a new sub-page) that shows:
 - **TFSA:** Annual limit by year since 2009 ($5,000–$7,000), total room since 18th birthday, withdrawals re-added the following January
 - Warning alerts: "You are over-contributing" (if user enters an amount exceeding room)
 
-Persist room totals in the DB (new fields on `Member`). Pre-populate the TFSA table from CRA annual limits.
+Enhanced Contribution Room Tracker section on AccountsPage with detailed RRSP and TFSA tables showing annual limits, cumulative room, contributions, and remaining room. Over-contribution alerts displayed with warning styling. Member-level `rrspContributionRoom` and `tfsaContributionRoom` fields persisted in DB.
+
+**Shipped:** March 2026. Location: Accounts page dedicated section.
 
 ---
 
-#### 4.2 Asset Allocation Modeller  
+#### 4.2 Asset Allocation Modeller ✅ SHIPPED
 **Impact: M | Effort: M**
 
 Currently each account has `estimatedReturnRate`. Upgrade to:
@@ -248,11 +254,15 @@ Currently each account has `estimatedReturnRate`. Upgrade to:
 - Expected return auto-calculated from asset mix using configurable capital market assumptions (default: equity 7%, bonds 4%, cash 2%)
 - Visualization: donut chart of household-wide allocation + glide path line chart
 
+Per-account allocation fields (equityPercent, fixedIncomePercent, alternativesPercent, cashPercent) in Prisma schema and account dialog with sum=100% validation and computed expected return. AllocationDonut (D3 interactive donut) and GlidePathChart (D3 line chart) components. Household Asset Allocation section on AccountsPage. `asset-allocation.ts` engine module with `calculateExpectedReturn`, `buildGlidePath`, `calculateHouseholdAllocation`. `CAPITAL_MARKET_ASSUMPTIONS` in shared constants.
+
+**Shipped:** March 2026. Location: Accounts page + engine module.
+
 The engine's `GlidePathStep[]` already supports this — only the UI is missing.
 
 ---
 
-#### 4.3 Real Estate & Rental Income  
+#### 4.3 Real Estate & Rental Income ✅ SHIPPED
 **Impact: M | Effort: M**
 
 Extend Accounts to include real property:
@@ -262,7 +272,9 @@ Extend Accounts to include real property:
 - Downsizing event: sell primary home at a future age, net proceeds (after real estate commission) invested into portfolio
 - Vacation property / cottage: capital gain exposure, principal residence nomination optimization
 
-This addresses a very common scenario (house-rich Canadian retirees) that currently has no modelling path.
+Full CRUD for real estate properties via `RealEstate` Prisma model, NestJS API module, and AccountsPage UI section with property dialog. Engine module (`real-estate.ts`) with `projectRealEstateValue`, `calculateNetRentalIncome`, `calculateDownsizingProceeds`, `calculateRealEstateCapitalGain` (with Principal Residence Exemption handling).
+
+**Shipped:** March 2026. Location: Accounts page + API + engine.
 
 ---
 
@@ -348,7 +360,7 @@ D3 animated area sparkline (CatmullRom curve) on the Dashboard showing projected
 
 ---
 
-#### 6.3 Account Drawdown Waterfall Animation  
+#### 6.3 Account Drawdown Waterfall Animation ✅ SHIPPED
 **Impact: M | Effort: M**
 
 An animated visualization on the Projections page showing how each account (RRSP, TFSA, Non-Reg, Cash) shrinks year by year during retirement. Inspired by swimming-lane diagrams:
@@ -356,6 +368,10 @@ An animated visualization on the Projections page showing how each account (RRSP
 - Each account is a horizontal bar that shrinks right-to-left
 - Different colour per account type
 - User can scrub through retirement years on a slider
+
+D3 animated stacked bar chart (`DrawdownWaterfallChart.tsx`) with age scrubber slider, auto-play button, account color coding (RRSP blue, TFSA green, Non-Reg orange, Cash grey), and responsive ResizeObserver. Integrated as "Drawdown" tab (index 6) on the Projections page.
+
+**Shipped:** March 2026. Location: Projections page Drawdown tab.
 
 ---
 
@@ -383,7 +399,7 @@ Add a chart to the Projections page showing a fixed $60,000 retirement income in
 
 ---
 
-#### 6.6 PDF Report Improvements  
+#### 6.6 PDF Report Improvements ✅ SHIPPED
 **Impact: M | Effort: M**
 
 Current PDF is comprehensive but advisor-unfriendly. Upgrade it:
@@ -395,11 +411,15 @@ Current PDF is comprehensive but advisor-unfriendly. Upgrade it:
 - Estate summary page
 - Appendix: assumptions and methodology disclosure
 
+Extended `RetirementPlanData` with optional `readinessScore`, `insights`, `contributionRoom`, `estateResult`, and `assumptions` fields. New Executive Summary page (after Overview) with Readiness Score box, Key Metrics 2×2 grid, Top Recommendations from insights, and Contribution Room section. New Appendix page (after all scenarios) with Capital Market Assumptions table and Methodology disclosure. All backward-compatible via optional fields.
+
+**Shipped:** March 2026. Location: PdfReport.tsx enhanced pages.
+
 ---
 
 ### Theme 7 — Life Events & Goals
 
-#### 7.1 Goals-Based Retirement View  
+#### 7.1 Goals-Based Retirement View ✅ SHIPPED
 **Impact: H | Effort: M**
 
 Shift from a "how much will I have?" model to "can I afford what I want?" goals-based approach. Users define goals:
@@ -411,11 +431,13 @@ Shift from a "how much will I have?" model to "can I afford what I want?" goals-
 
 Each goal gets a success rate from the Monte Carlo engine and a progress indicator. Users can prioritize goals (essential vs. discretionary) and the engine models tradeoffs between them.
 
-**Proposed route:** `/goals` — new page that supplements rather than replaces the existing Milestones page.
+Full CRUD GoalsPage at `/goals` with `Goal` Prisma model, NestJS API module, and React page. Goals have name, description, targetAmount, targetAge, priority (essential/important/nice-to-have), and category (income/legacy/lifestyle/health). Summary stats at top, category-colored cards, create/edit dialog. Engine module (`goals-engine.ts`) with `evaluateGoals` computing success rate and shortfall from Monte Carlo trials. Nav item with TrackChangesIcon.
+
+**Shipped:** March 2026. Location: `/goals` page + API + engine.
 
 ---
 
-#### 7.2 Extended Milestones Templates  
+#### 7.2 Extended Milestones Templates ✅ SHIPPED
 **Impact: M | Effort: S**
 
 The current Milestones page accepts freeform events. Add a template library with pre-configured common events:
@@ -430,6 +452,10 @@ The current Milestones page accepts freeform events. Add a template library with
 | Part-time work in retirement | Income amount, years of work |
 | Major renovation | One-time expense |
 | Fund child's education | Annual RESP withdrawal |
+
+8 milestone templates (Sell Home, Start CPP, Retirement Community, Pay Off Mortgage, Receive Inheritance, Part-Time Work, Major Renovation, Fund Education) with pre-populated fields. Template selector dialog with descriptive cards and "Add from Template" button on Milestones page.
+
+**Shipped:** March 2026. Location: Milestones page template selector.
 
 ---
 
@@ -487,7 +513,7 @@ This dramatically reduces setup friction and data-entry errors.
 
 ---
 
-#### 9.2 Market Data Refresh & Assumptions Audit  
+#### 9.2 Market Data Refresh & Assumptions Audit ✅ SHIPPED
 **Impact: M | Effort: S**
 
 The engine uses static 2024 tax bracket figures and a hardcoded historical return dataset. Add:
@@ -496,6 +522,10 @@ The engine uses static 2024 tax bracket figures and a hardcoded historical retur
 - Prompt: "CRA updated the TFSA limit to $7,000 for 2025. Update your contribution room?"
 - Update built-in capital market assumptions annually (equity return forward estimate, inflation expectation)
 - Pull live bond yield for expected bond return estimate (via Bank of Canada API)
+
+AssumptionsAuditDialog component with assumptions table (TFSA limit, RRSP max, CPP/OAS, equity/fixed income returns, inflation, bond yield), "Refresh from Bank of Canada" button with spinner, last-updated timestamps, and current/stale status chips. API endpoint `GET /market-data/assumptions` pulling from `CAPITAL_MARKET_ASSUMPTIONS` constants. Annual plan refresh reminder Alert on Dashboard with localStorage-based dismissal per year.
+
+**Shipped:** March 2026. Location: Dashboard reminder + Assumptions dialog.
 
 ---
 

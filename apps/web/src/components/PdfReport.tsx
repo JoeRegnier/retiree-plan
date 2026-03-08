@@ -124,6 +124,34 @@ export interface RetirementPlanData {
   scenarios?: PdfScenario[];
   annualExpenses?: number;
   notes?: string;
+  readinessScore?: number;
+  insights?: Array<{
+    title: string;
+    description: string;
+    dollarImpact: number;
+    priority: 'high' | 'medium' | 'low';
+    category: string;
+  }>;
+  contributionRoom?: {
+    rrspRoom: number;
+    tfsaRoom: number;
+    rrspDeductionLimit: number;
+    tfsaCumulativeLimit: number;
+  };
+  estateResult?: {
+    totalEstate: number;
+    totalTax: number;
+    netToHeirs: number;
+  };
+  assumptions?: {
+    inflationRate: number;
+    equityReturn: number;
+    fixedIncomeReturn: number;
+    tfsaLimit: number;
+    rrspMaxContribution: number;
+    cppMaxBenefit: number;
+    oasMaxBenefit: number;
+  };
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -878,7 +906,98 @@ export function PdfDocument({ plan }: { plan: RetirementPlanData }) {
         </View>
       </Page>
 
-      {/* ── Page 2: Projections (if provided) ── */}
+      {/* ── Page 2: Executive Summary ── */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Executive Summary</Text>
+          <Text style={styles.headerSubtitle}>{plan.householdName}</Text>
+        </View>
+
+        {plan.readinessScore != null && (
+          <View style={[styles.summaryBox, { marginBottom: 14 }]}>
+            <Text style={styles.summaryValue}>Readiness Score: {plan.readinessScore}/100</Text>
+            <Text style={styles.summaryLabel}>
+              {plan.readinessScore >= 80
+                ? 'Excellent - Your plan is well-positioned'
+                : plan.readinessScore >= 70
+                  ? 'Good - Minor adjustments recommended'
+                  : plan.readinessScore >= 50
+                    ? 'Fair - Several areas need attention'
+                    : 'Needs Work - Significant improvements recommended'}
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Key Metrics</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            <View style={[styles.summaryBox, { width: '48%', marginBottom: 8 }]}>
+              <Text style={styles.summaryValue}>{fmt(totalAccounts)}</Text>
+              <Text style={styles.summaryLabel}>Total Portfolio</Text>
+            </View>
+            <View style={[styles.summaryBox, { width: '48%', marginBottom: 8 }]}>
+              <Text style={styles.summaryValue}>{fmt(totalIncome)}</Text>
+              <Text style={styles.summaryLabel}>Annual Income</Text>
+            </View>
+            {plan.estateResult && (
+              <>
+                <View style={[styles.summaryBox, { width: '48%', marginBottom: 8 }]}>
+                  <Text style={styles.summaryValue}>{fmt(plan.estateResult.netToHeirs)}</Text>
+                  <Text style={styles.summaryLabel}>Projected Estate (Net to Heirs)</Text>
+                </View>
+                <View style={[styles.summaryBox, { width: '48%' }]}>
+                  <Text style={styles.summaryValue}>{fmt(plan.estateResult.totalTax)}</Text>
+                  <Text style={styles.summaryLabel}>Estimated Estate Tax</Text>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+
+        {plan.insights && plan.insights.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Top Recommendations</Text>
+            {plan.insights.slice(0, 3).map((insight, i) => (
+              <View key={i} style={{ marginBottom: 8, paddingLeft: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                  <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, color: DARK_TEXT }}>
+                    {i + 1}. {insight.title}
+                  </Text>
+                  <Text style={{ fontSize: 8, color: '#2E7D32', marginLeft: 8 }}>
+                    {fmtShort(insight.dollarImpact)} potential impact
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 9, color: MED_TEXT, lineHeight: 1.4 }}>
+                  {insight.description}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {plan.contributionRoom && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Contribution Room</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <View style={[styles.summaryBox, { width: '48%' }]}>
+                <Text style={styles.summaryValue}>{fmt(plan.contributionRoom.rrspRoom)}</Text>
+                <Text style={styles.summaryLabel}>Available RRSP Room</Text>
+              </View>
+              <View style={[styles.summaryBox, { width: '48%' }]}>
+                <Text style={styles.summaryValue}>{fmt(plan.contributionRoom.tfsaRoom)}</Text>
+                <Text style={styles.summaryLabel}>Available TFSA Room</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.footer}>
+          <Text>{plan.householdName} - Executive Summary</Text>
+          <Text>{now}</Text>
+        </View>
+      </Page>
+
+      {/* ── Page 3: Projections (if provided) ── */}
       {plan.projections && plan.projections.length > 0 && (
         <Page size="A4" style={styles.page}>
           <View style={styles.header}>
@@ -1157,6 +1276,52 @@ export function PdfDocument({ plan }: { plan: RetirementPlanData }) {
           ),
         ].filter(Boolean);
       })}
+
+      {/* Appendix: Assumptions & Methodology */}
+      {plan.assumptions && (
+        <Page size="A4" style={styles.page}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Appendix: Assumptions &amp; Methodology</Text>
+            <Text style={styles.headerSubtitle}>{plan.householdName}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Capital Market Assumptions</Text>
+            <View style={styles.table}>
+              <View style={[styles.tableRow, styles.tableHeader]}>
+                <Text style={[styles.tableHeaderCell, { width: '50%' }]}>Assumption</Text>
+                <Text style={[styles.tableHeaderCell, { width: '50%' }]}>Value</Text>
+              </View>
+              {[
+                { label: 'Inflation Rate', value: `${(plan.assumptions.inflationRate * 100).toFixed(1)}%` },
+                { label: 'Equity Expected Return', value: `${(plan.assumptions.equityReturn * 100).toFixed(1)}%` },
+                { label: 'Fixed Income Expected Return', value: `${(plan.assumptions.fixedIncomeReturn * 100).toFixed(1)}%` },
+                { label: 'TFSA Annual Limit', value: fmt(plan.assumptions.tfsaLimit) },
+                { label: 'RRSP Max Contribution', value: fmt(plan.assumptions.rrspMaxContribution) },
+                { label: 'CPP Max Annual Benefit', value: fmt(plan.assumptions.cppMaxBenefit) },
+                { label: 'OAS Max Annual Benefit', value: fmt(plan.assumptions.oasMaxBenefit) },
+              ].map((row, i) => (
+                <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowEven : {}]}>
+                  <Text style={[styles.tableCell, { width: '50%' }]}>{row.label}</Text>
+                  <Text style={[styles.tableCell, { width: '50%' }]}>{row.value}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Methodology</Text>
+            <Text style={{ fontSize: 9, color: MED_TEXT, lineHeight: 1.6 }}>
+              Projections use a deterministic cash-flow model with year-by-year tax calculations based on current federal and provincial tax brackets. Monte Carlo simulations use log-normal return distributions with 1,000 randomised trials. CPP and OAS benefits are calculated using current CRA formulas with actuarial adjustments for early or deferred claiming. All dollar amounts are in Canadian dollars (CAD). This report is for planning purposes only and does not constitute financial advice.
+            </Text>
+          </View>
+
+          <View style={styles.footer}>
+            <Text>{plan.householdName} - Appendix</Text>
+            <Text>{now}</Text>
+          </View>
+        </Page>
+      )}
     </Document>
   );
 }

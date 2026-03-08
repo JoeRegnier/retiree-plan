@@ -3,12 +3,17 @@ import {
   Box, Typography, Card, CardContent, Button, Alert, CircularProgress,
   Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, IconButton, Tooltip, Chip,
+  MenuItem, IconButton, Tooltip, Chip, Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FlagIcon from '@mui/icons-material/Flag';
+import HomeIcon from '@mui/icons-material/Home';
+import WorkIcon from '@mui/icons-material/Work';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import SchoolIcon from '@mui/icons-material/School';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../hooks/useApi';
 
@@ -39,6 +44,23 @@ const TYPE_COLORS: Record<MilestoneType, 'success' | 'error' | 'info' | 'warning
   lump_sum_out: 'warning',
 };
 
+const MILESTONE_TEMPLATES: Array<{
+  name: string;
+  type: MilestoneType;
+  amount: number;
+  age: number;
+  description: string;
+}> = [
+  { name: 'Sell Home', type: 'lump_sum_in', amount: 500000, age: 70, description: 'Downsize and sell primary residence - net proceeds after commission' },
+  { name: 'Start CPP', type: 'income', amount: 16375, age: 65, description: 'Begin Canada Pension Plan benefits' },
+  { name: 'Retirement Community', type: 'expense', amount: 60000, age: 80, description: 'Annual cost of retirement or assisted living facility' },
+  { name: 'Pay Off Mortgage', type: 'lump_sum_out', amount: 200000, age: 62, description: 'Final mortgage lump-sum payoff' },
+  { name: 'Receive Inheritance', type: 'lump_sum_in', amount: 100000, age: 65, description: 'Expected inheritance from family' },
+  { name: 'Part-Time Work', type: 'income', amount: 20000, age: 60, description: 'Part-time or consulting income in early retirement' },
+  { name: 'Major Renovation', type: 'lump_sum_out', amount: 75000, age: 63, description: 'Home renovation or major repair project' },
+  { name: 'Fund Education', type: 'lump_sum_out', amount: 30000, age: 55, description: 'Help fund grandchildren education (RESP or gifts)' },
+];
+
 const emptyForm = {
   name: '',
   description: '',
@@ -51,6 +73,7 @@ export function MilestonesPage() {
   const { apiFetch } = useApi();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MilestoneEvent | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState('');
@@ -119,6 +142,36 @@ export function MilestonesPage() {
     setFormError('');
   }
 
+  function getTemplateIcon(templateName: string, type: MilestoneType) {
+    if (templateName === 'Sell Home' || templateName === 'Major Renovation' || templateName === 'Pay Off Mortgage') {
+      return <HomeIcon color="primary" fontSize="small" />;
+    }
+    if (templateName === 'Part-Time Work') {
+      return <WorkIcon color="action" fontSize="small" />;
+    }
+    if (templateName === 'Fund Education') {
+      return <SchoolIcon color="action" fontSize="small" />;
+    }
+    if (type === 'lump_sum_in' || type === 'income') {
+      return <TrendingUpIcon color="success" fontSize="small" />;
+    }
+    return <TrendingDownIcon color="error" fontSize="small" />;
+  }
+
+  function applyTemplate(template: (typeof MILESTONE_TEMPLATES)[number]) {
+    setEditing(null);
+    setForm({
+      name: template.name,
+      description: template.description,
+      amount: template.amount,
+      age: template.age,
+      type: template.type,
+    });
+    setFormError('');
+    setTemplateDialogOpen(false);
+    setDialogOpen(true);
+  }
+
   function handleSave() {
     if (!form.name.trim()) { setFormError('Name is required.'); return; }
     if (form.amount < 0) { setFormError('Amount must be ≥ 0.'); return; }
@@ -145,14 +198,23 @@ export function MilestonesPage() {
             Milestone Events
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={openCreate}
-          disabled={!household}
-        >
-          Add Milestone
-        </Button>
+        <Box display="flex" gap={1}>
+          <Button
+            variant="outlined"
+            onClick={() => setTemplateDialogOpen(true)}
+            disabled={!household}
+          >
+            Add from Template
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={openCreate}
+            disabled={!household}
+          >
+            Add Milestone
+          </Button>
+        </Box>
       </Box>
 
       <Typography variant="body1" color="text.secondary" mb={3}>
@@ -273,6 +335,35 @@ export function MilestonesPage() {
           })}
         </Grid>
       )}
+
+      <Dialog open={templateDialogOpen} onClose={() => setTemplateDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Choose a Template</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            {MILESTONE_TEMPLATES.map((template) => (
+              <Grid item xs={12} sm={6} key={template.name}>
+                <Card
+                  sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 }, transition: 'box-shadow 0.2s' }}
+                  onClick={() => applyTemplate(template)}
+                >
+                  <CardContent>
+                    <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                      {getTemplateIcon(template.name, template.type)}
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{template.name}</Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{template.description}</Typography>
+                    <Stack direction="row" spacing={1}>
+                      <Chip label={`$${template.amount.toLocaleString()}`} size="small" color="primary" variant="outlined" />
+                      <Chip label={`Age ${template.age}`} size="small" variant="outlined" />
+                      <Chip label={template.type.replace(/_/g, ' ')} size="small" />
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+      </Dialog>
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>

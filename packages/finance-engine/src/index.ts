@@ -13,3 +13,7 @@ export * from './scoring/plan-completeness.js';
 export * from './international/cross-border.js';
 export * from './international/expat.js';
 export * from './contributions/contribution-room.js';
+export * from './real-estate/real-estate.js';
+export * from './allocation/asset-allocation.js';
+export * from './insights/insights-engine.js';
+export * from './goals/goals-engine.js';

@@ -7,8 +7,17 @@ import {
   calculateEstate,
   runHistoricalBootstrapSimulation,
   calculateReadinessScore,
+  generateInsights as runInsightsEngine,
 } from '@retiree-plan/finance-engine';
-import type { CashFlowInput, MonteCarloInput, BacktestInput, GKInput, EstateInput, HistoricalBootstrapInput } from '@retiree-plan/finance-engine';
+import type {
+  CashFlowInput,
+  MonteCarloInput,
+  BacktestInput,
+  GKInput,
+  EstateInput,
+  HistoricalBootstrapInput,
+  InsightInput,
+} from '@retiree-plan/finance-engine';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
 
@@ -21,6 +30,10 @@ export class ProjectionsService {
 
   runProjection(input: CashFlowInput) {
     return runCashFlowProjection(input);
+  }
+
+  generateInsights(input: InsightInput) {
+    return runInsightsEngine(input);
   }
 
   runMonteCarlo(input: MonteCarloInput) {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { Box, useTheme } from '@mui/material';
 import type { ChartMilestone } from './CashFlowChart';
@@ -8,6 +8,8 @@ interface Props {
   data: ProjectionYear[];
   height?: number;
   milestones?: ChartMilestone[];
+  /** Extra top padding (px) reserved for milestone labels. Auto-calculated when omitted. */
+  milestoneHeadroom?: number;
 }
 
 const ALLOC_COLORS = {
@@ -32,17 +34,31 @@ const LEGEND_ITEMS = [
   { label: 'Unused TFSA room',  color: ALLOC_COLORS.unusedTfsa,    dashed: true  },
 ];
 
-export function IncomeAllocationChart({ data, height = 360, milestones = [] }: Props) {
+export function IncomeAllocationChart({ data, height = 420, milestones = [], milestoneHeadroom }: Props) {
   const svgRef   = useRef<SVGSVGElement>(null);
   const contRef  = useRef<HTMLDivElement>(null);
   const theme    = useTheme();
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  // Track container width so the chart redraws on window / panel resize
+  useEffect(() => {
+    if (!contRef.current) return;
+    const el = contRef.current;
+    const sync = () => setContainerWidth(el.clientWidth || 0);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !contRef.current || data.length === 0) return;
+    if (!svgRef.current || !contRef.current || data.length === 0 || containerWidth <= 0) return;
 
-    const width  = contRef.current.clientWidth;
-    // top: headroom for three-row staggered milestone labels; bottom: x-axis only (legend is HTML)
-    const margin = { top: 110, right: 24, bottom: 44, left: 68 };
+    const width  = containerWidth;
+    // Top headroom: enough for 3 staggered rows of -40° milestone labels, or a small
+    // fixed gap when there are none.  Caller can override via milestoneHeadroom prop.
+    const topMargin = milestoneHeadroom ?? (milestones.length > 0 ? 100 : 20);
+    const margin = { top: topMargin, right: 24, bottom: 48, left: 68 };
     const innerW = width  - margin.left - margin.right;
     const innerH = height - margin.top  - margin.bottom;
 
@@ -79,8 +95,12 @@ export function IncomeAllocationChart({ data, height = 360, milestones = [] }: P
     const ages   = bars.map((b) => b.age);
     const maxVal = d3.max(bars, (b) => b.total) ?? 1;
 
+    // Pad the domain by half an age-slot on each side so the first and last bars
+    // are fully centred inside the plot area and don't bleed into the axis margins.
+    const ageStep = bars.length > 1 ? (ages[ages.length - 1] - ages[0]) / (bars.length - 1) : 1;
+    const xPad    = ageStep / 2;
     const x = d3.scaleLinear()
-      .domain([ages[0], ages[ages.length - 1]])
+      .domain([ages[0] - xPad, ages[ages.length - 1] + xPad])
       .range([0, innerW]);
 
     const y = d3.scaleLinear()
@@ -90,17 +110,22 @@ export function IncomeAllocationChart({ data, height = 360, milestones = [] }: P
 
     const barW = Math.max(2, (innerW / bars.length) * 0.74);
 
+    // Clip-path so bars (and retirement shading) never paint outside the plot area.
+    svg.append('defs').append('clipPath').attr('id', 'ia-bars-clip')
+      .append('rect').attr('width', innerW).attr('height', innerH);
+    const barG = g.append('g').attr('clip-path', 'url(#ia-bars-clip)');
+
     // ── Retirement shading ────────────────────────────────────────────────────
     const retireYear = data.find((d) => (d.rrspContributionYear ?? 0) === 0 && d.age > (data[0]?.age ?? 0));
     if (retireYear) {
       const rx = x(retireYear.age);
-      g.append('rect')
+      barG.append('rect')
         .attr('x', rx).attr('y', 0)
         .attr('width', innerW - rx).attr('height', innerH)
         .attr('fill', theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)');
-      // Retirement zone label — inside the shaded area
+      // Label floats at the top of the shaded zone, above the bars
       g.append('text')
-        .attr('x', rx + 6).attr('y', innerH - 6)
+        .attr('x', rx + 8).attr('y', 13)
         .attr('fill', theme.palette.text.disabled).attr('font-size', 10).attr('font-style', 'italic')
         .text('Retirement →');
     }
@@ -131,7 +156,7 @@ export function IncomeAllocationChart({ data, height = 360, milestones = [] }: P
         const val = b[key] as number;
         if (val <= 0) return;
         const isUnused = key === 'unusedRrsp' || key === 'unusedTfsa';
-        g.append('rect')
+        barG.append('rect')
           .attr('x', bx).attr('y', y(base + val))
           .attr('width', barW).attr('height', Math.max(1, y(base) - y(base + val)))
           .attr('fill', color)
@@ -208,12 +233,21 @@ export function IncomeAllocationChart({ data, height = 360, milestones = [] }: P
     });
 
     // ── Axes ─────────────────────────────────────────────────────────────────
-    // X axis
+    // X axis — integer ages every 5 years so no fractional labels
+    const tickStart  = Math.ceil(ages[0] / 5) * 5;
+    const xTickVals  = d3.range(tickStart, ages[ages.length - 1] + 1, 5);
     const xAxis = g.append('g')
       .attr('transform', `translate(0,${innerH})`)
-      .call(d3.axisBottom(x).ticks(10).tickFormat((d) => `${d}`));
+      .call(
+        d3.axisBottom(x)
+          .tickValues(xTickVals)
+          .tickFormat((d) => String(d)),
+      );
     xAxis.select('.domain').attr('stroke', theme.palette.divider);
-    xAxis.selectAll('text').attr('fill', theme.palette.text.secondary).attr('font-size', 11);
+    xAxis.selectAll('text')
+      .attr('fill', theme.palette.text.secondary)
+      .attr('font-size', 11)
+      .attr('dy', '1.1em');
     xAxis.selectAll('.tick line').attr('stroke', theme.palette.divider);
 
     // Y axis — clean $100k / $200k format, no trailing zeros
@@ -229,9 +263,9 @@ export function IncomeAllocationChart({ data, height = 360, milestones = [] }: P
     yAxis.selectAll('.tick line').remove();
     yAxis.selectAll('text').attr('fill', theme.palette.text.secondary).attr('font-size', 11);
 
-    // X-axis label — placed just below tick labels, well within bottom margin
+    // X-axis label — sits below tick labels inside the bottom margin
     g.append('text')
-      .attr('x', innerW / 2).attr('y', innerH + 32)
+      .attr('x', innerW / 2).attr('y', innerH + 42)
       .attr('text-anchor', 'middle')
       .attr('fill', theme.palette.text.disabled).attr('font-size', 11)
       .text('Age');
@@ -289,7 +323,7 @@ export function IncomeAllocationChart({ data, height = 360, milestones = [] }: P
       tooltip.style('display', 'none');
     });
 
-  }, [data, height, milestones, theme]);
+  }, [data, height, milestones, milestoneHeadroom, theme, containerWidth]);
 
   return (
     <Box ref={contRef} sx={{ position: 'relative', width: '100%' }}>

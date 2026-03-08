@@ -27,6 +27,8 @@ model Household {
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   members          HouseholdMember[]
   accounts         Account[]
+  realEstateProperties RealEstate[]
+  goals            Goal[]
   scenarios        Scenario[]
   expenses              Expense[]
   milestoneEvents       MilestoneEvent[]
@@ -104,8 +106,29 @@ model Account {
   brokerageAccountId   String?
   brokerageProvider    String?   // 'QUESTRADE' | 'WEALTHSIMPLE' | 'TD'
   brokerageAccountName String?
+  equityPercent        Float?
+  fixedIncomePercent   Float?
+  alternativesPercent  Float?
+  cashPercent          Float?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+}
+
+model RealEstate {
+  id                 String    @id @default(cuid())
+  name               String
+  propertyType       String    // 'PRIMARY_RESIDENCE' | 'RENTAL' | 'VACATION'
+  currentValue       Float
+  purchasePrice      Float     @default(0)
+  annualAppreciation Float     @default(0.03)
+  grossRentalIncome  Float?
+  rentalExpenses     Float?
+  sellAtAge          Int?
+  netProceedsPercent Float     @default(0.95)
+  householdId        String
+  household          Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model Scenario {
@@ -145,6 +168,20 @@ model MilestoneEvent {
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+model Goal {
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
+  targetAmount Float
+  targetAge    Int?
+  priority     String    @default("essential")   // 'essential' | 'discretionary'
+  category     String    @default("retirement")  // 'retirement' | 'legacy' | 'purchase' | 'lifestyle'
+  householdId  String
+  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 // ─── Phase 5: YNAB Integration ───────────────────────────────────────────────

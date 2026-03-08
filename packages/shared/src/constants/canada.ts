@@ -98,6 +98,7 @@ export const TFSA_ANNUAL_LIMITS: Record<number, number> = {
   2023: 6_500,
   2024: 7_000,
   2025: 7_000,
+  2026: 7_000,
 };
 
 /** RRIF minimum withdrawal percentages by age */
@@ -133,3 +134,16 @@ export const RRIF_MINIMUM_WITHDRAWAL: Record<number, number> = {
 export const DEFAULT_INFLATION_RATE = 0.02;
 export const DEFAULT_REAL_RETURN_RATE = 0.04;
 export const DEFAULT_MONTE_CARLO_TRIALS = 1_000;
+
+/** TFSA annual limit for 2026 (projected - same as 2025 until CRA announces) */
+export const TFSA_ANNUAL_LIMIT_2026 = 7_000;
+
+/** Capital market assumptions - updated annually */
+export const CAPITAL_MARKET_ASSUMPTIONS = {
+  equityExpectedReturn: 0.07,
+  fixedIncomeExpectedReturn: 0.035,
+  alternativesExpectedReturn: 0.055,
+  cashExpectedReturn: 0.025,
+  inflationExpectation: 0.02,
+  lastUpdated: '2026-01-01',
+} as const;

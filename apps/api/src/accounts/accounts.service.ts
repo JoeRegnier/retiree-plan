@@ -11,6 +11,10 @@ export class AccountsService {
     balance: number;
     annualContribution?: number;
     estimatedReturnRate?: number | null;
+    equityPercent?: number | null;
+    fixedIncomePercent?: number | null;
+    alternativesPercent?: number | null;
+    cashPercent?: number | null;
     currency?: string;
     householdId: string;
     ynabAccountId?: string;
@@ -26,6 +30,10 @@ export class AccountsService {
         balance: data.balance,
         annualContribution: data.annualContribution ?? 0,
         estimatedReturnRate: data.estimatedReturnRate ?? null,
+        equityPercent: data.equityPercent ?? null,
+        fixedIncomePercent: data.fixedIncomePercent ?? null,
+        alternativesPercent: data.alternativesPercent ?? null,
+        cashPercent: data.cashPercent ?? null,
         currency: data.currency ?? 'CAD',
         householdId: data.householdId,
         ynabAccountId: data.ynabAccountId ?? null,
@@ -53,6 +61,10 @@ export class AccountsService {
     balance?: number;
     annualContribution?: number;
     estimatedReturnRate?: number | null;
+    equityPercent?: number | null;
+    fixedIncomePercent?: number | null;
+    alternativesPercent?: number | null;
+    cashPercent?: number | null;
     ynabAccountId?: string | null;
     ynabAccountName?: string | null;
     brokerageAccountId?: string | null;

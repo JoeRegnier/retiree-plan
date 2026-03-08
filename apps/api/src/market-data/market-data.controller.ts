@@ -56,4 +56,13 @@ export class MarketDataController {
       );
     }
   }
+
+  /**
+   * GET /market-data/assumptions
+   * Return current capital market assumptions and CRA limits.
+   */
+  @Get('assumptions')
+  getCurrentAssumptions() {
+    return this.service.getCurrentAssumptions();
+  }
 }

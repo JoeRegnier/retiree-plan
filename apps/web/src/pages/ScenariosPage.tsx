@@ -51,20 +51,30 @@ interface Scenario {
 
 interface Household { id: string; name: string; }
 
+const SMILE_CURVE_PHASES = [
+  { fromAge: 60, factor: 0.85 },
+  { fromAge: 75, factor: 0.75 },
+  { fromAge: 85, factor: 0.85 },
+];
+
 const SPENDING_PRESETS = [
   {
     label: 'Smile Curve',
-    phases: [
-      { fromAge: 65, factor: 0.85 },
-      { fromAge: 75, factor: 0.75 },
-      { fromAge: 85, factor: 0.85 },
-    ],
+    phases: SMILE_CURVE_PHASES,
   },
   {
     label: 'Step Down',
     phases: [
       { fromAge: 65, factor: 0.85 },
       { fromAge: 75, factor: 0.70 },
+    ],
+  },
+  {
+    label: 'Travel Heavy Early',
+    phases: [
+      { fromAge: 60, factor: 1.15 },
+      { fromAge: 70, factor: 0.9 },
+      { fromAge: 80, factor: 0.85 },
     ],
   },
   { label: 'Healthcare Rise', phases: [{ fromAge: 80, factor: 1.15 }] },
@@ -558,10 +568,14 @@ export function ScenariosPage() {
               <Grid item xs={12}>
                 <Divider />
                 <Typography variant="overline" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Spending Phases
+                  Phased Retirement Spending
                   <Tooltip title="Apply a multiplier to inflation-adjusted expenses from a given age (e.g. 0.85 from age 75 as travel slows down).">
                     <span style={{ marginLeft: 6, cursor: 'help', fontSize: 14, color: '#888' }}>ⓘ</span>
                   </Tooltip>
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Model the "smile curve" of retirement spending - active early years, quieter mid-retirement,
+                  then rising healthcare costs. Choose a preset or customize phase multipliers.
                 </Typography>
               </Grid>
               <Grid item xs={12}>
@@ -578,6 +592,15 @@ export function ScenariosPage() {
                   ))}
                 </Stack>
               </Grid>
+              {hasMatchingSpendingPreset(SMILE_CURVE_PHASES) && (
+                <Grid item xs={12}>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                    <Chip size="small" color="primary" variant="outlined" label="Phase 1: Active Retirement (age 60-74)" />
+                    <Chip size="small" color="primary" variant="outlined" label="Phase 2: Slow-Go Years (age 75-84)" />
+                    <Chip size="small" color="primary" variant="outlined" label="Phase 3: Late Retirement / Healthcare (age 85+)" />
+                  </Stack>
+                </Grid>
+              )}
               <Grid item xs={12}>
                 <TableContainer component={Box} sx={{ mb: 1 }}>
                   <Table size="small">

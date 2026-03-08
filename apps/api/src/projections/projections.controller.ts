@@ -88,4 +88,9 @@ export class ProjectionsController {
     };
     return this.projectionsService.runHistoricalBootstrap(normalized);
   }
+
+  @Post('insights')
+  generateInsights(@Body() body: any) {
+    return this.projectionsService.generateInsights(body);
+  }
 }

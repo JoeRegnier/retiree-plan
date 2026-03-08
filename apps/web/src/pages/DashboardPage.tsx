@@ -1,9 +1,11 @@
 import {
   Box, Grid, Card, CardContent, Typography, useTheme, Button,
-  Chip, Skeleton, Stack, Divider, Avatar, CircularProgress, alpha,
+  Chip, Skeleton, Stack, Divider, Avatar, CircularProgress, alpha, Alert,
 } from '@mui/material';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import HomeIcon from '@mui/icons-material/Home';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import HourglassTopIcon from '@mui/icons-material/HourglassTop';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
@@ -24,9 +26,8 @@ import { useNavigate } from 'react-router';
 import * as d3 from 'd3';
 import { calculatePlanCompleteness } from '@retiree-plan/finance-engine';
 import { ReadinessGauge } from '../components/charts/ReadinessGauge';
-import { WhatIfDrawer } from '../components/WhatIfDrawer';
+import { AssumptionsAuditDialog } from '../components/AssumptionsAuditDialog';
 import { useApi } from '../hooks/useApi';
-import { useQuickActions } from '../contexts/QuickActionsContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,36 @@ interface IncomeSource { id: string; name: string; type: string; annualAmount: n
 interface Member { id: string; name: string; dateOfBirth?: string; retirementAge: number; province?: string; incomeSources?: IncomeSource[]; }
 interface Scenario { id: string; name: string; description?: string; parameters?: string | Record<string, any>; }
 interface Household { id: string; name: string; members: Member[]; accounts: Account[]; scenarios?: Scenario[]; annualExpenses?: number; }
+interface Insight {
+  id: string;
+  title: string;
+  description: string;
+  dollarImpact: number;
+  priority: 'high' | 'medium' | 'low';
+  linkTo: string;
+  category: 'tax' | 'benefits' | 'investment' | 'estate';
+}
+interface InsightInput {
+  currentAge: number;
+  retirementAge: number;
+  annualIncome: number;
+  province: string;
+  rrspBalance: number;
+  tfsaBalance: number;
+  nonRegBalance: number;
+  unusedTfsaRoom: number;
+  unusedRrspRoom: number;
+  cppStartAge: number;
+  oasStartAge: number;
+  oasClawbackYears: number[];
+  projectedIncomeAtRetirement: number;
+  hasSpouse: boolean;
+  spouseIncome?: number;
+  rrifConversionAge: number;
+}
+
+const INSIGHT_COUNT_STORAGE_KEY = 'retiree-plan-insight-count';
+const ASSUMPTIONS_DISMISS_STORAGE_KEY = 'retiree-plan-assumptions-dismissed';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -766,19 +797,168 @@ function MilestoneRow({ icon, color, label, detail, isNext }: {
   );
 }
 
+function InsightsCard({
+  householdId,
+  input,
+  apiFetch,
+  onCountChange,
+}: {
+  householdId?: string;
+  input: InsightInput | null;
+  apiFetch: <T = unknown>(path: string, options?: RequestInit) => Promise<T>;
+  onCountChange: (count: number) => void;
+}) {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const enabled = !!householdId && !!input;
+
+  const { data: insights, isLoading, isFetching } = useQuery<Insight[]>({
+    queryKey: ['automated-insights', householdId, input],
+    queryFn: async () => {
+      const raw = await apiFetch<Insight[] | { insights?: Insight[] }>('/projections/insights', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      });
+      if (Array.isArray(raw)) return raw;
+      if (raw && Array.isArray(raw.insights)) return raw.insights;
+      return [];
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!enabled) {
+      onCountChange(0);
+      return;
+    }
+    onCountChange(Math.min((insights ?? []).length, 5));
+  }, [enabled, insights, onCountChange]);
+
+  const topInsights = (insights ?? []).slice(0, 5);
+
+  const categoryIcon = (category: Insight['category']) => {
+    if (category === 'tax') return <MonetizationOnIcon fontSize="small" />;
+    if (category === 'investment') return <TrendingUpIcon fontSize="small" />;
+    if (category === 'benefits') return <AccountBalanceIcon fontSize="small" />;
+    return <HomeIcon fontSize="small" />;
+  };
+
+  if (isLoading || (isFetching && !insights)) {
+    return (
+      <Card>
+        <CardContent sx={{ p: 2.5 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+            <Skeleton width={170} height={30} />
+            <Skeleton width={58} height={24} />
+          </Stack>
+          <Stack spacing={1}>
+            {[0, 1, 2].map((idx) => (
+              <Skeleton key={idx} variant="rounded" height={58} sx={{ borderRadius: 1.5 }} />
+            ))}
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent sx={{ p: 2.5 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>Automated Insights</Typography>
+          <Chip
+            size="small"
+            label={`${topInsights.length}`}
+            sx={{ fontWeight: 700, minWidth: 36 }}
+          />
+        </Stack>
+
+        {topInsights.length === 0 ? (
+          <Typography color="text.secondary" variant="body2">
+            No actionable insights found. Your plan looks great!
+          </Typography>
+        ) : (
+          <Stack spacing={1}>
+            {topInsights.map((insight) => {
+              const priorityColor =
+                insight.priority === 'high'
+                  ? theme.palette.error.main
+                  : insight.priority === 'medium'
+                    ? theme.palette.warning.main
+                    : theme.palette.grey[500];
+
+              return (
+                <Box
+                  key={insight.id}
+                  onClick={() => navigate(insight.linkTo)}
+                  sx={{
+                    px: 1.25,
+                    py: 1,
+                    borderRadius: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    transition: 'background-color 0.15s ease',
+                  }}
+                >
+                  <Stack direction="row" spacing={1.25} alignItems="center">
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main' }}>
+                      {categoryIcon(insight.category)}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Stack direction="row" spacing={0.75} alignItems="center">
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: priorityColor, flexShrink: 0 }} />
+                        <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                          {insight.title}
+                        </Typography>
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {insight.description}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      size="small"
+                      label={`${money(Math.abs(insight.dollarImpact))} potential savings`}
+                      sx={{
+                        bgcolor: alpha(theme.palette.success.main, 0.1),
+                        color: 'success.main',
+                        border: `1px solid ${alpha(theme.palette.success.main, 0.25)}`,
+                        fontWeight: 700,
+                        fontSize: '0.7rem',
+                      }}
+                    />
+                  </Stack>
+                </Box>
+              );
+            })}
+          </Stack>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { apiFetch } = useApi();
-  const [whatIfOpen, setWhatIfOpen] = useState(false);
-  const { setWhatIfAction } = useQuickActions();
+  const [assumptionsOpen, setAssumptionsOpen] = useState(false);
+  const currentYear = new Date().getFullYear();
+  const [reminderDismissed, setReminderDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(ASSUMPTIONS_DISMISS_STORAGE_KEY) === String(currentYear);
+  });
+  const [insightCount, setInsightCount] = useState(0);
 
   useEffect(() => {
-    setWhatIfAction(() => setWhatIfOpen(true));
-    return () => setWhatIfAction(null);
-  }, [setWhatIfAction]);
+    window.localStorage.setItem(INSIGHT_COUNT_STORAGE_KEY, insightCount.toString());
+    window.dispatchEvent(new CustomEvent<number>('insights-count', { detail: insightCount }));
+  }, [insightCount]);
 
   const { data: households, isLoading: hhLoading } = useQuery<Household[]>({
     queryKey: ['households'],
@@ -893,6 +1073,59 @@ export function DashboardPage() {
     return row ? Math.max(0, (row.totalNetWorth ?? row.netWorth ?? 0) as number) : null;
   }, [projData, retirementAge]);
 
+  const projectedIncomeAtRetirement = useMemo(() => {
+    if (!projData?.length) return 0;
+    const row = projData.find((y: any) => y.age === retirementAge);
+    return Math.max(0, Number(row?.grossIncome ?? 0));
+  }, [projData, retirementAge]);
+
+  const spouseIncome = useMemo(() => {
+    if (!hh || hh.members.length < 2) return undefined;
+    return hh.members
+      .slice(1)
+      .flatMap(m => m.incomeSources ?? [])
+      .reduce((sum, source) => sum + source.annualAmount, 0);
+  }, [hh]);
+
+  const insightsInput = useMemo<InsightInput | null>(() => {
+    if (!hh || !primaryMember) return null;
+    const hasSpouse = (hh.members?.length ?? 0) > 1;
+    const rrifConversionAge = Number(firstScenarioParams.rrifStartAge ?? 71);
+
+    return {
+      currentAge,
+      retirementAge,
+      annualIncome: totalIncome,
+      province: primaryMember.province ?? 'ON',
+      rrspBalance: rrspTotal,
+      tfsaBalance: tfsaTotal,
+      nonRegBalance: nonRegTotal,
+      unusedTfsaRoom: 0,
+      unusedRrspRoom: 0,
+      cppStartAge,
+      oasStartAge,
+      oasClawbackYears: [],
+      projectedIncomeAtRetirement,
+      hasSpouse,
+      spouseIncome: hasSpouse ? (spouseIncome ?? 0) : undefined,
+      rrifConversionAge: Number.isFinite(rrifConversionAge) ? rrifConversionAge : 71,
+    };
+  }, [
+    hh,
+    primaryMember,
+    currentAge,
+    retirementAge,
+    totalIncome,
+    rrspTotal,
+    tfsaTotal,
+    nonRegTotal,
+    cppStartAge,
+    oasStartAge,
+    projectedIncomeAtRetirement,
+    spouseIncome,
+    firstScenarioParams,
+  ]);
+
   const planCompleteness = useMemo(() => {
     if (!hh) return null;
     // Prefer fetched expense items (includes YNAB-synced categories); fall back to household-level annualExpenses
@@ -942,6 +1175,37 @@ export function DashboardPage() {
           {yearsToRetire > 0 && ` · ${yearsToRetire} year${yearsToRetire !== 1 ? 's' : ''} to retirement`}
         </Typography>
       </Box>
+
+      {!reminderDismissed && (
+        <Alert
+          severity="info"
+          sx={{ mb: 2.5, borderRadius: 2 }}
+          action={(
+            <Stack direction="row" spacing={1}>
+              <Button color="inherit" size="small" onClick={() => setAssumptionsOpen(true)}>
+                Review Now
+              </Button>
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  window.localStorage.setItem(ASSUMPTIONS_DISMISS_STORAGE_KEY, String(currentYear));
+                  setReminderDismissed(true);
+                }}
+              >
+                Dismiss
+              </Button>
+            </Stack>
+          )}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            Time to review your plan assumptions for {currentYear}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Tax limits and market assumptions may have changed since your last review.
+          </Typography>
+        </Alert>
+      )}
 
       {/* KPI cards */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
@@ -1007,6 +1271,18 @@ export function DashboardPage() {
           )}
         </Grid>
       )}
+
+      {/* Automated Insights */}
+      <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+        <Grid item xs={12}>
+          <InsightsCard
+            householdId={hh?.id}
+            input={insightsInput}
+            apiFetch={apiFetch}
+            onCountChange={setInsightCount}
+          />
+        </Grid>
+      </Grid>
 
       {/* Portfolio allocation + milestones */}
       <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
@@ -1185,12 +1461,7 @@ export function DashboardPage() {
         </CardContent>
       </Card>
 
-      <WhatIfDrawer
-        open={whatIfOpen}
-        onClose={() => setWhatIfOpen(false)}
-        baselineInput={projPayload as any}
-        baselineData={sparkData.map(point => ({ age: point.age, totalNetWorth: point.netWorth }))}
-      />
+      <AssumptionsAuditDialog open={assumptionsOpen} onClose={() => setAssumptionsOpen(false)} />
     </Box>
   );
 }
