@@ -5,7 +5,20 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AccountsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: { name: string; type: string; balance: number; annualContribution?: number; estimatedReturnRate?: number | null; currency?: string; householdId: string; ynabAccountId?: string; ynabAccountName?: string }) {
+  async create(data: {
+    name: string;
+    type: string;
+    balance: number;
+    annualContribution?: number;
+    estimatedReturnRate?: number | null;
+    currency?: string;
+    householdId: string;
+    ynabAccountId?: string;
+    ynabAccountName?: string;
+    brokerageAccountId?: string | null;
+    brokerageProvider?: string | null;
+    brokerageAccountName?: string | null;
+  }) {
     return this.prisma.account.create({
       data: {
         name: data.name,
@@ -17,6 +30,9 @@ export class AccountsService {
         householdId: data.householdId,
         ynabAccountId: data.ynabAccountId ?? null,
         ynabAccountName: data.ynabAccountName ?? null,
+        brokerageAccountId:   data.brokerageAccountId ?? null,
+        brokerageProvider:    data.brokerageProvider ?? null,
+        brokerageAccountName: data.brokerageAccountName ?? null,
       },
     });
   }
@@ -31,7 +47,18 @@ export class AccountsService {
     return account;
   }
 
-  async update(id: string, data: { name?: string; type?: string; balance?: number; annualContribution?: number; estimatedReturnRate?: number | null; ynabAccountId?: string | null; ynabAccountName?: string | null }) {
+  async update(id: string, data: {
+    name?: string;
+    type?: string;
+    balance?: number;
+    annualContribution?: number;
+    estimatedReturnRate?: number | null;
+    ynabAccountId?: string | null;
+    ynabAccountName?: string | null;
+    brokerageAccountId?: string | null;
+    brokerageProvider?: string | null;
+    brokerageAccountName?: string | null;
+  }) {
     await this.findOne(id);
     return this.prisma.account.update({ where: { id }, data: data as any });
   }

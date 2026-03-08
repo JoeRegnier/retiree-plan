@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique
-  password        String
-  name            String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  households      Household[]
-  ynabConnection  YnabConnection?
-  aiMessages      AiMessage[]
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  password             String
+  name                 String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  households           Household[]
+  ynabConnection       YnabConnection?
+  aiMessages           AiMessage[]
+  brokerageConnections BrokerageConnection[]
 }
 
 model Household {
@@ -88,10 +89,14 @@ model Account {
   householdId         String
   household           Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   // Optional link to a YNAB account — balance synced automatically
-  ynabAccountId      String?
-  ynabAccountName    String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  ynabAccountId        String?
+  ynabAccountName      String?
+  // Optional link to a brokerage account (Questrade / Wealthsimple / TD)
+  brokerageAccountId   String?
+  brokerageProvider    String?   // 'QUESTRADE' | 'WEALTHSIMPLE' | 'TD'
+  brokerageAccountName String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model Scenario {
@@ -163,6 +168,28 @@ model YnabCategoryMapping {
   updatedAt        DateTime  @updatedAt
 
   @@unique([householdId, ynabCategoryId])
+}
+
+// ─── Phase 6: Brokerage Integrations ────────────────────────────────────────
+
+/// Stores OAuth2 / PAT credentials for Canadian brokerage integrations.
+/// provider is one of: 'QUESTRADE' | 'WEALTHSIMPLE' | 'TD'
+model BrokerageConnection {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     String    // 'QUESTRADE' | 'WEALTHSIMPLE' | 'TD'
+  /// Encrypted access token (Wealthsimple PAT; unused for Questrade after first exchange)
+  accessToken  String?
+  /// Encrypted refresh token (Questrade; also used as PAT for Wealthsimple initial storage)
+  refreshToken String?
+  /// Questrade returns a per-user API server URL on each token exchange
+  apiServer    String?
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([userId, provider])
 }
 
 // ─── Phase 5: AI Chat ────────────────────────────────────────────────────────

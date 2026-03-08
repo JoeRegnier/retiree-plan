@@ -17,6 +17,7 @@ import { AiModule } from './ai/ai.module';
 import { MarketDataModule } from './market-data/market-data.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
+import { BrokerageModule } from './brokerage/brokerage.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { HealthController } from './health.controller';
     MilestonesModule,
     YnabModule,
     AiModule,
+    BrokerageModule,
   ],
   controllers: [HealthController],
 })

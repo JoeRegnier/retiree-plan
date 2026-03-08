@@ -50,6 +50,9 @@ interface Account {
   householdId: string;
   ynabAccountId?: string | null;
   ynabAccountName?: string | null;
+  brokerageAccountId?: string | null;
+  brokerageProvider?: string | null;
+  brokerageAccountName?: string | null;
 }
 
 interface YnabBudgetAccount {
@@ -60,11 +63,38 @@ interface YnabBudgetAccount {
   onBudget: boolean;
 }
 
+interface BrokerageStatus {
+  connected: boolean;
+  provider: 'QUESTRADE' | 'WEALTHSIMPLE' | 'TD';
+  lastSyncedAt?: string | null;
+}
+
+interface BrokerageAccount {
+  id: string;
+  name: string;
+  type: string;
+  balance: number;
+  currency: string;
+}
+
 interface YnabStatus { connected: boolean; budgetId?: string; budgetName?: string; }
 
 interface Household { id: string; name: string; }
 
-const emptyForm = { name: '', type: 'RRSP', balance: '', annualContribution: '', estimatedReturnRate: '', currency: 'CAD', householdId: '', ynabAccountId: '' };
+/** Map brokerage provider to a display-friendly label. */
+const BROKERAGE_LABELS: Record<string, string> = {
+  QUESTRADE:    'Questrade',
+  WEALTHSIMPLE: 'Wealthsimple',
+  TD:           'TD Bank',
+};
+
+const BROKERAGE_COLORS: Record<string, string> = {
+  QUESTRADE:    '#e82c2c',
+  WEALTHSIMPLE: '#00b0a0',
+  TD:           '#1b6b32',
+};
+
+const emptyForm = { name: '', type: 'RRSP', balance: '', annualContribution: '', estimatedReturnRate: '', currency: 'CAD', householdId: '', ynabAccountId: '', brokerageProvider: '', brokerageAccountId: '' };
 
 export function AccountsPage() {
   const { apiFetch } = useApi();
@@ -90,6 +120,24 @@ export function AccountsPage() {
     queryKey: ['ynab-accounts'],
     queryFn: () => apiFetch('/ynab/accounts'),
     enabled: ynabStatus?.connected === true && !!ynabStatus.budgetId,
+    retry: false,
+  });
+
+  // Brokerage integrations
+  const { data: brokerageStatuses = [] } = useQuery<BrokerageStatus[]>({
+    queryKey: ['brokerage-status'],
+    queryFn: () => apiFetch('/brokerage/status'),
+    retry: false,
+  });
+
+  const connectedBrokerages = brokerageStatuses.filter((s) => s.connected);
+
+  // Fetch accounts for the currently-selected brokerage provider (lazy, only when dialog is open)
+  const [activeBrokerageProvider, setActiveBrokerageProvider] = useState('');
+  const { data: brokerageAccounts, isFetching: brokerageAccountsFetching } = useQuery<BrokerageAccount[]>({
+    queryKey: ['brokerage-accounts', activeBrokerageProvider],
+    queryFn: () => apiFetch(`/brokerage/${activeBrokerageProvider.toLowerCase()}/accounts`),
+    enabled: !!activeBrokerageProvider && activeBrokerageProvider !== 'TD',
     retry: false,
   });
 
@@ -126,29 +174,55 @@ export function AccountsPage() {
     setError('');
     if (account) {
       setEditingAccount(account);
-      setForm({ name: account.name, type: account.type, balance: String(account.balance), annualContribution: String(account.annualContribution), estimatedReturnRate: account.estimatedReturnRate != null ? String(account.estimatedReturnRate * 100) : '', currency: account.currency, householdId: account.householdId, ynabAccountId: account.ynabAccountId ?? '' });
+      const providerForDialog = account.brokerageProvider ?? '';
+      setActiveBrokerageProvider(providerForDialog);
+      setForm({
+        name: account.name,
+        type: account.type,
+        balance: String(account.balance),
+        annualContribution: String(account.annualContribution),
+        estimatedReturnRate: account.estimatedReturnRate != null ? String(account.estimatedReturnRate * 100) : '',
+        currency: account.currency,
+        householdId: account.householdId,
+        ynabAccountId: account.ynabAccountId ?? '',
+        brokerageProvider: providerForDialog,
+        brokerageAccountId: account.brokerageAccountId ?? '',
+      });
     } else {
       setEditingAccount(null);
+      setActiveBrokerageProvider('');
       setForm({ ...emptyForm, householdId: household?.id ?? '' });
     }
     setDialogOpen(true);
   };
 
-  const closeDialog = () => { setDialogOpen(false); setEditingAccount(null); setForm(emptyForm); };
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingAccount(null);
+    setForm(emptyForm);
+    setActiveBrokerageProvider('');
+  };
 
   const handleSave = () => {
     if (!form.name.trim()) { setError('Name is required'); return; }
-    if (!form.balance && !form.ynabAccountId) { setError('Balance is required'); return; }
+    const hasBrokerageBalance = form.brokerageAccountId && form.brokerageProvider !== 'TD';
+    if (!form.balance && !form.ynabAccountId && !hasBrokerageBalance) { setError('Balance is required'); return; }
     const selectedYnab = ynabAccounts?.find((a) => a.id === form.ynabAccountId);
+    const selectedBrokerage = (brokerageAccounts ?? []).find((a) => a.id === form.brokerageAccountId);
     const payload = {
       name: form.name, type: form.type,
-      balance: Number(form.balance) || (ynabAccounts?.find((a) => a.id === form.ynabAccountId)?.balance ?? 0),
+      balance: Number(form.balance) ||
+        (selectedYnab?.balance ??
+         selectedBrokerage?.balance ?? 0),
       annualContribution: Number(form.annualContribution || 0),
       estimatedReturnRate: form.estimatedReturnRate !== '' ? Number(form.estimatedReturnRate) / 100 : null,
       currency: form.currency,
       householdId: household?.id,
       ynabAccountId: form.ynabAccountId || null,
       ynabAccountName: selectedYnab?.name ?? null,
+      brokerageAccountId:   form.brokerageAccountId || null,
+      brokerageProvider:    form.brokerageProvider   || null,
+      brokerageAccountName: selectedBrokerage?.name  ?? null,
     };
     if (editingAccount) {
       updateAccount.mutate({ id: editingAccount.id, data: payload });
@@ -244,6 +318,17 @@ export function AccountsPage() {
                                   <Chip icon={<LinkIcon />} label="YNAB" size="small" color="primary" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
                                 </Tooltip>
                               )}
+                              {acc.brokerageProvider && (
+                                <Tooltip title={`Synced from ${BROKERAGE_LABELS[acc.brokerageProvider] ?? acc.brokerageProvider}: ${acc.brokerageAccountName ?? acc.brokerageAccountId}`}>
+                                  <Chip
+                                    icon={<LinkIcon />}
+                                    label={BROKERAGE_LABELS[acc.brokerageProvider] ?? acc.brokerageProvider}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ height: 20, fontSize: '0.65rem', borderColor: BROKERAGE_COLORS[acc.brokerageProvider] ?? undefined, color: BROKERAGE_COLORS[acc.brokerageProvider] ?? undefined }}
+                                  />
+                                </Tooltip>
+                              )}
                             </Stack>
                           }
                           secondary={`Balance: $${acc.balance.toLocaleString('en-CA', { maximumFractionDigits: 0 })} ${acc.currency}${acc.annualContribution > 0 ? ` • Contributes $${acc.annualContribution.toLocaleString()}/yr` : ''}${acc.estimatedReturnRate != null ? ` • ${(acc.estimatedReturnRate * 100).toFixed(1)}% est. return` : ''}`}
@@ -295,9 +380,13 @@ export function AccountsPage() {
             value={form.balance}
             onChange={(e) => setForm({ ...form, balance: e.target.value })}
             fullWidth
-            InputProps={{ readOnly: !!form.ynabAccountId }}
-            helperText={form.ynabAccountId ? 'Balance is synced from YNAB — read-only' : undefined}
-            sx={form.ynabAccountId ? { '& .MuiOutlinedInput-root': { bgcolor: 'action.disabledBackground' } } : undefined}
+            InputProps={{ readOnly: !!form.ynabAccountId || (!!form.brokerageAccountId && form.brokerageProvider !== 'TD') }}
+            helperText={
+              form.ynabAccountId ? 'Balance is synced from YNAB — read-only' :
+              (form.brokerageAccountId && form.brokerageProvider !== 'TD') ? `Balance is synced from ${BROKERAGE_LABELS[form.brokerageProvider] ?? form.brokerageProvider} — read-only` :
+              undefined
+            }
+            sx={(!!form.ynabAccountId || (!!form.brokerageAccountId && form.brokerageProvider !== 'TD')) ? { '& .MuiOutlinedInput-root': { bgcolor: 'action.disabledBackground' } } : undefined}
           />
           <TextField label="Annual Contribution ($)" type="number" value={form.annualContribution} onChange={(e) => setForm({ ...form, annualContribution: e.target.value })} fullWidth helperText="How much you contribute per year" />
           <TextField
@@ -355,6 +444,69 @@ export function AccountsPage() {
           )}
           {!ynabStatus?.connected && (
             <Alert severity="info" sx={{ py: 0.5 }}>Connect YNAB in Integrations to sync account balances automatically.</Alert>
+          )}
+          {/* ── Brokerage linking ─────────────────────── */}
+          {connectedBrokerages.length > 0 && (
+            <FormControl fullWidth>
+              <InputLabel>Link to Brokerage Account (optional)</InputLabel>
+              <Select
+                value={form.brokerageProvider}
+                label="Link to Brokerage Account (optional)"
+                onChange={(e) => {
+                  const provider = e.target.value;
+                  setActiveBrokerageProvider(provider);
+                  setForm({ ...form, brokerageProvider: provider, brokerageAccountId: '', balance: '' });
+                }}
+              >
+                <MenuItem value=""><em>Not linked</em></MenuItem>
+                {connectedBrokerages.map((s) => (
+                  <MenuItem key={s.provider} value={s.provider}>
+                    {BROKERAGE_LABELS[s.provider] ?? s.provider}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          {form.brokerageProvider && form.brokerageProvider !== 'TD' && (
+            <FormControl fullWidth>
+              <InputLabel>Select Account</InputLabel>
+              <Select
+                value={form.brokerageAccountId}
+                label="Select Account"
+                disabled={brokerageAccountsFetching}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  const brokAcc = (brokerageAccounts ?? []).find((a) => a.id === selectedId);
+                  setForm({
+                    ...form,
+                    brokerageAccountId: selectedId,
+                    balance: brokAcc ? String(brokAcc.balance) : '',
+                  });
+                }}
+              >
+                <MenuItem value=""><em>None</em></MenuItem>
+                {(brokerageAccounts ?? []).map((a) => (
+                  <MenuItem key={a.id} value={a.id}>
+                    <Stack direction="row" justifyContent="space-between" width="100%" alignItems="center">
+                      <span>{a.name}</span>
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        ${a.balance.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+                      </Typography>
+                    </Stack>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          {form.brokerageProvider === 'TD' && (
+            <Alert severity="info" sx={{ py: 0.5 }}>
+              TD does not offer a public API. Balance will not be synced automatically — update it manually as needed.
+            </Alert>
+          )}
+          {connectedBrokerages.length === 0 && (
+            <Alert severity="info" sx={{ py: 0.5 }}>
+              Connect Questrade, Wealthsimple, or TD in Integrations to link and sync brokerage accounts.
+            </Alert>
           )}
         </DialogContent>
         <DialogActions>

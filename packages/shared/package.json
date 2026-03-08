@@ -2,6 +2,7 @@
   "name": "@retiree-plan/shared",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "types": "./dist/index.d.ts",
