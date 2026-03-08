@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   runCashFlowProjection,
   runMonteCarloSimulation,
@@ -6,6 +6,7 @@ import {
   runGuytonKlinger,
   calculateEstate,
   runHistoricalBootstrapSimulation,
+  calculateReadinessScore,
 } from '@retiree-plan/finance-engine';
 import type { CashFlowInput, MonteCarloInput, BacktestInput, GKInput, EstateInput, HistoricalBootstrapInput } from '@retiree-plan/finance-engine';
 import { PrismaService } from '../prisma/prisma.service';
@@ -57,6 +58,44 @@ export class ProjectionsService {
 
   runEstateCalculation(input: EstateInput) {
     return calculateEstate(input);
+  }
+
+  computeReadinessScore(input: CashFlowInput) {
+    const projection = runCashFlowProjection(input);
+    if (!projection || projection.length === 0) {
+      throw new BadRequestException('Cannot compute readiness score: projection returned no data');
+    }
+
+    const monteCarlo = runMonteCarloSimulation({
+      ...input,
+      trials: 500,
+    });
+
+    const preRetirementYear =
+      [...projection].reverse().find((year) => year.age < input.retirementAge) ??
+      projection.find((year) => year.age === input.retirementAge) ??
+      projection[projection.length - 1];
+
+    const retirementYear =
+      projection.find((year) => year.age === input.retirementAge) ??
+      preRetirementYear ??
+      projection[projection.length - 1];
+
+    const preRetirementGrossIncome = preRetirementYear?.grossIncome ?? 0;
+    const retirementYearGrossIncome = retirementYear?.grossIncome ?? 0;
+    const actualEffectiveTaxRate =
+      retirementYearGrossIncome > 0 ? (retirementYear?.totalTax ?? 0) / retirementYearGrossIncome : 0;
+
+    return calculateReadinessScore({
+      monteCarloSuccessRate: monteCarlo.successRate,
+      preRetirementGrossIncome,
+      retirementYearGrossIncome,
+      actualEffectiveTaxRate,
+      optimalEffectiveTaxRate: 0,
+      rrspBalance: retirementYear?.rrspBalance ?? 0,
+      tfsaBalance: retirementYear?.tfsaBalance ?? 0,
+      nonRegBalance: retirementYear?.nonRegBalance ?? 0,
+    });
   }
 
   async runHistoricalBootstrap(

@@ -16,6 +16,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import CloseIcon from '@mui/icons-material/Close';
+import CalculateIcon from '@mui/icons-material/Calculate';
 import { PdfDownloadButton } from './PdfReport';
 import { usePlanExport } from '../hooks/usePlanExport';
 import { useQuickActions } from '../contexts/QuickActionsContext';
@@ -26,7 +27,7 @@ const DRAWER_WIDTH = 460;
 export function QuickActionsPanel() {
   const theme = useTheme();
   const { planData, projectionsLoading } = usePlanExport();
-  const { csvExport, csvLabel } = useQuickActions();
+  const { csvExport, csvLabel, whatIfAction } = useQuickActions();
   const [aiOpen, setAiOpen] = useState(false);
 
   const hasPdf = !!planData && !projectionsLoading;
@@ -104,6 +105,22 @@ export function QuickActionsPanel() {
               <SmartToyIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+
+          {/* What-If Calculator */}
+          {whatIfAction && (
+            <>
+              <Divider orientation="vertical" flexItem sx={{ my: 0.75 }} />
+              <Tooltip title="What-If Calculator" placement="top">
+                <IconButton
+                  size="small"
+                  onClick={whatIfAction}
+                  sx={{ mx: 0.25, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                >
+                  <CalculateIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
         </Stack>
       </Card>
 

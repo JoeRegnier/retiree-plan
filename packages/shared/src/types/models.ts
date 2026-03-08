@@ -27,6 +27,10 @@ export interface HouseholdMember {
   name: string;
   dateOfBirth: string;
   province: string;
+  rrspContributionRoom?: number | null;
+  tfsaContributionRoom?: number | null;
+  priorYearIncome?: number | null;
+  cppExpectedBenefit?: number | null;
   householdId: string;
 }
 

@@ -8,5 +8,8 @@ export * from './simulation/historical-bootstrap.js';
 export * from './benefits/government.js';
 export * from './optimization/rrsp-meltdown.js';
 export * from './estate/estate.js';
+export * from './scoring/readiness-score.js';
+export * from './scoring/plan-completeness.js';
 export * from './international/cross-border.js';
 export * from './international/expat.js';
+export * from './contributions/contribution-room.js';

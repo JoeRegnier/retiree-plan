@@ -5,6 +5,11 @@ export interface CreateMemberDto {
   name: string;
   dateOfBirth: string;
   province: string;
+  retirementAge?: number;
+  rrspContributionRoom?: number;
+  tfsaContributionRoom?: number;
+  priorYearIncome?: number;
+  cppExpectedBenefit?: number;
   householdId: string;
 }
 
@@ -12,6 +17,11 @@ export interface UpdateMemberDto {
   name?: string;
   dateOfBirth?: string;
   province?: string;
+  retirementAge?: number;
+  rrspContributionRoom?: number;
+  tfsaContributionRoom?: number;
+  priorYearIncome?: number;
+  cppExpectedBenefit?: number;
 }
 
 @Injectable()
@@ -24,6 +34,19 @@ export class MembersService {
         name: data.name,
         dateOfBirth: new Date(data.dateOfBirth),
         province: data.province,
+        ...(data.retirementAge !== undefined ? { retirementAge: data.retirementAge } : {}),
+        ...(data.rrspContributionRoom !== undefined
+          ? { rrspContributionRoom: data.rrspContributionRoom }
+          : {}),
+        ...(data.tfsaContributionRoom !== undefined
+          ? { tfsaContributionRoom: data.tfsaContributionRoom }
+          : {}),
+        ...(data.priorYearIncome !== undefined
+          ? { priorYearIncome: data.priorYearIncome }
+          : {}),
+        ...(data.cppExpectedBenefit !== undefined
+          ? { cppExpectedBenefit: data.cppExpectedBenefit }
+          : {}),
         householdId: data.householdId,
       },
       include: { incomeSources: true },
@@ -51,8 +74,24 @@ export class MembersService {
     return this.prisma.householdMember.update({
       where: { id },
       data: {
-        ...data,
-        ...(data.dateOfBirth ? { dateOfBirth: new Date(data.dateOfBirth) } : {}),
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.province !== undefined ? { province: data.province } : {}),
+        ...(data.retirementAge !== undefined ? { retirementAge: data.retirementAge } : {}),
+        ...(data.rrspContributionRoom !== undefined
+          ? { rrspContributionRoom: data.rrspContributionRoom }
+          : {}),
+        ...(data.tfsaContributionRoom !== undefined
+          ? { tfsaContributionRoom: data.tfsaContributionRoom }
+          : {}),
+        ...(data.priorYearIncome !== undefined
+          ? { priorYearIncome: data.priorYearIncome }
+          : {}),
+        ...(data.cppExpectedBenefit !== undefined
+          ? { cppExpectedBenefit: data.cppExpectedBenefit }
+          : {}),
+        ...(data.dateOfBirth !== undefined
+          ? { dateOfBirth: new Date(data.dateOfBirth) }
+          : {}),
       },
       include: { incomeSources: true },
     });

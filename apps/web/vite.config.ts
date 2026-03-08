@@ -4,8 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true,   // bind to 0.0.0.0 — accessible from any machine on the network
+    host: true,          // bind to 0.0.0.0 — accessible from any machine on the network
     port: 5173,
+    allowedHosts: true, // allow LAN IP access (Vite 6 host-check bypass)
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

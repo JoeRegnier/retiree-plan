@@ -64,6 +64,11 @@ export class ProjectionsController {
     return this.projectionsService.runEstateCalculation(body);
   }
 
+  @Post('readiness-score')
+  computeReadinessScore(@Body() body: any) {
+    return this.projectionsService.computeReadinessScore(body);
+  }
+
   @Post('historical-scenarios')
   runHistoricalScenarios(@Body() body: any) {
     const normalized = {

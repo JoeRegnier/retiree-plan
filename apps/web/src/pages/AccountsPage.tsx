@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, Grid, IconButton, List, ListItem, ListItemText,
@@ -12,7 +12,9 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { calculateContributionRoom } from '@retiree-plan/finance-engine';
 import { useApi } from '../hooks/useApi';
+import { calcAge } from '../utils/age';
 
 const ACCOUNT_TYPES = [
   { value: 'RRSP', label: 'RRSP – Registered Retirement Savings Plan' },
@@ -79,7 +81,17 @@ interface BrokerageAccount {
 
 interface YnabStatus { connected: boolean; budgetId?: string; budgetName?: string; }
 
-interface Household { id: string; name: string; }
+interface Household {
+  id: string;
+  name: string;
+  members?: {
+    id: string;
+    dateOfBirth: string;
+    rrspContributionRoom?: number | null;
+    tfsaContributionRoom?: number | null;
+    priorYearIncome?: number | null;
+  }[];
+}
 
 /** Map brokerage provider to a display-friendly label. */
 const BROKERAGE_LABELS: Record<string, string> = {
@@ -144,6 +156,12 @@ export function AccountsPage() {
   const { data: accounts, isLoading } = useQuery<Account[]>({
     queryKey: ['accounts', household?.id],
     queryFn: () => apiFetch(`/accounts/household/${household!.id}`),
+    enabled: !!household?.id,
+  });
+
+  const { data: scenarios } = useQuery<{ id: string; parameters: string }[]>({
+    queryKey: ['scenarios', household?.id],
+    queryFn: () => apiFetch(`/scenarios/household/${household!.id}`),
     enabled: !!household?.id,
   });
 
@@ -241,6 +259,44 @@ export function AccountsPage() {
   const totalBalance = (accounts ?? []).reduce((s, a) => s + a.balance, 0);
   const totalContributions = (accounts ?? []).reduce((s, a) => s + a.annualContribution, 0);
 
+  const contributionRoom = useMemo(() => {
+    try {
+      const member = household?.members?.[0];
+      if (!member?.rrspContributionRoom && !member?.tfsaContributionRoom) return null;
+
+      const retirementAge = (() => {
+        const firstScenario = scenarios?.[0];
+        if (!firstScenario) return 65;
+        try {
+          return JSON.parse(firstScenario.parameters).retirementAge ?? 65;
+        } catch {
+          return 65;
+        }
+      })();
+
+      const rrspContributions = (accounts ?? [])
+        .filter((a) => a.type === 'RRSP')
+        .reduce((s, a) => s + a.annualContribution, 0);
+      const tfsaContributions = (accounts ?? [])
+        .filter((a) => a.type === 'TFSA')
+        .reduce((s, a) => s + a.annualContribution, 0);
+
+      return calculateContributionRoom({
+        currentRrspRoom: member.rrspContributionRoom ?? 0,
+        currentTfsaRoom: member.tfsaContributionRoom ?? 0,
+        priorYearIncome: member.priorYearIncome ?? 0,
+        currentAge: calcAge(member.dateOfBirth),
+        retirementAge,
+        dateOfBirth: member.dateOfBirth,
+        annualRrspContribution: rrspContributions,
+        annualTfsaContribution: tfsaContributions,
+      });
+    } catch (error) {
+      console.error('Failed to calculate contribution room:', error);
+      return null;
+    }
+  }, [household, scenarios, accounts]);
+
   if (isLoading) return <Box display="flex" justifyContent="center" mt={8}><CircularProgress /></Box>;
 
   return (
@@ -291,6 +347,68 @@ export function AccountsPage() {
               </CardContent></Card>
             </Grid>
           </Grid>
+
+          {/* Contribution Room Tracker */}
+          {household && accounts && accounts.length > 0 && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ mb: 2 }}>Contribution Room Tracker</Typography>
+                {!contributionRoom ? (
+                  <Alert severity="info">
+                    Enter your RRSP and TFSA contribution room in Household {'->'} Member details to see projections.
+                  </Alert>
+                ) : (
+                  <Grid container spacing={3}>
+                    {/* RRSP Room */}
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>RRSP Contribution Room</Typography>
+                        <Typography variant="h5" sx={{ mb: 1 }}>
+                          ${contributionRoom.rrsp.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+                        </Typography>
+                        <Divider sx={{ my: 1 }} />
+                        <Stack spacing={0.5}>
+                          <Typography variant="body2">
+                            New room this year: <strong>${contributionRoom.rrsp.annualNewRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
+                          </Typography>
+                          <Typography variant="body2">
+                            Projected room at retirement: <strong>${contributionRoom.rrsp.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
+                          </Typography>
+                        </Stack>
+                        {contributionRoom.rrsp.overContribution && (
+                          <Alert severity="error" sx={{ mt: 1 }}>Over-contribution detected! You may be subject to a 1%/month penalty tax.</Alert>
+                        )}
+                      </Box>
+                    </Grid>
+                    {/* TFSA Room */}
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>TFSA Contribution Room</Typography>
+                        <Typography variant="h5" sx={{ mb: 1 }}>
+                          ${contributionRoom.tfsa.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}
+                        </Typography>
+                        <Divider sx={{ my: 1 }} />
+                        <Stack spacing={0.5}>
+                          <Typography variant="body2">
+                            Annual limit: <strong>${contributionRoom.tfsa.annualLimit.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
+                          </Typography>
+                          <Typography variant="body2">
+                            Cumulative room since 2009: <strong>${contributionRoom.tfsa.totalCumulativeRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
+                          </Typography>
+                          <Typography variant="body2">
+                            Projected room at retirement: <strong>${contributionRoom.tfsa.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</strong>
+                          </Typography>
+                        </Stack>
+                        {contributionRoom.tfsa.overContribution && (
+                          <Alert severity="error" sx={{ mt: 1 }}>Over-contribution detected! You may be subject to a 1%/month penalty tax.</Alert>
+                        )}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {Object.entries(byType).map(([type, accs]) => (
             <Card key={type} sx={{ mb: 2 }}>

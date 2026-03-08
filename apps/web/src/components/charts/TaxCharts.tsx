@@ -45,7 +45,7 @@ export function TaxBracketChart({ income, federalBrackets, provincialBrackets, h
         const x1 = x(b.min);
         const x2 = x(Math.min(b.max === Infinity ? maxIncome : b.max, maxIncome));
         g.append('rect')
-          .attr('x', x1).attr('y', y(b.rate) + yOffset).attr('width', x2 - x1)
+          .attr('x', x1).attr('y', y(b.rate) + yOffset).attr('width', Math.max(0, x2 - x1))
           .attr('height', innerH - y(b.rate))
           .attr('fill', color).attr('fill-opacity', 0.35).attr('stroke', color).attr('stroke-width', 0.5);
       });

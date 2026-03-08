@@ -40,6 +40,15 @@ model HouseholdMember {
   name          String
   dateOfBirth   DateTime
   province      String
+  retirementAge Int            @default(65)
+  /// User-entered current RRSP contribution room (from CRA Notice of Assessment)
+  rrspContributionRoom Float?
+  /// User-entered current TFSA contribution room
+  tfsaContributionRoom Float?
+  /// Prior-year earned income (used for RRSP room calculation)
+  priorYearIncome      Float?
+  /// User-entered expected CPP monthly benefit at age 65
+  cppExpectedBenefit   Float?
   householdId   String
   household     Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
   incomeSources IncomeSource[]

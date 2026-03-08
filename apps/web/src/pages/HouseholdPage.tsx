@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, ListSubheader, Stepper, Step, StepLabel, Grid, Chip, Tooltip,
-  IconButton, List, ListItem, ListItemText, ListItemSecondaryAction, Divider,
+  IconButton, List, ListItem, ListItemText, ListItemSecondaryAction, Divider, InputAdornment,
   Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails,
   FormControlLabel, Switch,
 } from '@mui/material';
@@ -52,9 +52,47 @@ interface Member {
   id: string;
   name: string;
   dateOfBirth: string;
+  retirementAge: number;
   province: string;
+  rrspContributionRoom?: number | null;
+  tfsaContributionRoom?: number | null;
+  priorYearIncome?: number | null;
+  cppExpectedBenefit?: number | null;
   incomeSources?: IncomeSource[];
 }
+
+interface MemberInput {
+  name: string;
+  dateOfBirth: string;
+  retirementAge: number;
+  province: string;
+  rrspContributionRoom?: number;
+  tfsaContributionRoom?: number;
+  priorYearIncome?: number;
+  cppExpectedBenefit?: number;
+}
+
+interface MemberFormState {
+  name: string;
+  dateOfBirth: string;
+  retirementAge: string;
+  province: string;
+  rrspContributionRoom: string;
+  tfsaContributionRoom: string;
+  priorYearIncome: string;
+  cppExpectedBenefit: string;
+}
+
+const INITIAL_MEMBER_FORM: MemberFormState = {
+  name: '',
+  dateOfBirth: '',
+  retirementAge: '65',
+  province: 'ON',
+  rrspContributionRoom: '',
+  tfsaContributionRoom: '',
+  priorYearIncome: '',
+  cppExpectedBenefit: '',
+};
 
 interface IncomeSource {
   id: string;
@@ -92,17 +130,33 @@ export function HouseholdPage() {
   const [wizardStep, setWizardStep] = useState(0);
   const [householdName, setHouseholdName] = useState('');
   const [newHouseholdId, setNewHouseholdId] = useState('');
-  const [memberForm, setMemberForm] = useState({ name: '', dateOfBirth: '', province: 'ON' });
+  const [memberForm, setMemberForm] = useState<MemberFormState>(INITIAL_MEMBER_FORM);
   const [incomeForm, setIncomeForm] = useState({ name: '', type: 'Employment', annualAmount: '', startAge: '', endAge: '', indexToInflation: true, memberId: '' });
   const [expenseForm, setExpenseForm] = useState({ name: '', category: 'Housing', annualAmount: '', startAge: '', endAge: '', indexToInflation: true as boolean });
   const [wizardError, setWizardError] = useState('');
 
   const [memberDialog, setMemberDialog] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [incomeDialog, setIncomeDialog] = useState(false);
   const [expenseDialog, setExpenseDialog] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [editingIncome, setEditingIncome] = useState<IncomeSource | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState('');
+
+  const resetMemberForm = () => {
+    setMemberForm({ ...INITIAL_MEMBER_FORM });
+  };
+
+  const buildMemberPayload = (form: MemberFormState): MemberInput => ({
+    name: form.name,
+    dateOfBirth: form.dateOfBirth,
+    retirementAge: form.retirementAge ? Number(form.retirementAge) : 65,
+    province: form.province,
+    ...(form.rrspContributionRoom ? { rrspContributionRoom: Number(form.rrspContributionRoom) } : {}),
+    ...(form.tfsaContributionRoom ? { tfsaContributionRoom: Number(form.tfsaContributionRoom) } : {}),
+    ...(form.priorYearIncome ? { priorYearIncome: Number(form.priorYearIncome) } : {}),
+    ...(form.cppExpectedBenefit ? { cppExpectedBenefit: Number(form.cppExpectedBenefit) } : {}),
+  });
 
   const { data: households, isLoading } = useQuery<Household[]>({
     queryKey: ['households'],
@@ -118,12 +172,12 @@ export function HouseholdPage() {
   });
 
   const createHousehold = useMutation({
-    mutationFn: (data: { name: string; members: { name: string; dateOfBirth: string; province: string }[] }) =>
+    mutationFn: (data: { name: string; members: MemberInput[] }) =>
       apiFetch('/households', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: (hh: any) => {
       queryClient.invalidateQueries({ queryKey: ['households'] });
       setNewHouseholdId(hh.id);
-      setMemberForm({ name: '', dateOfBirth: '', province: 'ON' });
+      resetMemberForm();
       setWizardError('');
       // Stay on step 1 so the user can add additional members
     },
@@ -135,7 +189,19 @@ export function HouseholdPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['households'] });
       setMemberDialog(false);
-      setMemberForm({ name: '', dateOfBirth: '', province: 'ON' });
+      setEditingMember(null);
+      resetMemberForm();
+    },
+  });
+
+  const updateMember = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      apiFetch(`/members/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['households'] });
+      setMemberDialog(false);
+      setEditingMember(null);
+      resetMemberForm();
     },
   });
 
@@ -200,18 +266,35 @@ export function HouseholdPage() {
   const handleCreateHouseholdWithFirstMember = () => {
     if (!householdName.trim()) { setWizardError('Please enter a household name'); return; }
     if (!memberForm.name.trim() || !memberForm.dateOfBirth) { setWizardError('Fill in all member fields'); return; }
-    createHousehold.mutate({ name: householdName, members: [memberForm] });
+    createHousehold.mutate({ name: householdName, members: [buildMemberPayload(memberForm)] });
   };
 
   const handleAddMemberInWizard = () => {
     if (!memberForm.name.trim() || !memberForm.dateOfBirth) { setWizardError('Fill in all member fields'); return; }
     setWizardError('');
-    addMember.mutate({ ...memberForm, householdId: newHouseholdId || household?.id }, {
+    addMember.mutate({ ...buildMemberPayload(memberForm), householdId: newHouseholdId || household?.id }, {
       onSuccess: () => {
-        setMemberForm({ name: '', dateOfBirth: '', province: 'ON' });
+        resetMemberForm();
         setWizardError('');
       },
     });
+  };
+
+  const openEditMemberDialog = (m: Member) => {
+    setEditingMember(m);
+    // Normalize ISO datetime to YYYY-MM-DD for the date input
+    const dob = m.dateOfBirth ? m.dateOfBirth.slice(0, 10) : '';
+    setMemberForm({
+      name: m.name,
+      dateOfBirth: dob,
+      retirementAge: String(m.retirementAge ?? 65),
+      province: m.province,
+      rrspContributionRoom: m.rrspContributionRoom != null ? String(m.rrspContributionRoom) : '',
+      tfsaContributionRoom: m.tfsaContributionRoom != null ? String(m.tfsaContributionRoom) : '',
+      priorYearIncome: m.priorYearIncome != null ? String(m.priorYearIncome) : '',
+      cppExpectedBenefit: m.cppExpectedBenefit != null ? String(m.cppExpectedBenefit) : '',
+    });
+    setMemberDialog(true);
   };
 
   const openIncomeDialog = (memberId: string, income?: IncomeSource) => {
@@ -343,16 +426,25 @@ export function HouseholdPage() {
               </Box>
               {household.members.map((m) => (
                 <Accordion key={m.id} sx={{ mb: 1, '&:before': { display: 'none' }, bgcolor: 'background.default' }}>
+                  {/*
+                    Buttons live inside AccordionSummary's content (not in expandIcon slot).
+                    Only the expandIcon slot gets MUI's 180° open rotation — content children do not.
+                    stopPropagation prevents the button clicks from toggling expand/collapse.
+                  */}
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', pr: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
                       <Typography fontWeight={600}>{m.name}</Typography>
                       <Chip label={PROVINCE_NAMES[m.province as keyof typeof PROVINCE_NAMES] ?? m.province} size="small" />
                       <Chip label={`${calcAge(m.dateOfBirth)} yrs`} size="small" variant="outlined" />
-                      <Box sx={{ ml: 'auto' }}>
-                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); deleteMember.mutate(m.id); }}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
+                      <Chip label={`Retires at ${m.retirementAge ?? 65}`} size="small" variant="outlined" color="primary" />
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mr: 1 }}>
+                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); openEditMemberDialog(m); }} aria-label="Edit member">
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); deleteMember.mutate(m.id); }} aria-label="Delete member">
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -388,6 +480,26 @@ export function HouseholdPage() {
                           </ListItem>
                         ))}
                       </List>
+                    )}
+                    {(m.rrspContributionRoom != null || m.tfsaContributionRoom != null || m.priorYearIncome != null || m.cppExpectedBenefit != null) && (
+                      <Box sx={{ mt: 2 }}>
+                        <Divider sx={{ mb: 1 }} />
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Financial Details</Typography>
+                        <Grid container spacing={1}>
+                          {m.rrspContributionRoom != null && (
+                            <Grid item xs={6}><Typography variant="body2">RRSP Room: <strong>${m.rrspContributionRoom.toLocaleString()}</strong></Typography></Grid>
+                          )}
+                          {m.tfsaContributionRoom != null && (
+                            <Grid item xs={6}><Typography variant="body2">TFSA Room: <strong>${m.tfsaContributionRoom.toLocaleString()}</strong></Typography></Grid>
+                          )}
+                          {m.priorYearIncome != null && (
+                            <Grid item xs={6}><Typography variant="body2">Prior Year Income: <strong>${m.priorYearIncome.toLocaleString()}</strong></Typography></Grid>
+                          )}
+                          {m.cppExpectedBenefit != null && (
+                            <Grid item xs={6}><Typography variant="body2">CPP at 65: <strong>${m.cppExpectedBenefit.toLocaleString()}/mo</strong></Typography></Grid>
+                          )}
+                        </Grid>
+                      </Box>
                     )}
                   </AccordionDetails>
                 </Accordion>
@@ -530,22 +642,86 @@ export function HouseholdPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Add Member Dialog */}
-      <Dialog open={memberDialog} maxWidth="xs" fullWidth onClose={() => setMemberDialog(false)}>
-        <DialogTitle>Add Member</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <TextField label="Name" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} fullWidth />
-          <TextField label="Date of Birth" type="date" value={memberForm.dateOfBirth}
-            onChange={(e) => setMemberForm({ ...memberForm, dateOfBirth: e.target.value })} fullWidth InputLabelProps={{ shrink: true }} />
-          <TextField label="Province" select value={memberForm.province}
-            onChange={(e) => setMemberForm({ ...memberForm, province: e.target.value })} fullWidth>
-            {PROVINCE_OPTIONS.map((p) => <MenuItem key={p.code} value={p.code}>{p.name}</MenuItem>)}
-          </TextField>
+      {/* Add / Edit Member Dialog */}
+      <Dialog open={memberDialog} maxWidth="sm" fullWidth onClose={() => { setMemberDialog(false); setEditingMember(null); resetMemberForm(); }}>
+        <DialogTitle sx={{ pb: 1 }}>{editingMember ? `Edit ${editingMember.name}` : 'Add Member'}</DialogTitle>
+        <DialogContent sx={{ pt: 3, pb: 1 }}>
+          <Grid container spacing={2}>
+            {/* Name */}
+            <Grid item xs={12}>
+              <TextField label="Name" value={memberForm.name}
+                onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} fullWidth
+                InputLabelProps={{ shrink: true }} />
+            </Grid>
+            {/* DOB + Retirement Age */}
+            <Grid item xs={12} sm={7}>
+              <TextField label="Date of Birth" type="date" value={memberForm.dateOfBirth}
+                onChange={(e) => setMemberForm({ ...memberForm, dateOfBirth: e.target.value })}
+                fullWidth InputLabelProps={{ shrink: true }} />
+            </Grid>
+            <Grid item xs={12} sm={5}>
+              <TextField label="Retirement Age" type="number" value={memberForm.retirementAge}
+                onChange={(e) => setMemberForm({ ...memberForm, retirementAge: e.target.value })}
+                fullWidth inputProps={{ min: 50, max: 80 }} />
+            </Grid>
+            {/* Province */}
+            <Grid item xs={12}>
+              <TextField label="Province" select value={memberForm.province}
+                onChange={(e) => setMemberForm({ ...memberForm, province: e.target.value })} fullWidth>
+                {PROVINCE_OPTIONS.map((p) => <MenuItem key={p.code} value={p.code}>{p.name}</MenuItem>)}
+              </TextField>
+            </Grid>
+
+            {/* Financial Details section */}
+            <Grid item xs={12}>
+              <Divider sx={{ mt: 0.5, mb: 1.5 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Financial Details</Typography>
+              <Typography variant="caption" color="text.disabled">
+                Optional · values from your CRA Notice of Assessment and My Service Canada account
+              </Typography>
+            </Grid>
+            {/* RRSP + TFSA side-by-side */}
+            <Grid item xs={12} sm={6}>
+              <TextField label="RRSP Contribution Room" type="number" value={memberForm.rrspContributionRoom}
+                onChange={(e) => setMemberForm({ ...memberForm, rrspContributionRoom: e.target.value })}
+                fullWidth InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                helperText="From CRA Notice of Assessment" />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField label="TFSA Contribution Room" type="number" value={memberForm.tfsaContributionRoom}
+                onChange={(e) => setMemberForm({ ...memberForm, tfsaContributionRoom: e.target.value })}
+                fullWidth InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                helperText="From CRA My Account" />
+            </Grid>
+            {/* Prior Income + CPP side-by-side */}
+            <Grid item xs={12} sm={6}>
+              <TextField label="Prior Year Earned Income" type="number" value={memberForm.priorYearIncome}
+                onChange={(e) => setMemberForm({ ...memberForm, priorYearIncome: e.target.value })}
+                fullWidth InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                helperText="Determines next year’s RRSP room" />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField label="CPP Benefit at 65 (monthly)" type="number" value={memberForm.cppExpectedBenefit}
+                onChange={(e) => setMemberForm({ ...memberForm, cppExpectedBenefit: e.target.value })}
+                fullWidth InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                helperText="From My Service Canada" />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setMemberDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => addMember.mutate({ ...memberForm, householdId: household?.id })} disabled={addMember.isPending}>
-            Add Member
+          <Button onClick={() => { setMemberDialog(false); setEditingMember(null); resetMemberForm(); }}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (editingMember) {
+                updateMember.mutate({ id: editingMember.id, data: buildMemberPayload(memberForm) });
+              } else {
+                addMember.mutate({ ...buildMemberPayload(memberForm), householdId: household?.id });
+              }
+            }}
+            disabled={addMember.isPending || updateMember.isPending}
+          >
+            {editingMember ? 'Save Changes' : 'Add Member'}
           </Button>
         </DialogActions>
       </Dialog>

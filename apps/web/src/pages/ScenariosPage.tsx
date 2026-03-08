@@ -4,7 +4,7 @@ import {
   DialogActions, TextField, Grid, IconButton, Chip, CircularProgress, Alert,
   Tooltip, Slider, InputAdornment, Tab, Tabs, Divider,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Switch, FormControlLabel,
+  Switch, FormControlLabel, Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -14,6 +14,7 @@ import ScienceIcon from '@mui/icons-material/Science';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { useApi } from '../hooks/useApi';
+import { SpendingCurveChart } from '../components/charts/SpendingCurveChart';
 
 interface ScenarioParameters {
   retirementAge: number;
@@ -49,6 +50,26 @@ interface Scenario {
 }
 
 interface Household { id: string; name: string; }
+
+const SPENDING_PRESETS = [
+  {
+    label: 'Smile Curve',
+    phases: [
+      { fromAge: 65, factor: 0.85 },
+      { fromAge: 75, factor: 0.75 },
+      { fromAge: 85, factor: 0.85 },
+    ],
+  },
+  {
+    label: 'Step Down',
+    phases: [
+      { fromAge: 65, factor: 0.85 },
+      { fromAge: 75, factor: 0.70 },
+    ],
+  },
+  { label: 'Healthcare Rise', phases: [{ fromAge: 80, factor: 1.15 }] },
+  { label: 'Clear All', phases: [] },
+] as const;
 
 const DEFAULT_PARAMS: ScenarioParameters = {
   retirementAge: 65,
@@ -152,6 +173,9 @@ export function ScenariosPage() {
 
   const setParam = <K extends keyof ScenarioParameters>(key: K, value: ScenarioParameters[K]) =>
     setParams((p) => ({ ...p, [key]: value }));
+
+  const hasMatchingSpendingPreset = (presetPhases: { fromAge: number; factor: number }[]) =>
+    JSON.stringify(params.spendingPhases ?? []) === JSON.stringify(presetPhases);
 
   if (isLoading) return <Box display="flex" justifyContent="center" mt={8}><CircularProgress /></Box>;
 
@@ -541,6 +565,20 @@ export function ScenariosPage() {
                 </Typography>
               </Grid>
               <Grid item xs={12}>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {SPENDING_PRESETS.map((preset) => (
+                    <Chip
+                      key={preset.label}
+                      label={preset.label}
+                      onClick={() => setParam('spendingPhases', [...preset.phases])}
+                      variant={hasMatchingSpendingPreset([...preset.phases]) ? 'filled' : 'outlined'}
+                      color={hasMatchingSpendingPreset([...preset.phases]) ? 'primary' : 'default'}
+                      size="small"
+                    />
+                  ))}
+                </Stack>
+              </Grid>
+              <Grid item xs={12}>
                 <TableContainer component={Box} sx={{ mb: 1 }}>
                   <Table size="small">
                     <TableHead>
@@ -584,6 +622,9 @@ export function ScenariosPage() {
                               InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
                               sx={{ width: 100 }}
                             />
+                            <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5 }}>
+                              ~${Math.round((params.annualExpenses ?? 0) * phase.factor).toLocaleString('en-CA', { maximumFractionDigits: 0 })}/yr
+                            </Typography>
                           </TableCell>
                           <TableCell align="right">
                             <IconButton size="small" onClick={() =>
@@ -600,6 +641,16 @@ export function ScenariosPage() {
                 }>
                   Add Phase
                 </Button>
+                {(params.spendingPhases ?? []).length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <SpendingCurveChart
+                      phases={params.spendingPhases ?? []}
+                      retirementAge={params.retirementAge ?? 65}
+                      endAge={params.lifeExpectancy ?? 90}
+                      baseExpenses={params.annualExpenses ?? 60000}
+                    />
+                  </Box>
+                )}
               </Grid>
             </Grid>
           )}
