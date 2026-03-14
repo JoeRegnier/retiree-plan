@@ -1,0 +1,83 @@
+appId: ca.retireeplan.app
+productName: Retiree Plan
+copyright: Copyright © 2024
+
+# ── Sources included in the asar ───────────────────────────────────────────────
+files:
+  - dist/**/*          # compiled Electron main + preload
+  - package.json
+
+# server/ and web/ ship as plain directories in Resources so electron-builder
+# does NOT re-pack native modules inside them into asar.
+asar: true
+
+# ── Resources shipped alongside the asar ──────────────────────────────────────
+extraResources:
+  - from: resources/server
+    to: server
+    filter:
+      - "**/*"
+  - from: resources/web
+    to: web
+    filter:
+      - "**/*"
+  - from: resources/template.db
+    to: template.db
+
+directories:
+  buildResources: build-resources   # icons, entitlements
+  output: release
+
+# ── macOS ──────────────────────────────────────────────────────────────────────
+mac:
+  category: public.app-category.finance
+  icon: build-resources/icon.icns
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # Provide entitlements when code-signing is configured.
+  # entitlements: build-resources/entitlements.mac.plist
+  # entitlementsInherit: build-resources/entitlements.mac.plist
+
+dmg:
+  title: "${productName} ${version}"
+  sign: false
+
+# ── Windows ────────────────────────────────────────────────────────────────────
+win:
+  icon: build-resources/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  installerIcon: build-resources/icon.ico
+  uninstallerIcon: build-resources/icon.ico
+
+# ── Linux ──────────────────────────────────────────────────────────────────────
+linux:
+  icon: build-resources/icon.png
+  category: Finance
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+
+# ── Auto-update ────────────────────────────────────────────────────────────────
+# Publishing configuration is intentionally omitted for local builds.
+# Configure `publish` (provider + credentials) in CI or your release pipeline.

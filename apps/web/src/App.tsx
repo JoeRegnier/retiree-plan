@@ -54,6 +54,7 @@ export function App() {
               <Route path="/household" element={<HouseholdPage />} />
               <Route path="/accounts" element={<AccountsPage />} />
               <Route path="/milestones" element={<MilestonesPage />} />
+              <Route path="/goals" element={<GoalsPage />} />
               <Route path="/scenarios" element={<ScenariosPage />} />
               <Route path="/projections" element={<ProjectionsPage />} />
               <Route path="/simulations" element={<SimulationsPage />} />
@@ -61,7 +62,6 @@ export function App() {
               <Route path="/tax-analytics" element={<TaxAnalyticsPage />} />
               <Route path="/compare" element={<ComparePage />} />
               <Route path="/estate" element={<EstatePage />} />
-              <Route path="/goals" element={<GoalsPage />} />
               <Route path="/help" element={<HelpPage />} />
               <Route path="/integrations" element={<IntegrationsPage />} />
               <Route path="/ai-chat" element={<AiChatPage />} />

@@ -1,0 +1,13 @@
+# Compiled Electron main / preload
+dist/
+
+# electron-builder output
+release/
+
+# Build-time generated resources (created by build-desktop.sh / CI)
+resources/server/
+resources/web/
+resources/template.db
+
+# Dependencies
+node_modules/

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { HouseholdsModule } from './households/households.module';
@@ -23,6 +24,22 @@ import { GoalsModule } from './goals/goals.module';
 
 @Module({
   imports: [
+    // When running inside the Electron desktop app the API also serves the
+    // compiled React bundle so all relative /api/* calls work seamlessly.
+    ...(process.env.SERVE_STATIC === 'true'
+      ? [
+          ServeStaticModule.forRoot({
+            rootPath: process.env.STATIC_FILES_PATH ?? '',
+            // Don't intercept requests that start with our global prefix.
+            // Exclude the API prefix. Use a RegExp to match '/api' and any
+            // nested path under it (e.g. '/api/...'). Cast to satisfy the
+            // ServeStaticModule TypeScript signature which expects strings.
+            // Exclude the API prefix and any nested API paths using
+            // path-to-regexp compatible string patterns.
+            exclude: ['/api', '/api/*path'],
+          }),
+        ]
+      : []),
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     DatabaseModule,

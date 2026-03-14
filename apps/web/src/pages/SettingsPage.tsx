@@ -11,8 +11,11 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import BackupIcon from '@mui/icons-material/Backup';
 import RestoreIcon from '@mui/icons-material/Restore';
 import DeleteIcon from '@mui/icons-material/Delete';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import AddIcon from '@mui/icons-material/Add';
+import SyncIcon from '@mui/icons-material/Sync';
 import { useNavigate } from 'react-router';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../hooks/useApi';
 import { PROVINCE_NAMES } from '@retiree-plan/shared';
@@ -81,6 +84,22 @@ export function SettingsPage() {
   const [defaultProvince, setDefaultProvince] = useState<string>('ON');
   const [inflationAssumption, setInflationAssumption] = useState<string>('2.5');
   const [expectedReturn, setExpectedReturn] = useState<string>('6.0');
+
+  // Desktop data info (Electron only)
+  const [dataInfo, setDataInfo] = useState<{ dataDir?: string | null; dbFile?: string | null; profiles?: any[] }>({ dataDir: null, dbFile: null, profiles: [] });
+
+  const refreshDataInfo = async () => {
+    try {
+      if (window.electron?.desktop?.getDataInfo) {
+        const info = await window.electron.desktop.getDataInfo();
+        setDataInfo(info as any);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  useEffect(() => { void refreshDataInfo(); }, []);
 
   const updateProfile = useMutation({
     mutationFn: () => apiFetch('/auth/profile', {
@@ -316,6 +335,83 @@ export function SettingsPage() {
               <Alert severity="info" variant="outlined">
                 Data is stored locally in a SQLite database. Regular exports are recommended.
               </Alert>
+            </CardContent>
+          </Card>
+        </Grid>
+        {/* Local data location (desktop only) */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2 }}>Local Data Location</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Current data directory:
+              </Typography>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 2 }}>
+                {dataInfo.dataDir ?? 'Not available (web mode)'}
+              </Typography>
+
+              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <Button variant="outlined" startIcon={<FolderOpenIcon />} onClick={async () => {
+                  if (!window.electron?.desktop) { setSnack('Not running in desktop mode'); return; }
+                  const res = await window.electron.desktop.openDataFolder();
+                  setSnack(res.success ? 'Opened data folder' : 'Failed to open folder');
+                }}>
+                  Open Folder
+                </Button>
+                <Button variant="contained" startIcon={<SyncIcon />} onClick={async () => {
+                  if (!window.electron?.desktop) { setSnack('Not running in desktop mode'); return; }
+                  const res = await window.electron.desktop.changeDataLocation();
+                  if (res.success) { setSnack('Data location updated'); await refreshDataInfo(); }
+                }}>
+                  Change Data Location
+                </Button>
+                <Button variant="outlined" startIcon={<AddIcon />} onClick={async () => {
+                  if (!window.electron?.desktop) { setSnack('Not running in desktop mode'); return; }
+                  const res = await window.electron.desktop.createFreshProfile();
+                  if (res.success) { setSnack('Fresh profile created'); await refreshDataInfo(); }
+                }}>
+                  Create Fresh Start
+                </Button>
+                <Button variant="text" onClick={async () => { await refreshDataInfo(); setSnack('Refreshed'); }} startIcon={<SyncIcon />}>
+                  Refresh
+                </Button>
+              </Stack>
+
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Profiles (history)</Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Label</TableCell>
+                      <TableCell>Path</TableCell>
+                      <TableCell>Last Used</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dataInfo.profiles && dataInfo.profiles.length ? dataInfo.profiles.map((p: any) => (
+                      <TableRow key={p.id} hover>
+                        <TableCell>{p.label ?? p.path.split(/[/\\]/).pop()}</TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace', fontSize: 11, maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.path}</TableCell>
+                        <TableCell>{p.lastUsedAt ? new Date(p.lastUsedAt).toLocaleString() : new Date(p.createdAt).toLocaleString()}</TableCell>
+                        <TableCell align="right">
+                          <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            <Button size="small" onClick={async () => {
+                              if (!window.electron?.desktop) { setSnack('Not in desktop mode'); return; }
+                              const res = await window.electron.desktop.switchProfile(p.path);
+                              if (res.success) { setSnack('Switched profile'); await refreshDataInfo(); }
+                            }}>Switch</Button>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={4}><Typography variant="caption">No profiles</Typography></TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </CardContent>
           </Card>
         </Grid>

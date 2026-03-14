@@ -34,6 +34,8 @@
     "predb:seed": "node prisma/backup.js --label pre-seed",
     "predb:seed-test": "node prisma/backup.js --label pre-seed-test",
     "predb:migrate": "node prisma/backup.js --label pre-migrate",
+    "desktop:dev": "npm run dev -w apps/desktop",
+    "desktop:build": "npm run package -w apps/desktop",
     "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules e2e/node_modules"
   },
   "prisma": {
