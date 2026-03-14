@@ -53,6 +53,8 @@ export interface BacktestResult {
   medianFinalBalance: number;
   worstCase: BacktestWindow | null;
   bestCase: BacktestWindow | null;
+  /** True when scenario horizon exceeds the historical dataset; later years use average returns */
+  dataConstrained: boolean;
 }
 
 function blendReturn(
@@ -103,33 +105,37 @@ export function runBacktest(input: BacktestInput): BacktestResult {
     .sort((a, b) => a - b);
 
   if (tsxYears.length === 0) {
-    return { successRate: 0, numWindows: 0, successfulWindows: 0, windows: [], medianFinalBalance: 0, worstCase: null, bestCase: null };
+    return { successRate: 0, numWindows: 0, successfulWindows: 0, windows: [], medianFinalBalance: 0, worstCase: null, bestCase: null, dataConstrained: false };
   }
 
   const firstYear = tsxYears[0];
   const lastYear = tsxYears[tsxYears.length - 1];
-  const totalYearsNeeded = yearsToRetirement + retirementYears;
-  const maxStartYear = lastYear - totalYearsNeeded;
+
+  // Pre-compute portfolio value at retirement using long-term average returns (deterministic).
+  // This decouples the accumulation phase from the historical windowing so we can test far
+  // more distribution-phase windows — the phase where sequence-of-returns risk actually matters.
+  const avgBlended = blendReturn(0.07, 0.04, equityFraction);
+  let portfolioAtRetirement = rrspBalance + tfsaBalance + nonRegBalance;
+  for (let i = 0; i < yearsToRetirement; i++) {
+    portfolioAtRetirement = portfolioAtRetirement * (1 + avgBlended) + annualSavings;
+  }
+
+  // Windows now only need `retirementYears` of data — gives many more test windows.
+  const dataConstrained = retirementYears > lastYear - firstYear + 1;
+  const maxStartYear = dataConstrained
+    ? firstYear
+    : lastYear - retirementYears + 1;
 
   const windows: BacktestWindow[] = [];
 
   for (let startYear = firstYear; startYear <= maxStartYear; startYear++) {
-    let totalBalance = rrspBalance + tfsaBalance + nonRegBalance;
+    let totalBalance = portfolioAtRetirement;
     const balanceByYear: { year: number; age: number; balance: number }[] = [];
 
-    // Accumulation phase: grow savings until retirement
-    for (let i = 0; i < yearsToRetirement; i++) {
-      const yr = startYear + i;
-      const equityRet = getReturn(returnsByYear, yr, 'TSX', 0.07);
-      const bondRet = getReturn(returnsByYear, yr, 'CA_BOND', 0.04);
-      const blended = blendReturn(equityRet, bondRet, equityFraction);
-      totalBalance = totalBalance * (1 + blended) + annualSavings;
-    }
-
-    // Distribution phase: retirement drawdown
+    // Distribution phase: retirement drawdown using historical returns starting at startYear
     let survived = true;
     for (let i = 0; i < retirementYears; i++) {
-      const yr = startYear + yearsToRetirement + i;
+      const yr = startYear + i;
       const age = retirementAge + i;
       const equityRet = getReturn(returnsByYear, yr, 'TSX', 0.05);
       const bondRet = getReturn(returnsByYear, yr, 'CA_BOND', 0.03);
@@ -146,7 +152,7 @@ export function runBacktest(input: BacktestInput): BacktestResult {
         // Fill remaining years with 0
         for (let j = i + 1; j < retirementYears; j++) {
           balanceByYear.push({
-            year: startYear + yearsToRetirement + j,
+            year: startYear + j,
             age: retirementAge + j,
             balance: 0,
           });
@@ -161,7 +167,7 @@ export function runBacktest(input: BacktestInput): BacktestResult {
 
     windows.push({
       startYear,
-      endYear: startYear + totalYearsNeeded - 1,
+      endYear: startYear + retirementYears - 1,
       survived,
       finalPortfolioValue: parseFloat(Math.max(0, totalBalance).toFixed(2)),
       yearsMoneyLasted: survived ? retirementYears : Math.max(0, yearsMoneyLasted),
@@ -170,7 +176,7 @@ export function runBacktest(input: BacktestInput): BacktestResult {
   }
 
   if (windows.length === 0) {
-    return { successRate: 0, numWindows: 0, successfulWindows: 0, windows: [], medianFinalBalance: 0, worstCase: null, bestCase: null };
+    return { successRate: 0, numWindows: 0, successfulWindows: 0, windows: [], medianFinalBalance: 0, worstCase: null, bestCase: null, dataConstrained };
   }
 
   const successfulWindows = windows.filter((w) => w.survived).length;
@@ -187,5 +193,6 @@ export function runBacktest(input: BacktestInput): BacktestResult {
     medianFinalBalance,
     worstCase: sorted[0],
     bestCase: sorted[sorted.length - 1],
+    dataConstrained,
   };
 }

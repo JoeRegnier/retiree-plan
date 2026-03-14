@@ -33,7 +33,7 @@ import { useApi } from '../hooks/useApi';
 
 interface Account { id: string; name: string; type: string; balance: number; estimatedReturnRate?: number; annualContribution?: number; }
 interface IncomeSource { id: string; name: string; type: string; annualAmount: number; startAge?: number; endAge?: number; }
-interface Member { id: string; name: string; dateOfBirth?: string; retirementAge: number; province?: string; incomeSources?: IncomeSource[]; }
+interface Member { id: string; name: string; dateOfBirth?: string; retirementAge: number; province?: string; incomeSources?: IncomeSource[]; cppExpectedBenefit?: number | null; rrspContributionRoom?: number | null; tfsaContributionRoom?: number | null; priorYearIncome?: number | null; }
 interface Scenario { id: string; name: string; description?: string; parameters?: string | Record<string, any>; }
 interface Household { id: string; name: string; members: Member[]; accounts: Account[]; scenarios?: Scenario[]; annualExpenses?: number; }
 interface Insight {
@@ -754,28 +754,76 @@ function PlanCompletenessCard({ data, navigate }: { data: any; navigate: (path: 
 /** Compact scenario card showing key parameters. */
 function ScenarioCard({ sc, idx }: { sc: Scenario; idx: number }) {
   const navigate = useNavigate();
+  const theme = useTheme();
   const p = parseParams(sc.parameters);
-  const chips: string[] = [];
-  if (p.retirementAge) chips.push(`Retire ${p.retirementAge}`);
-  if (p.expectedReturnRate) chips.push(`${(p.expectedReturnRate * 100).toFixed(1)}% return`);
-  if (p.inflationRate) chips.push(`${(p.inflationRate * 100).toFixed(1)}% inflation`);
+
+  const retAge   = p.retirementAge   ?? 65;
+  const lifeExp  = p.lifeExpectancy  ?? 90;
+  const retRate  = p.expectedReturnRate != null ? `${(p.expectedReturnRate * 100).toFixed(1)}%` : null;
+  const infRate  = p.inflationRate    != null ? `${(p.inflationRate * 100).toFixed(1)}%` : null;
+  const cppAge   = p.cppStartAge      ?? null;
+  const oasAge   = p.oasStartAge      ?? null;
+  const expenses = p.annualExpenses   ?? null;
+  const vol      = p.volatility       != null ? `${(p.volatility * 100).toFixed(0)}%` : null;
+
   const hue = (idx * 47 + 200) % 360;
+  const accentColor = `hsl(${hue},50%,50%)`;
+
+  const fmt$ = (n: number) =>
+    n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1_000)}K`;
+
+  const statItems: { label: string; value: string }[] = [];
+  if (expenses)           statItems.push({ label: 'Expenses/yr', value: fmt$(expenses) });
+  if (cppAge != null)     statItems.push({ label: 'CPP start',   value: `Age ${cppAge}` });
+  if (oasAge != null)     statItems.push({ label: 'OAS start',   value: `Age ${oasAge}` });
+                          statItems.push({ label: 'Horizon',     value: `Age ${lifeExp}` });
+  if (vol)                statItems.push({ label: 'Volatility',  value: vol });
+
   return (
     <Card sx={{ cursor: 'pointer', height: '100%', transition: 'box-shadow 0.2s', '&:hover': { boxShadow: 4 } }}
       onClick={() => navigate('/scenarios')}>
-      <CardContent sx={{ p: 2 }}>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+      <CardContent sx={{ p: 2, pb: '16px !important' }}>
+        {/* Header */}
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.75 }}>
           <Avatar sx={{ bgcolor: `hsl(${hue},60%,88%)`, color: `hsl(${hue},50%,35%)`, width: 28, height: 28, fontSize: 12, fontWeight: 700 }}>
             {idx + 1}
           </Avatar>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, flex: 1 }} noWrap>{sc.name}</Typography>
+          <Chip
+            label={`Retire ${retAge}`}
+            size="small"
+            sx={{ fontSize: '0.63rem', height: 18, bgcolor: alpha(accentColor, 0.12), color: accentColor, fontWeight: 600 }}
+          />
         </Stack>
+
         {sc.description && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>{sc.description}</Typography>
         )}
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-          {chips.map(c => <Chip key={c} label={c} size="small" sx={{ fontSize: '0.63rem', height: 18 }} />)}
+
+        {/* Return + Inflation chips */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.25 }}>
+          {retRate && <Chip key="ret"  label={`${retRate} return`}    size="small" sx={{ fontSize: '0.63rem', height: 18 }} />}
+          {infRate && <Chip key="inf"  label={`${infRate} inflation`} size="small" sx={{ fontSize: '0.63rem', height: 18 }} />}
         </Box>
+
+        {/* Detail stat grid */}
+        {statItems.length > 0 && (
+          <>
+            <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mb: 1 }} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '4px 8px' }}>
+              {statItems.map(({ label, value }) => (
+                <Box key={label}>
+                  <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled', lineHeight: 1.2, textTransform: 'uppercase', letterSpacing: 0.3 }}>
+                    {label}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: 'text.primary', lineHeight: 1.3 }}>
+                    {value}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -1136,6 +1184,10 @@ export function DashboardPage() {
       members: (hh.members ?? []).map(m => ({
         dateOfBirth: m.dateOfBirth,
         province: m.province,
+        cppExpectedBenefit: m.cppExpectedBenefit,
+        rrspContributionRoom: m.rrspContributionRoom,
+        tfsaContributionRoom: m.tfsaContributionRoom,
+        priorYearIncome: m.priorYearIncome,
         incomeSources: (m.incomeSources ?? []).map(s => ({ type: s.type, startAge: s.startAge, annualAmount: s.annualAmount })),
       })),
       accounts: accounts.map(a => ({ type: a.type, balance: a.balance })),

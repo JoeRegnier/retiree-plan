@@ -38,7 +38,7 @@ function primaryMember(members: HouseholdMember[]): HouseholdMember | undefined 
 }
 interface PercentileYear { age: number; p5: number; p25: number; p50: number; p75: number; p95: number; }
 interface MCResult { percentilesByYear: PercentileYear[]; successRate: number; median: number; }
-interface BacktestResult { successRate: number; numWindows: number; windows: any[]; worstCase: any; bestCase: any; }
+interface BacktestResult { successRate: number; numWindows: number; windows: any[]; worstCase: any; bestCase: any; dataConstrained?: boolean; }
 interface GKResult { years: any[]; portfolioSurvived: boolean; initialWithdrawal: number; finalPortfolio: number; totalWithdrawn: number; }
 
 interface OutcomeCategory { count: number; pct: number; }
@@ -425,6 +425,11 @@ function BacktestingTab() {
           <Card>
             <CardContent>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>{result.windows.length} historical windows tested</Typography>
+              {result.dataConstrained && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Your scenario's horizon exceeds the 55-year historical dataset (1970–2024). Windows starting at 1970 use long-term average returns for years beyond 2024. Results are still meaningful but treat with extra caution.
+                </Alert>
+              )}
               <BacktestChart windows={result.windows} successRate={result.successRate} />
             </CardContent>
           </Card>

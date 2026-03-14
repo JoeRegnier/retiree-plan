@@ -205,10 +205,10 @@ export function calculatePlanCompleteness(
     {
       id: 'return-rate',
       label: 'Return rate reviewed',
-      hint: 'No real return rate set in your scenario. This is the single biggest assumption in your projection — open your scenario and confirm the rate reflects your portfolio mix.',
+      hint: 'This is the single biggest assumption in your projection — confirm the rate reflects your portfolio mix.',
 
       completed: parsedScenarioParameters.some(
-        (parameters) => parameters.realReturnRate != null,
+        (parameters) => parameters.expectedReturnRate != null,
       ),
       category: 'planning',
       linkTo: '/scenarios',

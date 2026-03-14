@@ -92,7 +92,9 @@ interface Household {
   name: string;
   members?: {
     id: string;
+    name: string;
     dateOfBirth: string;
+    retirementAge?: number | null;
     rrspContributionRoom?: number | null;
     tfsaContributionRoom?: number | null;
     priorYearIncome?: number | null;
@@ -508,46 +510,59 @@ export function AccountsPage() {
     );
   }, [accounts]);
 
-  const member = household?.members?.[0];
-  const rrspFromPriorIncome = (member?.priorYearIncome ?? 0) * 0.18;
   const rrspAnnualMax = 31560;
 
-  const contributionRoom = useMemo(() => {
-    try {
-      if (!member?.rrspContributionRoom && !member?.tfsaContributionRoom) return null;
+  const totalHouseholdRrspContributions = useMemo(
+    () => (accounts ?? []).filter((a) => a.type === 'RRSP').reduce((s, a) => s + a.annualContribution, 0),
+    [accounts],
+  );
+  const totalHouseholdTfsaContributions = useMemo(
+    () => (accounts ?? []).filter((a) => a.type === 'TFSA').reduce((s, a) => s + a.annualContribution, 0),
+    [accounts],
+  );
 
-      const retirementAge = (() => {
-        const firstScenario = scenarios?.[0];
-        if (!firstScenario) return 65;
+  const memberRooms = useMemo(() => {
+    const members = household?.members ?? [];
+    if (members.length === 0) return [];
+
+    const scenarioRetirementAge = (() => {
+      const firstScenario = scenarios?.[0];
+      if (!firstScenario) return 65;
+      try {
+        return JSON.parse(firstScenario.parameters).retirementAge ?? 65;
+      } catch {
+        return 65;
+      }
+    })();
+
+    return members
+      .filter((m) => m.rrspContributionRoom != null || m.tfsaContributionRoom != null)
+      .map((m) => {
         try {
-          return JSON.parse(firstScenario.parameters).retirementAge ?? 65;
-        } catch {
-          return 65;
+          const retirementAge = m.retirementAge ?? scenarioRetirementAge;
+          const room = calculateContributionRoom({
+            currentRrspRoom: m.rrspContributionRoom ?? 0,
+            currentTfsaRoom: m.tfsaContributionRoom ?? 0,
+            priorYearIncome: m.priorYearIncome ?? 0,
+            currentAge: calcAge(m.dateOfBirth),
+            retirementAge,
+            dateOfBirth: m.dateOfBirth,
+            annualRrspContribution: 0,
+            annualTfsaContribution: 0,
+          });
+          const rrspFromPriorIncome = (m.priorYearIncome ?? 0) * 0.18;
+          return { member: m, room, rrspFromPriorIncome };
+        } catch (error) {
+          console.error('Failed to calculate contribution room for member:', error);
+          return null;
         }
-      })();
-
-      const rrspContributions = (accounts ?? [])
-        .filter((a) => a.type === 'RRSP')
-        .reduce((s, a) => s + a.annualContribution, 0);
-      const tfsaContributions = (accounts ?? [])
-        .filter((a) => a.type === 'TFSA')
-        .reduce((s, a) => s + a.annualContribution, 0);
-
-      return calculateContributionRoom({
-        currentRrspRoom: member.rrspContributionRoom ?? 0,
-        currentTfsaRoom: member.tfsaContributionRoom ?? 0,
-        priorYearIncome: member.priorYearIncome ?? 0,
-        currentAge: calcAge(member.dateOfBirth),
-        retirementAge,
-        dateOfBirth: member.dateOfBirth,
-        annualRrspContribution: rrspContributions,
-        annualTfsaContribution: tfsaContributions,
-      });
-    } catch (error) {
-      console.error('Failed to calculate contribution room:', error);
-      return null;
-    }
-  }, [member, scenarios, accounts]);
+      })
+      .filter(Boolean) as Array<{
+        member: NonNullable<NonNullable<typeof household>['members']>[number];
+        room: ReturnType<typeof calculateContributionRoom>;
+        rrspFromPriorIncome: number;
+      }>;
+  }, [household, scenarios]);
 
   if (isLoading) return <Box display="flex" justifyContent="center" mt={8}><CircularProgress /></Box>;
 
@@ -599,100 +614,6 @@ export function AccountsPage() {
               </CardContent></Card>
             </Grid>
           </Grid>
-
-          {/* Contribution Room Tracker */}
-          {household && accounts && accounts.length > 0 && (
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>Contribution Room Tracker</Typography>
-                {!contributionRoom ? (
-                  <Alert severity="info">
-                    Enter your RRSP and TFSA contribution room in Household {'->'} Member details to see projections.
-                  </Alert>
-                ) : (
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="subtitle1" sx={{ mb: 1 }}>RRSP</Typography>
-                      <TableContainer>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>Metric</TableCell>
-                              <TableCell align="right">Value</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell>Current Room</TableCell>
-                              <TableCell align="right">${contributionRoom.rrsp.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell>18% of Prior Income</TableCell>
-                              <TableCell align="right">${rrspFromPriorIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell>Annual Max (2024)</TableCell>
-                              <TableCell align="right">${rrspAnnualMax.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell>New Room This Year</TableCell>
-                              <TableCell align="right">${contributionRoom.rrsp.annualNewRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell>Projected At Retirement</TableCell>
-                              <TableCell align="right">${contributionRoom.rrsp.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                      {contributionRoom.rrsp.currentRoom < 0 && (
-                        <Alert severity="error" sx={{ mt: 1 }}>
-                          Over-contribution alert: RRSP room is negative. You may be subject to penalty tax.
-                        </Alert>
-                      )}
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="subtitle1" sx={{ mb: 1 }}>TFSA</Typography>
-                      <TableContainer>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>Metric</TableCell>
-                              <TableCell align="right">Value</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell>Current Room</TableCell>
-                              <TableCell align="right">${contributionRoom.tfsa.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell>Annual Limit (2024)</TableCell>
-                              <TableCell align="right">$7,000</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell>Cumulative Room Since 18</TableCell>
-                              <TableCell align="right">${contributionRoom.tfsa.totalCumulativeRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell>Projected At Retirement</TableCell>
-                              <TableCell align="right">${contributionRoom.tfsa.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                      {contributionRoom.tfsa.currentRoom < 0 && (
-                        <Alert severity="error" sx={{ mt: 1 }}>
-                          Over-contribution alert: TFSA room is negative.
-                        </Alert>
-                      )}
-                    </Grid>
-                  </Grid>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
           {Object.entries(byType).map(([type, accs]) => (
             <Card key={type} sx={{ mb: 2 }}>
@@ -862,6 +783,137 @@ export function AccountsPage() {
         </Card>
       )}
 
+      {/* Contribution Room Tracker */}
+      {household && accounts && accounts.length > 0 && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 2 }}>Contribution Room Tracker</Typography>
+            {memberRooms.length === 0 ? (
+              <Alert severity="info">
+                Enter your RRSP and TFSA contribution room in Household {'->'}  Member details to see projections.
+              </Alert>
+            ) : (
+              <>
+                {memberRooms.map(({ member, room, rrspFromPriorIncome }, idx) => (
+                  <Box key={member.id} sx={{ mb: memberRooms.length > 1 && idx < memberRooms.length - 1 ? 3 : 0 }}>
+                    {memberRooms.length > 1 && (
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: 'primary.main' }}>
+                        {member.name}
+                      </Typography>
+                    )}
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle1" sx={{ mb: 1 }}>RRSP</Typography>
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Metric</TableCell>
+                                <TableCell align="right">Value</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell>Current Room</TableCell>
+                                <TableCell align="right">${room.rrsp.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>18% of Prior Income</TableCell>
+                                <TableCell align="right">${rrspFromPriorIncome.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>Annual Max (2024)</TableCell>
+                                <TableCell align="right">${rrspAnnualMax.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>New Room This Year</TableCell>
+                                <TableCell align="right">${room.rrsp.annualNewRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>
+                                  Max Room at Retirement
+                                  <Typography variant="caption" color="text.disabled" sx={{ display: 'block' }}>
+                                    Before contributions
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">${room.rrsp.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                        {room.rrsp.currentRoom < 0 && (
+                          <Alert severity="error" sx={{ mt: 1 }}>
+                            Over-contribution alert: RRSP room is negative. You may be subject to penalty tax.
+                          </Alert>
+                        )}
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle1" sx={{ mb: 1 }}>TFSA</Typography>
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Metric</TableCell>
+                                <TableCell align="right">Value</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell>Current Room</TableCell>
+                                <TableCell align="right">${room.tfsa.currentRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>Annual Limit (2024)</TableCell>
+                                <TableCell align="right">$7,000</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>Cumulative Room Since 18</TableCell>
+                                <TableCell align="right">${room.tfsa.totalCumulativeRoom.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>
+                                  Max Room at Retirement
+                                  <Typography variant="caption" color="text.disabled" sx={{ display: 'block' }}>
+                                    Before contributions
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">${room.tfsa.projectedRoomAtRetirement.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                        {room.tfsa.currentRoom < 0 && (
+                          <Alert severity="error" sx={{ mt: 1 }}>
+                            Over-contribution alert: TFSA room is negative.
+                          </Alert>
+                        )}
+                      </Grid>
+                    </Grid>
+                  </Box>
+                ))}
+                {(totalHouseholdRrspContributions > 0 || totalHouseholdTfsaContributions > 0) && (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Annual contributions across all accounts: </strong>
+                      {totalHouseholdRrspContributions > 0 && (
+                        <>RRSP ${totalHouseholdRrspContributions.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/yr</>
+                      )}
+                      {totalHouseholdRrspContributions > 0 && totalHouseholdTfsaContributions > 0 && ' · '}
+                      {totalHouseholdTfsaContributions > 0 && (
+                        <>TFSA ${totalHouseholdTfsaContributions.toLocaleString('en-CA', { maximumFractionDigits: 0 })}/yr</>
+                      )}
+                      . These reduce your available room annually. The projections above show maximum room
+                      available at retirement before accounting for contributions.
+                    </Typography>
+                  </Alert>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Dialog open={dialogOpen} maxWidth="xs" fullWidth onClose={closeDialog}>
         <DialogTitle>{editingAccount ? 'Edit Account' : 'Add Account'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
@@ -884,7 +936,7 @@ export function AccountsPage() {
             }
             sx={(!!form.ynabAccountId || (!!form.brokerageAccountId && form.brokerageProvider !== 'TD')) ? { '& .MuiOutlinedInput-root': { bgcolor: 'action.disabledBackground' } } : undefined}
           />
-          <TextField label="Annual Contribution ($)" type="number" value={form.annualContribution} onChange={(e) => setForm({ ...form, annualContribution: e.target.value })} fullWidth helperText="How much you contribute per year" />
+          <TextField label="Annual Contribution ($)" type="number" value={form.annualContribution} onChange={(e) => setForm({ ...form, annualContribution: e.target.value })} fullWidth helperText={form.type === 'RRSP' ? 'Include employer matching in this total — both your contribution and the employer match use your RRSP room' : 'How much you contribute per year'} />
           <TextField
             label="Estimated Annual Return (%)"
             type="number"
