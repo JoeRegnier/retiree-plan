@@ -5,15 +5,18 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig*.json ./
 COPY packages/shared/package*.json ./packages/shared/
+COPY packages/finance-engine/package*.json ./packages/finance-engine/
 COPY apps/web/package*.json ./apps/web/
 
-RUN npm ci --workspace=packages/shared --workspace=apps/web
+RUN npm ci --workspace=packages/shared --workspace=packages/finance-engine --workspace=apps/web
 
 COPY packages/shared ./packages/shared/
+COPY packages/finance-engine ./packages/finance-engine/
 COPY apps/web ./apps/web/
 
-RUN npm run build --workspace=packages/shared
-RUN npm run build --workspace=apps/web
+RUN npm run build --workspace=packages/shared \
+	&& npm run build --workspace=packages/finance-engine \
+	&& npm run build --workspace=apps/web
 
 # Serve stage
 FROM nginx:alpine AS runner
