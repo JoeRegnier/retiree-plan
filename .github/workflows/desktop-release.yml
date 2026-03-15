@@ -53,6 +53,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Ensure Prisma model types exist before TypeScript builds (notably on Windows)
+      - name: Prisma generate (pre-build)
+        run: npx prisma generate --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: "file:/tmp/dummy-build.db"
+
       # ── Build shared package ──────────────────────────────────────────────
       - name: Build shared
         run: npm run build -w packages/shared

@@ -40,6 +40,9 @@ echo ""
 echo "▸ [1/7] Building workspace packages..."
 cd "$ROOT_DIR"
 
+# Ensure generated Prisma client types are present before building the API.
+npx prisma generate --schema="$PRISMA_SCHEMA"
+
 npm run build -w packages/shared
 npm run build -w packages/finance-engine
 npm run build -w apps/api

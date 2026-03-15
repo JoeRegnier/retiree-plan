@@ -2,7 +2,10 @@
   "name": "@retiree-plan/desktop",
   "version": "0.1.0",
   "description": "Retiree Plan – Desktop Application",
-  "author": "Retiree Plan",
+  "author": {
+    "name": "Retiree Plan",
+    "email": "maintainer@retireeplan.app"
+  },
   "repository": {
     "type": "git",
     "url": "https://gitlab.com/fox-den/retireeplan.git"

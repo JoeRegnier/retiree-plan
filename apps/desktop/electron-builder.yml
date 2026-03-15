@@ -70,6 +70,7 @@ nsis:
 linux:
   icon: build-resources/icon.png
   category: Finance
+  maintainer: "Retiree Plan <maintainer@retireeplan.app>"
   target:
     - target: AppImage
       arch:
