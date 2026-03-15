@@ -1,9 +1,6 @@
 name: Build Desktop Installers
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       version:
@@ -12,8 +9,7 @@ on:
         default: ''
 
 # Each platform job builds, then uploads its artifacts.
-# The optional "release" job fires only on tag pushes and
-# attaches all artifacts to a GitHub Release.
+# This workflow is manual-only and is intended for ad hoc installer builds.
 
 jobs:
   # ── macOS ────────────────────────────────────────────────────────────────────
