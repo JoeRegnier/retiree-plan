@@ -27,11 +27,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install desktop workspace deps
+        run: npm ci --workspace apps/desktop
 
       - name: Build desktop installer
         run: bash apps/desktop/scripts/build-desktop.sh
@@ -57,13 +60,17 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       # windows-latest pre-installs Python and Visual Studio Build Tools,
       # which are needed by node-gyp to compile native modules (bcrypt).
       - name: Install dependencies
         run: npm ci
+        shell: bash
+
+      - name: Install desktop workspace deps
+        run: npm ci --workspace apps/desktop
         shell: bash
 
       - name: Build desktop installer
@@ -92,11 +99,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install desktop workspace deps
+        run: npm ci --workspace apps/desktop
 
       - name: Build desktop installer
         run: bash apps/desktop/scripts/build-desktop.sh
