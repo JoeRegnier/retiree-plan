@@ -176,7 +176,12 @@ echo "▸ [7/8] Generating app icon..."
 node "$SCRIPT_DIR/generate-icon.js"
 
 echo "▸ [8/8] Packaging with electron-builder..."
-npx electron-builder --publish never --config.extraMetadata.version="$RELEASE_VERSION"
+if [ "$(uname -s)" = "Darwin" ]; then
+  npx electron-builder --mac --x64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
+  npx electron-builder --mac --arm64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
+else
+  npx electron-builder --publish never --config.extraMetadata.version="$RELEASE_VERSION"
+fi
 
 echo ""
 echo "✅ Done!  Artifacts → $DESKTOP_DIR/release/"

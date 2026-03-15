@@ -34,13 +34,7 @@ mac:
   icon: build-resources/icon.png
   target:
     - target: dmg
-      arch:
-        - x64
-        - arm64
     - target: zip
-      arch:
-        - x64
-        - arm64
   hardenedRuntime: true
   gatekeeperAssess: false
   # Provide entitlements when code-signing is configured.
