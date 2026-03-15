@@ -1,0 +1,231 @@
+name: Desktop Release
+
+# Trigger on version tags (e.g. v1.2.3) or manually.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to GitHub Releases'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform_label: mac
+          - os: windows-latest
+            platform_label: win
+          - os: ubuntu-latest
+            platform_label: linux
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Node.js 24 ────────────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      # Linux: install native build toolchain for bcrypt / Prisma
+      - name: Install Linux build deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++ libsqlite3-dev
+
+      # ── Install all workspace dependencies ────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # Install desktop-specific deps (electron, electron-builder, etc.)
+      - name: Install desktop workspace deps
+        run: npm ci --workspace apps/desktop
+
+      # ── Build finance-engine ──────────────────────────────────────────────
+      - name: Build finance-engine
+        run: npm run build -w packages/finance-engine
+
+      # ── Build NestJS API ──────────────────────────────────────────────────
+      - name: Build API
+        run: npm run build -w apps/api
+
+      # ── Build React web ───────────────────────────────────────────────────
+      - name: Build web
+        run: npm run build -w apps/web
+
+      # ── Bundle API with ncc ───────────────────────────────────────────────
+      - name: Bundle API (ncc)
+        shell: bash
+        run: |
+          mkdir -p apps/desktop/resources/server
+          npx @vercel/ncc build apps/api/dist/main.js \
+            --out apps/desktop/resources/server \
+            --external bcrypt \
+            --external @prisma/client \
+            --external @github/copilot-sdk \
+            -m
+
+      # ── Write server package.json for native deps ─────────────────────────
+      - name: Write server package.json
+        shell: bash
+        run: |
+          API_BCRYPT_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies.bcrypt)")
+          PRISMA_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies['@prisma/client'])")
+          COPILOT_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies['@github/copilot-sdk'] || '')")
+          cat > apps/desktop/resources/server/package.json << EOF
+          {
+            "name": "retiree-plan-server",
+            "version": "0.1.0",
+            "private": true,
+            "dependencies": {
+              "bcrypt": "$API_BCRYPT_VER",
+              "@prisma/client": "$PRISMA_VER"
+              ,"@github/copilot-sdk": "$COPILOT_VER"
+            }
+          }
+          EOF
+
+      # ── Install native modules into server bundle ─────────────────────────
+      - name: Install server native deps
+        working-directory: apps/desktop/resources/server
+        run: npm install --production --no-package-lock
+
+      # ── Generate Prisma client for this platform ──────────────────────────
+      - name: Prisma generate
+        run: npx prisma generate --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: "file:/tmp/dummy-build.db"
+
+      # Copy Prisma artifacts into the server bundle
+      - name: Copy Prisma client into server bundle
+        shell: bash
+        run: |
+          if [ -d node_modules/.prisma ]; then
+            cp -r node_modules/.prisma apps/desktop/resources/server/node_modules/.prisma
+          fi
+          if [ -d node_modules/@prisma/client ]; then
+            cp -r node_modules/@prisma/client apps/desktop/resources/server/node_modules/@prisma/client
+          fi
+
+      # ── Rebuild native modules for Electron's Node ABI ───────────────────
+      - name: Rebuild native modules for Electron
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          ELECTRON_VER=$(node -e "process.stdout.write(require('./node_modules/electron/package.json').version)")
+          npx @electron/rebuild \
+            --version "$ELECTRON_VER" \
+            --module-dir resources/server
+
+      # ── Copy React build ──────────────────────────────────────────────────
+      - name: Copy web build
+        shell: bash
+        run: |
+          rm -rf apps/desktop/resources/web
+          cp -r apps/web/dist apps/desktop/resources/web
+
+      # ── Stamp template database ───────────────────────────────────────────
+      - name: Create template database
+        shell: bash
+        run: |
+          rm -f apps/desktop/resources/template.db
+          DATABASE_URL="file:$(pwd)/apps/desktop/resources/template.db" \
+            npx prisma db push \
+              --schema=prisma/schema.prisma \
+              --accept-data-loss \
+              --skip-generate
+
+      # ── Compile Electron TypeScript ────────────────────────────────────────
+      - name: Compile Electron main process
+        working-directory: apps/desktop
+        run: npm run build
+
+      # ── Package with electron-builder ─────────────────────────────────────
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        working-directory: apps/desktop
+        run: npx electron-builder --mac
+        env:
+          # Set GH_TOKEN so electron-builder can upload to GitHub Releases.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code-signing (optional – leave unset to skip):
+          # CSC_LINK: ${{ secrets.CSC_LINK }}
+          # CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        working-directory: apps/desktop
+        run: npx electron-builder --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          # WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        working-directory: apps/desktop
+        run: npx electron-builder --linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Upload artifacts ───────────────────────────────────────────────────
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform_label }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/latest*.yml
+          if-no-files-found: warn
+          retention-days: 30
+
+  # ── Create / update GitHub Release ────────────────────────────────────────────
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    # Only run for real tag pushes, not manual dispatches (unless explicitly requested).
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish == 'true')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

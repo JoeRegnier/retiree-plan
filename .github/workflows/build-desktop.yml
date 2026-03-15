@@ -1,0 +1,135 @@
+name: Build Desktop Installers
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Informational version label (e.g. v0.2.0). Does not create a tag.'
+        required: false
+        default: ''
+
+# Each platform job builds, then uploads its artifacts.
+# The optional "release" job fires only on tag pushes and
+# attaches all artifacts to a GitHub Release.
+
+jobs:
+  # ── macOS ────────────────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS (DMG + ZIP)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build desktop installer
+        run: bash apps/desktop/scripts/build-desktop.sh
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  # ── Windows ──────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows (NSIS installer)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # windows-latest pre-installs Python and Visual Studio Build Tools,
+      # which are needed by node-gyp to compile native modules (bcrypt).
+      - name: Install dependencies
+        run: npm ci
+        shell: bash
+
+      - name: Build desktop installer
+        run: bash apps/desktop/scripts/build-desktop.sh
+        shell: bash
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: apps/desktop/release/*.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  # ── Linux ────────────────────────────────────────────────────────────────────
+  build-linux:
+    name: Linux (AppImage + deb)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux packaging dependencies
+        run: sudo apt-get update && sudo apt-get install -y fakeroot rpm
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build desktop installer
+        run: bash apps/desktop/scripts/build-desktop.sh
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+          if-no-files-found: error
+          retention-days: 14
+
+  # ── GitHub Release (tag pushes only) ─────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Retiree Plan ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: release-artifacts/**/*
+          generate_release_notes: true
