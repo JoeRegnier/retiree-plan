@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Informational version label (e.g. v0.2.0). Does not create a tag.'
+        description: 'Optional desktop release version override (e.g. v0.2.0 or 0.2.0).'
         required: false
         default: ''
 
@@ -32,6 +32,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Apply manual release version override
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        run: echo "DESKTOP_RELEASE_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
 
       - name: Build desktop installer
         run: bash apps/desktop/scripts/build-desktop.sh
@@ -66,6 +70,11 @@ jobs:
         run: npm ci
         shell: bash
 
+      - name: Apply manual release version override
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        run: echo "DESKTOP_RELEASE_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+        shell: bash
+
       - name: Build desktop installer
         run: bash apps/desktop/scripts/build-desktop.sh
         shell: bash
@@ -97,6 +106,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Apply manual release version override
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        run: echo "DESKTOP_RELEASE_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
 
       - name: Build desktop installer
         run: bash apps/desktop/scripts/build-desktop.sh

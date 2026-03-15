@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Desktop Release
 
 # Trigger on version tags (e.g. v1.2.3) or manually.
@@ -10,7 +11,7 @@ on:
       publish:
         description: 'Publish to GitHub Releases'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 concurrency:
@@ -26,11 +27,8 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            platform_label: mac
           - os: windows-latest
-            platform_label: win
           - os: ubuntu-latest
-            platform_label: linux
 
     steps:
       # ── Checkout ──────────────────────────────────────────────────────────
@@ -43,6 +41,17 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
+
+      - name: Resolve desktop release version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+          else
+            RELEASE_VERSION=$(node -e "process.stdout.write(require('./apps/desktop/package.json').version)")
+          fi
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
+          echo "Using desktop release version: $RELEASE_VERSION"
 
       # Linux: install native build toolchain for bcrypt / Prisma
       - name: Install Linux build deps
@@ -97,7 +106,7 @@ jobs:
           cat > apps/desktop/resources/server/package.json << EOF
           {
             "name": "retiree-plan-server",
-            "version": "0.1.0",
+            "version": "$RELEASE_VERSION",
             "private": true,
             "dependencies": {
               "bcrypt": "$API_BCRYPT_VER",
@@ -166,7 +175,7 @@ jobs:
       - name: Package (macOS)
         if: runner.os == 'macOS'
         working-directory: apps/desktop
-        run: npx electron-builder --mac --publish never
+        run: npx electron-builder --mac --publish never --config.extraMetadata.version="$RELEASE_VERSION"
         # Code-signing (optional – leave unset to skip):
         # CSC_LINK: ${{ secrets.CSC_LINK }}
         # CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -177,20 +186,20 @@ jobs:
       - name: Package (Windows)
         if: runner.os == 'Windows'
         working-directory: apps/desktop
-        run: npx electron-builder --win --publish never
+        run: npx electron-builder --win --publish never --config.extraMetadata.version="$RELEASE_VERSION"
         # WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
         # WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
         working-directory: apps/desktop
-        run: npx electron-builder --linux --publish never
+        run: npx electron-builder --linux --publish never --config.extraMetadata.version="$RELEASE_VERSION"
 
       # ── Upload artifacts ───────────────────────────────────────────────────
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.platform_label }}
+          name: desktop-${{ matrix.os }}
           path: |
             apps/desktop/release/*.dmg
             apps/desktop/release/*.zip
@@ -214,6 +223,18 @@ jobs:
       contents: write
 
     steps:
+      - name: Resolve release version
+        id: release_version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+          else
+            RELEASE_VERSION=$(node -e "process.stdout.write(require('./apps/desktop/package.json').version)")
+          fi
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
+          echo "value=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -222,6 +243,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: Retiree Plan ${{ steps.release_version.outputs.value }}
           files: artifacts/**/*
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}

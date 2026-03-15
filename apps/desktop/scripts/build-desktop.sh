@@ -31,6 +31,26 @@ echo "╚═══════════════════════�
 echo ""
 echo "  Root  : $ROOT_DIR"
 echo "  Output: $DESKTOP_DIR/release"
+
+cd "$ROOT_DIR"
+
+# Determine the effective desktop release version.
+# Priority:
+#   1) DESKTOP_RELEASE_VERSION env (manual override)
+#   2) CI tag ref (strip leading 'v')
+#   3) apps/desktop/package.json version (local fallback)
+if [ -n "${DESKTOP_RELEASE_VERSION:-}" ]; then
+  RELEASE_VERSION="${DESKTOP_RELEASE_VERSION#v}"
+elif [ "${GITHUB_REF_TYPE:-}" = "tag" ] && [ -n "${GITHUB_REF_NAME:-}" ]; then
+  RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+elif [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+  RELEASE_VERSION="${GITHUB_REF##refs/tags/}"
+  RELEASE_VERSION="${RELEASE_VERSION#v}"
+else
+  RELEASE_VERSION=$(node -e "process.stdout.write(require('./apps/desktop/package.json').version)")
+fi
+
+echo "  Version: $RELEASE_VERSION"
 echo ""
 
 # ── 1. Build workspace packages ────────────────────────────────────────────────
@@ -38,7 +58,6 @@ echo ""
 # Running `npm run build --workspaces` can dispatch them concurrently, causing
 # finance-engine to fail because @retiree-plan/shared dist/ does not yet exist.
 echo "▸ [1/7] Building workspace packages..."
-cd "$ROOT_DIR"
 
 # Ensure generated Prisma client types are present before building the API.
 npx prisma generate --schema="$PRISMA_SCHEMA"
@@ -96,7 +115,7 @@ fi
 cat > "$RESOURCES_DIR/server/package.json" << EOF
 {
   "name": "retiree-plan-server",
-  "version": "0.1.0",
+  "version": "$RELEASE_VERSION",
   "private": true,
   "dependencies": {
     "bcrypt": "$API_BCRYPT_VER",
@@ -157,7 +176,7 @@ echo "▸ [7/8] Generating app icon..."
 node "$SCRIPT_DIR/generate-icon.js"
 
 echo "▸ [8/8] Packaging with electron-builder..."
-npx electron-builder --publish never
+npx electron-builder --publish never --config.extraMetadata.version="$RELEASE_VERSION"
 
 echo ""
 echo "✅ Done!  Artifacts → $DESKTOP_DIR/release/"
