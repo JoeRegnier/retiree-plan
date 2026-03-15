@@ -57,6 +57,10 @@ jobs:
       - name: Install desktop workspace deps
         run: npm ci --workspace apps/desktop
 
+      # ── Build shared package ──────────────────────────────────────────────
+      - name: Build shared
+        run: npm run build -w packages/shared
+
       # ── Build finance-engine ──────────────────────────────────────────────
       - name: Build finance-engine
         run: npm run build -w packages/finance-engine
