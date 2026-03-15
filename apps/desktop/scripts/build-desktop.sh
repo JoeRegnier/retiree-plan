@@ -69,16 +69,16 @@ npx --yes @vercel/ncc build \
 # Place a minimal package.json so npm install + electron-rebuild work correctly.
 echo "▸ [3/7] Installing and rebuilding native modules for Electron..."
 
-API_BCRYPT_VER=$(node -e "process.stdout.write(require('$ROOT_DIR/apps/api/package.json').dependencies.bcrypt ?? '5')")
-PRISMA_VER=$(node -e "process.stdout.write(require('$ROOT_DIR/apps/api/package.json').dependencies['@prisma/client'] ?? '6')")
-COPILOT_VER=$(node -e "process.stdout.write(require('$ROOT_DIR/apps/api/package.json').dependencies['@github/copilot-sdk'] ?? '')")
+API_BCRYPT_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies.bcrypt ?? '5')")
+PRISMA_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies['@prisma/client'] ?? '6')")
+COPILOT_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies['@github/copilot-sdk'] ?? '')")
 
 # Determine Electron version. Prefer the workspace-local install, fall back
 # to the repository root install. If neither exists, print guidance.
 if [ -f "$DESKTOP_DIR/node_modules/electron/package.json" ]; then
-  ELECTRON_VER=$(node -e "process.stdout.write(require('$DESKTOP_DIR/node_modules/electron/package.json').version)")
+  ELECTRON_VER=$(node -e "process.stdout.write(require('./apps/desktop/node_modules/electron/package.json').version)")
 elif [ -f "$ROOT_DIR/node_modules/electron/package.json" ]; then
-  ELECTRON_VER=$(node -e "process.stdout.write(require('$ROOT_DIR/node_modules/electron/package.json').version)")
+  ELECTRON_VER=$(node -e "process.stdout.write(require('./node_modules/electron/package.json').version)")
 else
   echo "Electron package not found in apps/desktop or repo root. Install with:"
   echo "  npm ci --workspace apps/desktop"

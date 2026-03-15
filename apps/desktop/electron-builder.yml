@@ -71,6 +71,7 @@ linux:
   icon: build-resources/icon.png
   category: Finance
   maintainer: "Retiree Plan <maintainer@retireeplan.app>"
+  artifactName: "retiree-plan-${version}-${arch}.${ext}"
   target:
     - target: AppImage
       arch:
