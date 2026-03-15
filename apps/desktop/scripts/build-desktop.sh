@@ -34,10 +34,16 @@ echo "  Output: $DESKTOP_DIR/release"
 echo ""
 
 # ── 1. Build workspace packages ────────────────────────────────────────────────
+# Packages must be built in dependency order: shared → finance-engine → api/web.
+# Running `npm run build --workspaces` can dispatch them concurrently, causing
+# finance-engine to fail because @retiree-plan/shared dist/ does not yet exist.
 echo "▸ [1/7] Building workspace packages..."
 cd "$ROOT_DIR"
 
-npm run build --workspaces --if-present
+npm run build -w packages/shared
+npm run build -w packages/finance-engine
+npm run build -w apps/api
+npm run build -w apps/web
 
 # ── 2. Bundle API with ncc ─────────────────────────────────────────────────────
 # Bundle everything EXCEPT native modules so they can be rebuilt for Electron's
