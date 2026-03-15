@@ -286,9 +286,28 @@ app.whenReady().then(async () => {
         dialog.showErrorBox('Error', `Could not copy database: ${String(e)}`);
         return;
       }
+      // Always copy secrets alongside the DB so that encrypted tokens remain
+      // decryptable with the same key in the new profile.
       if (fs.existsSync(oldSecrets) && !fs.existsSync(newSecrets)) {
         try { fs.copyFileSync(oldSecrets, newSecrets); } catch { /* ignore */ }
       }
+    }
+
+    // If the target directory has a DB but no secrets file, a new random key
+    // will be generated — this means any stored integration tokens (YNAB etc.)
+    // in that DB were encrypted with a different key and will fail to decrypt.
+    // Warn the user so they know to reconnect integrations.
+    const newDbExists = fs.existsSync(path.join(newDir, 'retiree-plan.db'));
+    const newSecretsExist = fs.existsSync(newSecrets);
+    if (newDbExists && !newSecretsExist && !opts?.fresh && !opts?.copyExisting) {
+      dialog.showMessageBox({
+        type: 'warning',
+        buttons: ['OK'],
+        message: 'Integration tokens need to be reconnected',
+        detail:
+          'This plan\'s encryption key file (secrets.json) is missing. ' +
+          'Any saved integrations (YNAB, etc.) will need to be disconnected and reconnected after switching.',
+      }).catch(() => {});
     }
 
     if (opts?.fresh) {
@@ -426,6 +445,19 @@ app.whenReady().then(async () => {
       await switchToDataDir(picked, opts);
     };
 
+    const editMenu = {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    };
+
     const template: any[] = [];
     if (process.platform === 'darwin') {
       template.push({
@@ -448,6 +480,7 @@ app.whenReady().then(async () => {
         ],
       });
     }
+    template.push(editMenu);
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
   };
 

@@ -12,7 +12,8 @@
 #   4. Copy the React static build into resources/web/
 #   5. Stamp a template SQLite DB (schema only, no user data) into resources/
 #   6. Compile the Electron TypeScript (main/preload)
-#   7. Run electron-builder for the current platform
+#   7. Generate placeholder app icon if build-resources/icon.png is missing
+#   8. Run electron-builder for the current platform
 # =============================================================================
 
 set -euo pipefail
@@ -79,6 +80,12 @@ else
 fi
 
 # Write a lean package.json for the server bundle
+# Only include copilot-sdk if the version string is non-empty
+COPILOT_DEP=''
+if [ -n "${COPILOT_VER}" ]; then
+  COPILOT_DEP=",\"@github/copilot-sdk\": \"${COPILOT_VER}\""
+fi
+
 cat > "$RESOURCES_DIR/server/package.json" << EOF
 {
   "name": "retiree-plan-server",
@@ -87,7 +94,7 @@ cat > "$RESOURCES_DIR/server/package.json" << EOF
   "dependencies": {
     "bcrypt": "$API_BCRYPT_VER",
     "@prisma/client": "$PRISMA_VER"
-    ,"@github/copilot-sdk": "${COPILOT_VER}"
+    ${COPILOT_DEP}
   }
 }
 EOF
@@ -96,7 +103,7 @@ EOF
 npm install --prefix "$RESOURCES_DIR/server" --production --no-package-lock
 
 # Regenerate the Prisma client for the current OS/arch targeting the native engine
-DATABASE_URL="file:/tmp/retiree-plan-build-dummy.db" \
+DATABASE_URL="file:${TMPDIR:-/tmp}/retiree-plan-build-dummy.db" \
   npx prisma generate --schema="$PRISMA_SCHEMA"
 
 # Copy the generated Prisma client (.prisma/client/) into the server node_modules
@@ -135,11 +142,14 @@ DATABASE_URL="file:$TEMPLATE_DB" \
 echo "  Template DB: $TEMPLATE_DB"
 
 # ── 6. Compile Electron TypeScript ────────────────────────────────────────────
-echo "▸ [6/7] Compiling Electron main process..."
+echo "▸ [6/8] Compiling Electron main process..."
 cd "$DESKTOP_DIR"
 npm run build
 
-echo "▸ [7/7] Packaging with electron-builder..."
+echo "▸ [7/8] Generating app icon..."
+node "$SCRIPT_DIR/generate-icon.js"
+
+echo "▸ [8/8] Packaging with electron-builder..."
 npx electron-builder --publish never
 
 echo ""

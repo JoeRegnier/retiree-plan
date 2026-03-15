@@ -1,0 +1,40 @@
+# CODEOWNERS — RetireePlan
+#
+# Each line assigns one or more owners to a path pattern.
+# Owners are automatically requested for review when a PR
+# touches the matching files.
+#
+# Syntax:  <pattern>  <@user-or-team> [<@user-or-team> ...]
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ── Default owner (catches anything not matched below) ────────────────────────
+*                               @joeregnier
+
+# ── Finance engine — tax, projection, simulation ──────────────────────────────
+# Changes here affect calculation correctness; require careful review.
+packages/finance-engine/        @joeregnier
+
+# ── Shared types & Zod schemas ────────────────────────────────────────────────
+packages/shared/                @joeregnier
+
+# ── API (NestJS) ──────────────────────────────────────────────────────────────
+apps/api/                       @joeregnier
+
+# ── Frontend (React / Vite) ───────────────────────────────────────────────────
+apps/web/                       @joeregnier
+
+# ── Desktop (Electron) ────────────────────────────────────────────────────────
+apps/desktop/                   @joeregnier
+
+# ── Database schema & migrations ──────────────────────────────────────────────
+# Schema changes are high-impact; require explicit review.
+prisma/schema.prisma            @joeregnier
+prisma/migrations/              @joeregnier
+
+# ── CI / CD workflows ─────────────────────────────────────────────────────────
+.github/                        @joeregnier
+
+# ── Documentation ─────────────────────────────────────────────────────────────
+docs/                           @joeregnier
+README.md                       @joeregnier
+CONTRIBUTING.md                 @joeregnier

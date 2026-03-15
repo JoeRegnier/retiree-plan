@@ -27,6 +27,7 @@
 | Income Replacement Card | Pre-retirement vs. retirement income comparison with replacement ratio gauge |
 | Net Worth Sparkline | D3 animated area sparkline on Dashboard showing projected net worth timeline with milestone annotations |
 | Quick What-If Calculator | Floating drawer with sliders (extra savings, return rate, retirement age shift, life expectancy); live chart in Web Worker; integrated into QuickActionsPanel overlay |
+| Desktop Distribution | Electron 32 app bundling its own API server; packaged as DMG (macOS x64/arm64), NSIS installer (Windows x64), and AppImage+deb (Linux x64); GitHub Actions CI workflow builds all three platforms on each version tag |
 
 ---
 
@@ -606,32 +607,30 @@ Quebec residents contribute to QPP, not CPP. QPP has slightly different rates an
 
 ## Implementation Priority Matrix
 
-| # | Feature | Impact | Effort | Priority |
-|---|---|---|---|---|
 | # | Feature | Impact | Effort | Priority | Status |
 |---|---|---|---|---|---|
 | 1.1 | Retirement Readiness Score | H | M | ★★★★★ | ✅ Shipped |
-| 1.2 | Automated Insights Engine | H | M | ★★★★★ | — |
+| 1.2 | Automated Insights Engine | H | M | ★★★★★ | ✅ Shipped |
 | 2.1 | CPP Timing Optimizer | H | M | ★★★★★ | — |
 | 2.3 | Pension Splitting Optimizer | H | M | ★★★★★ | — |
 | 5.1 | Withdrawal Order Optimizer | H | H | ★★★★☆ | — |
 | 3.4 | Quick What-If Calculator | H | S | ★★★★☆ | ✅ Shipped |
-| 4.1 | RRSP/TFSA Room Tracker | H | M | ★★★★☆ | — |
+| 4.1 | RRSP/TFSA Room Tracker | H | M | ★★★★☆ | ✅ Shipped |
 | 6.1 | Income Replacement Card | H | S | ★★★★☆ | ✅ Shipped |
-| 7.1 | Goals-Based View | H | M | ★★★★☆ | — |
+| 7.1 | Goals-Based View | H | M | ★★★★☆ | ✅ Shipped |
 | 2.2 | OAS Deferral + Clawback Optimizer | H | M | ★★★★☆ | — |
-| 3.1 | Phased Spending Template | H | M | ★★★★☆ | — |
-| 4.3 | Real Estate / Rental Income | M | M | ★★★☆☆ | — |
+| 3.1 | Phased Spending Template | H | M | ★★★★☆ | ✅ Shipped |
+| 4.3 | Real Estate / Rental Income | M | M | ★★★☆☆ | ✅ Shipped |
 | 4.4 | Defined Benefit Pension Deep-Dive | H | M | ★★★☆☆ | — |
 | 1.3 | Plan Completeness Checklist | M | S | ★★★☆☆ | ✅ Shipped |
 | 2.5 | GIS Planner | M | M | ★★★☆☆ | — |
 | 5.2 | Bucket Strategy Modeller | M | M | ★★★☆☆ | — |
 | 6.2 | Net Worth Sparkline Timeline | H | S | ★★★☆☆ | ✅ Shipped |
-| 6.6 | PDF Report Improvements | M | M | ★★★☆☆ | — |
+| 6.6 | PDF Report Improvements | M | M | ★★★☆☆ | ✅ Shipped |
 | 7.3 | Legacy & Estate Giving Planner | M | M | ★★★☆☆ | — |
 | 8.1 | Advisor Sharing Mode | M | M | ★★★☆☆ | — |
-| 4.2 | Asset Allocation Modeller | M | M | ★★★☆☆ | — |
-| 9.2 | Market Data Refresh / Assumptions Audit | M | S | ★★★☆☆ | — |
+| 4.2 | Asset Allocation Modeller | M | M | ★★★☆☆ | ✅ Shipped |
+| 9.2 | Market Data Refresh / Assumptions Audit | M | S | ★★★☆☆ | ✅ Shipped |
 | 10.1 | RDSP | M | M | ★★★☆☆ | — |
 | 10.3 | RESP Planner | M | M | ★★★☆☆ | — |
 | 6.4 | Sequence-of-Returns Heatmap | M | S | ★★☆☆☆ | — |
@@ -639,8 +638,8 @@ Quebec residents contribute to QPP, not CPP. QPP has slightly different rates an
 | 3.2 | Expense Category Drill-Down | M | M | ★★☆☆☆ | — |
 | 3.3 | Healthcare Cost Modeller | M | S | ★★☆☆☆ | — |
 | 5.3 | Dynamic Withdrawal (Floor-and-Upside) | M | M | ★★☆☆☆ | — |
-| 6.3 | Account Drawdown Animation | M | M | ★★☆☆☆ | — |
-| 7.2 | Milestone Templates | M | S | ★★☆☆☆ | — |
+| 6.3 | Account Drawdown Animation | M | M | ★★☆☆☆ | ✅ Shipped |
+| 7.2 | Milestone Templates | M | S | ★★☆☆☆ | ✅ Shipped |
 | 8.2 | Household Multi-User Accounts | M | H | ★★☆☆☆ | — |
 | 9.1 | CRA Data Import | H | H | ★★☆☆☆ | — |
 | 9.3 | CSV / Spreadsheet Import | M | S | ★★☆☆☆ | — |

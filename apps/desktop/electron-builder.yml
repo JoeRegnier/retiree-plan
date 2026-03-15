@@ -31,7 +31,7 @@ directories:
 # ── macOS ──────────────────────────────────────────────────────────────────────
 mac:
   category: public.app-category.finance
-  icon: build-resources/icon.icns
+  icon: build-resources/icon.png
   target:
     - target: dmg
       arch:
@@ -53,7 +53,7 @@ dmg:
 
 # ── Windows ────────────────────────────────────────────────────────────────────
 win:
-  icon: build-resources/icon.ico
+  icon: build-resources/icon.png
   target:
     - target: nsis
       arch:
@@ -63,8 +63,8 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
-  installerIcon: build-resources/icon.ico
-  uninstallerIcon: build-resources/icon.ico
+  installerIcon: build-resources/icon.png
+  uninstallerIcon: build-resources/icon.png
 
 # ── Linux ──────────────────────────────────────────────────────────────────────
 linux:

@@ -204,16 +204,18 @@ export function IntegrationsPage() {
 
   const householdId = households?.[0]?.id ?? '';
 
-  const { data: budgets, isLoading: budgetsLoading } = useQuery<Budget[]>({
+  const { data: budgets, isLoading: budgetsLoading, isError: budgetsError, error: budgetsErrorObj } = useQuery<Budget[]>({
     queryKey: ['ynab-budgets'],
     queryFn: () => apiFetch('/ynab/budgets'),
     enabled: status?.connected === true,
+    retry: false,
   });
 
-  const { data: ynabCategories, isLoading: categoriesLoading } = useQuery<YnabCategory[]>({
+  const { data: ynabCategories, isLoading: categoriesLoading, isError: categoriesError, error: categoriesErrorObj } = useQuery<YnabCategory[]>({
     queryKey: ['ynab-categories'],
     queryFn: () => apiFetch('/ynab/categories'),
     enabled: status?.connected === true && !!status.budgetId,
+    retry: false,
   });
 
   const { data: mappings } = useQuery<CategoryMapping[]>({
@@ -510,6 +512,10 @@ export function IntegrationsPage() {
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                 <CircularProgress />
               </Box>
+            ) : categoriesError ? (
+              <Alert severity="error">
+                {(categoriesErrorObj as Error)?.message || 'Failed to load categories.'}
+              </Alert>
             ) : (
               <TableContainer component={Paper} variant="outlined">
                 <Table size="small">
@@ -690,6 +696,24 @@ export function IntegrationsPage() {
                 </Button>
               ) : (
                 <Stack spacing={2}>
+                {(budgetsError || categoriesError) && (
+                  <Alert
+                    severity="error"
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        startIcon={<LinkOffIcon />}
+                        onClick={() => disconnectMutation.mutate()}
+                      >
+                        Disconnect
+                      </Button>
+                    }
+                  >
+                    {(budgetsErrorObj as Error)?.message || (categoriesErrorObj as Error)?.message ||
+                      'Could not load YNAB data. Disconnect and reconnect to fix.'}
+                  </Alert>
+                )}
                   {brokStatus.lastSyncedAt && (
                     <Box>
                       <Typography variant="body2" color="text.secondary">Last synced</Typography>
@@ -822,19 +846,26 @@ export function IntegrationsPage() {
             label="Personal Access Token"
             value={tokenInput}
             onChange={(e) => { setTokenInput(e.target.value); setTokenError(''); }}
-            type={tokenVisible ? 'text' : 'password'}
+            type="text"
             fullWidth
             error={!!tokenError}
             helperText={tokenError}
             autoFocus
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={() => setTokenVisible((v) => !v)} edge="end">
-                    {tokenVisible ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setTokenVisible((v) => !v)} edge="end">
+                      {tokenVisible ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+              htmlInput: {
+                style: { WebkitTextSecurity: tokenVisible ? 'none' : 'disc' } as React.CSSProperties,
+                autoComplete: 'off',
+                spellCheck: false,
+              },
             }}
           />
         </DialogContent>
@@ -854,6 +885,11 @@ export function IntegrationsPage() {
       <Dialog open={budgetDialogOpen} onClose={() => setBudgetDialogOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Select a Budget</DialogTitle>
         <DialogContent>
+          {budgetsError ? (
+            <Alert severity="error" sx={{ mt: 1 }}>
+              {(budgetsErrorObj as Error)?.message || 'Failed to load budgets.'}
+            </Alert>
+          ) : (
           <FormControl fullWidth sx={{ mt: 1 }}>
             <InputLabel>Budget</InputLabel>
             <Select
@@ -868,12 +904,13 @@ export function IntegrationsPage() {
               ))}
             </Select>
           </FormControl>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBudgetDialogOpen(false)}>Cancel</Button>
           <Button
             variant="contained"
-            disabled={!selectedBudgetId || selectBudgetMutation.isPending}
+            disabled={!selectedBudgetId || selectBudgetMutation.isPending || !!budgetsError}
             onClick={() => selectBudgetMutation.mutate(selectedBudgetId)}
           >
             {selectBudgetMutation.isPending ? <CircularProgress size={16} /> : 'Select'}

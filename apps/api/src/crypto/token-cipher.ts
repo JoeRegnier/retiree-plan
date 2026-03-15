@@ -34,7 +34,23 @@ export function encryptToken(plaintext: string): string {
   return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
 }
 
-/** Decrypt a value produced by `encryptToken`. Throws on tampering. */
+/**
+ * Thrown when a stored token cannot be decrypted with the current key.
+ * This typically means the TOKEN_ENCRYPTION_KEY changed after the token was
+ * stored (e.g. after switching plans in the desktop app). The user needs to
+ * disconnect and reconnect the integration to re-encrypt with the current key.
+ */
+export class TokenDecryptionError extends Error {
+  constructor() {
+    super(
+      'Stored API token could not be decrypted with the current encryption key. ' +
+      'Please disconnect and reconnect this integration to restore access.',
+    );
+    this.name = 'TokenDecryptionError';
+  }
+}
+
+/** Decrypt a value produced by `encryptToken`. Throws on tampering or key mismatch. */
 export function decryptToken(stored: string): string {
   // Support plain-text tokens stored before encryption was introduced —
   // they won't contain two colons and will fail the split check.
@@ -54,5 +70,9 @@ export function decryptToken(stored: string): string {
   }
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(tag);
-  return decipher.update(data) + decipher.final('utf8');
+  try {
+    return decipher.update(data) + decipher.final('utf8');
+  } catch {
+    throw new TokenDecryptionError();
+  }
 }

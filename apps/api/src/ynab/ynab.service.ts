@@ -1,11 +1,12 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { encryptToken, decryptToken } from '../crypto/token-cipher';
+import { encryptToken, decryptToken, TokenDecryptionError } from '../crypto/token-cipher';
 
 const YNAB_API = 'https://api.youneedabudget.com/v1';
 
@@ -57,7 +58,19 @@ export class YnabService {
 
   private async ynabGet<T>(userId: string, path: string): Promise<T> {
     const conn = await this.requireConnection(userId);
-    const bearerToken = decryptToken(conn.accessToken);
+    let bearerToken: string;
+    try {
+      bearerToken = decryptToken(conn.accessToken);
+    } catch (err) {
+      if (err instanceof TokenDecryptionError) {
+        throw new BadRequestException(
+          'Your YNAB API token could not be decrypted. ' +
+          'This can happen when switching plans. ' +
+          'Please go to Integrations, disconnect YNAB, and reconnect it.',
+        );
+      }
+      throw err;
+    }
     const resp = await fetch(`${YNAB_API}${path}`, {
       headers: { Authorization: `Bearer ${bearerToken}` },
     });
