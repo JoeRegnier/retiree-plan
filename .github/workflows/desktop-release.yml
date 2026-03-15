@@ -53,10 +53,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Install desktop-specific deps (electron, electron-builder, etc.)
-      - name: Install desktop workspace deps
-        run: npm ci --workspace apps/desktop
-
       # ── Build shared package ──────────────────────────────────────────────
       - name: Build shared
         run: npm run build -w packages/shared

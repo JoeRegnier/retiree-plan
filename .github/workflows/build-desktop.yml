@@ -33,9 +33,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install desktop workspace deps
-        run: npm ci --workspace apps/desktop
-
       - name: Build desktop installer
         run: bash apps/desktop/scripts/build-desktop.sh
 
@@ -69,10 +66,6 @@ jobs:
         run: npm ci
         shell: bash
 
-      - name: Install desktop workspace deps
-        run: npm ci --workspace apps/desktop
-        shell: bash
-
       - name: Build desktop installer
         run: bash apps/desktop/scripts/build-desktop.sh
         shell: bash
@@ -104,9 +97,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Install desktop workspace deps
-        run: npm ci --workspace apps/desktop
 
       - name: Build desktop installer
         run: bash apps/desktop/scripts/build-desktop.sh
