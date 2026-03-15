@@ -175,7 +175,10 @@ jobs:
       - name: Package (macOS)
         if: runner.os == 'macOS'
         working-directory: apps/desktop
-        run: npx electron-builder --mac --publish never --config.extraMetadata.version="$RELEASE_VERSION"
+        shell: bash
+        run: |
+          npx electron-builder --mac --x64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
+          npx electron-builder --mac --arm64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
         # Code-signing (optional – leave unset to skip):
         # CSC_LINK: ${{ secrets.CSC_LINK }}
         # CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -186,6 +189,7 @@ jobs:
       - name: Package (Windows)
         if: runner.os == 'Windows'
         working-directory: apps/desktop
+        shell: bash
         run: npx electron-builder --win --publish never --config.extraMetadata.version="$RELEASE_VERSION"
         # WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
         # WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
@@ -193,6 +197,7 @@ jobs:
       - name: Package (Linux)
         if: runner.os == 'Linux'
         working-directory: apps/desktop
+        shell: bash
         run: npx electron-builder --linux --publish never --config.extraMetadata.version="$RELEASE_VERSION"
 
       # ── Upload artifacts ───────────────────────────────────────────────────
