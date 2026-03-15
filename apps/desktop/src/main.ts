@@ -373,14 +373,22 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('desktop:list-profiles', async () => ({ profiles: readProfiles() }));
 
-  ipcMain.handle('desktop:switch-profile', async (_ev, newPath: string) => {
-    if (!newPath) return { success: false };
-    // If target directory has a DB, switch to it; otherwise, prompt whether to copy or create fresh
-    const hasDb = fs.existsSync(path.join(newPath, 'retiree-plan.db'));
+  ipcMain.handle('desktop:switch-profile', async (_ev, profileIdOrPath: string) => {
+    if (!profileIdOrPath) return { success: false };
+
+    // Accept either a profile ID (from the login page) or a raw directory path (legacy)
+    const allProfiles = readProfiles();
+    const matched = allProfiles.find((p) => p.id === profileIdOrPath);
+    const targetDir = matched ? matched.path : profileIdOrPath;
+
+    // If target directory already has a DB, switch to it directly — no prompts needed
+    const hasDb = fs.existsSync(path.join(targetDir, 'retiree-plan.db'));
     if (hasDb) {
-      await switchToDataDir(newPath, { copyExisting: false, fresh: false });
+      await switchToDataDir(targetDir, { copyExisting: false, fresh: false });
       return { success: true };
     }
+
+    // DB missing — ask whether to copy or create fresh
     const choice = await dialog.showMessageBox({
       type: 'question',
       buttons: ['Copy existing data here', 'Create fresh DB here', 'Cancel'],
@@ -390,7 +398,7 @@ app.whenReady().then(async () => {
     });
     if (choice.response === 2) return { success: false };
     const opts = { copyExisting: choice.response === 0, fresh: choice.response === 1 };
-    await switchToDataDir(newPath, opts);
+    await switchToDataDir(targetDir, opts);
     return { success: true };
   });
 

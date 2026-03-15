@@ -3,12 +3,34 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// __dirname at runtime = apps/api/dist/database  →  4 levels up = project root
-const ROOT       = path.resolve(__dirname, '../../../..');
-const DB_PATH    = path.join(ROOT, 'data', 'retiree-plan.db');
-const BACKUP_DIR = path.join(ROOT, 'data', 'backups');
 /** Keep the N most recent backups from the scheduled job. Manual backups are never auto-pruned. */
 const DAILY_KEEP = 7;
+
+/**
+ * Resolve the active database file path.
+ * - Desktop mode: DATABASE_URL is set to "file:/abs/path/retiree-plan.db" per plan.
+ * - Web-only / dev mode: fall back to <project-root>/data/retiree-plan.db.
+ */
+function resolveDbPath(): string {
+  const url = process.env.DATABASE_URL;
+  if (url?.startsWith('file:')) {
+    return path.resolve(url.slice('file:'.length));
+  }
+  const ROOT = path.resolve(__dirname, '../../../..');
+  return path.join(ROOT, 'data', 'retiree-plan.db');
+}
+
+/**
+ * Backups always live in a "backups" subfolder next to the active database file.
+ * This means each plan gets its own isolated backup set.
+ */
+function resolveBackupDir(): string {
+  return path.join(path.dirname(resolveDbPath()), 'backups');
+}
+
+// Compute once per API process startup (the desktop restarts the API on every plan switch).
+const DB_PATH    = resolveDbPath();
+const BACKUP_DIR = resolveBackupDir();
 
 export interface BackupInfo {
   filename: string;

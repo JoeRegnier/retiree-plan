@@ -398,7 +398,7 @@ export function SettingsPage() {
                           <Stack direction="row" spacing={1} justifyContent="flex-end">
                             <Button size="small" onClick={async () => {
                               if (!window.electron?.desktop) { setSnack('Not in desktop mode'); return; }
-                              const res = await window.electron.desktop.switchProfile(p.path);
+                              const res = await window.electron.desktop.switchProfile(p.id);
                               if (res.success) { setSnack('Switched profile'); await refreshDataInfo(); }
                             }}>Switch</Button>
                           </Stack>
@@ -440,7 +440,7 @@ export function SettingsPage() {
                 </Stack>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Backups are stored in <code>data/backups/</code> on the server. Restoring overwrites the live database — a
+                Backups are stored in a <code>backups/</code> folder next to each plan's database file — each plan keeps its own isolated backup set. Restoring overwrites the live database — a
                 <strong> pre-restore backup is created automatically</strong> before any restore.
               </Typography>
               {backups.length === 0 ? (
