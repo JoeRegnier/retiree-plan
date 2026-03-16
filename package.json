@@ -61,5 +61,29 @@
   },
   "prisma": {
     "seed": "node prisma/seed.js"
+  },
+  "overrides": {
+    "@nestjs/common": {
+      "file-type": "^21.3.2"
+    },
+    "@nestjs/cli": {
+      "@angular-devkit/core": {
+        "ajv": "^8.18.0"
+      },
+      "@angular-devkit/schematics": {
+        "ajv": "^8.18.0"
+      },
+      "@angular-devkit/schematics-cli": {
+        "ajv": "^8.18.0"
+      }
+    },
+    "@nestjs/schematics": {
+      "@angular-devkit/core": {
+        "ajv": "^8.18.0"
+      }
+    },
+    "@angular-devkit/core": {
+      "ajv": "^8.18.0"
+    }
   }
 }
