@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RetireePlan — Open-Source Canadian Retirement Planning</title>
+  <meta name="description" content="A privacy-first, self-hosted retirement planning app built for Canadians. Model your financial life, run Monte Carlo simulations, and optimize taxes — all without sharing your data.">
+  <meta property="og:title" content="RetireePlan — Open-Source Canadian Retirement Planning">
+  <meta property="og:description" content="Privacy-first, self-hosted retirement planning built for Canadians. Monte Carlo simulations, full tax engine, CPP/OAS optimization.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://joeregnier.github.io/retiree-plan/">
+  <meta property="og:image" content="https://joeregnier.github.io/retiree-plan/screenshots/01-dashboard.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #d32f2f;
+      --red-light: #ef5350;
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --text: #1a1a2e;
+      --text-muted: #555;
+      --border: #e0e0e0;
+      --radius: 12px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Nav ───────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+    nav .inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+    nav .logo {
+      font-weight: 800;
+      font-size: 1.25rem;
+      text-decoration: none;
+      color: var(--text);
+    }
+    nav .logo span { color: var(--red); }
+    nav .links { display: flex; gap: 1.5rem; align-items: center; }
+    nav .links a {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    nav .links a:hover { color: var(--red); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn-primary {
+      background: var(--red);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--red-light); }
+    .btn-outline {
+      border: 2px solid var(--border);
+      color: var(--text);
+      background: var(--surface);
+    }
+    .btn-outline:hover { border-color: var(--red); color: var(--red); }
+
+    /* ─── Hero ──────────────────────────────── */
+    .hero {
+      padding: 8rem 2rem 4rem;
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .hero .badge {
+      display: inline-block;
+      background: #fce4ec;
+      color: var(--red);
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 0.35rem 1rem;
+      border-radius: 100px;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(2.5rem, 5vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 .accent { color: var(--red); }
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto 2rem;
+    }
+    .hero .ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+    .hero-screenshot {
+      margin: 3rem auto 0;
+      max-width: 1100px;
+      padding: 0 1rem;
+    }
+    .hero-screenshot img {
+      width: 100%;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* ─── Privacy Banner ────────────────────── */
+    .privacy-banner {
+      max-width: 800px;
+      margin: 3rem auto;
+      background: linear-gradient(135deg, #fff5f5, #fff);
+      border: 1px solid #ffcdd2;
+      border-radius: var(--radius);
+      padding: 1.5rem 2rem;
+      text-align: center;
+      font-size: 1.05rem;
+    }
+    .privacy-banner strong { color: var(--red); }
+
+    /* ─── Section layout ────────────────────── */
+    section { padding: 5rem 2rem; }
+    section .container { max-width: 1100px; margin: 0 auto; }
+    .section-heading {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .section-heading h2 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .section-heading p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ─── Features Grid ─────────────────────── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+    .feature-card .icon {
+      font-size: 1.6rem;
+      margin-bottom: 0.75rem;
+    }
+    .feature-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature-card p { color: var(--text-muted); font-size: 0.95rem; }
+
+    /* ─── Screenshots Gallery ───────────────── */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+    .gallery-item {
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .gallery-item:hover { transform: scale(1.02); box-shadow: var(--shadow-lg); }
+    .gallery-item img {
+      width: 100%;
+      display: block;
+    }
+    .gallery-item .caption {
+      background: var(--surface);
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    /* ─── Tech Stack ────────────────────────── */
+    .tech-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+    }
+    .tech-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.5rem 1.25rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    /* ─── Getting Started Steps ─────────────── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      text-align: center;
+    }
+    .step .number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #fce4ec;
+      color: var(--red);
+      font-weight: 800;
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .step h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .step p { color: var(--text-muted); font-size: 0.95rem; }
+
+    /* ─── CTA Section ───────────────────────── */
+    .cta-section {
+      background: linear-gradient(135deg, var(--red), #b71c1c);
+      color: #fff;
+      text-align: center;
+      padding: 5rem 2rem;
+    }
+    .cta-section h2 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+    .cta-section p {
+      font-size: 1.15rem;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto 2rem;
+    }
+    .cta-section .btn-primary {
+      background: #fff;
+      color: var(--red);
+    }
+    .cta-section .btn-primary:hover {
+      background: #f5f5f5;
+    }
+    .cta-section .btn-outline {
+      border-color: rgba(255,255,255,0.5);
+      color: #fff;
+      background: transparent;
+    }
+    .cta-section .btn-outline:hover {
+      border-color: #fff;
+    }
+
+    /* ─── Footer ────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 2.5rem 2rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--red); text-decoration: none; }
+
+    /* ─── Responsive ────────────────────────── */
+    @media (max-width: 640px) {
+      nav .links a:not(.btn) { display: none; }
+      .hero { padding: 6rem 1.25rem 2.5rem; }
+      .gallery-grid { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <div class="inner">
+    <a class="logo" href="#">🍁 Retiree<span>Plan</span></a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#get-started">Get Started</a>
+      <a href="https://github.com/JoeRegnier/retiree-plan" class="btn btn-outline">View on GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <span class="badge">🍁 Open Source &amp; Free Forever</span>
+  <h1>Plan Your Retirement<br><span class="accent">With Confidence</span></h1>
+  <p>A privacy-first, self-hosted Canadian retirement planning application. Model your entire financial life, run Monte Carlo simulations, and optimize your taxes — without sharing your data with anyone.</p>
+  <div class="ctas">
+    <a href="https://github.com/JoeRegnier/retiree-plan/releases" class="btn btn-primary">⬇ Download Desktop App</a>
+    <a href="https://github.com/JoeRegnier/retiree-plan" class="btn btn-outline">⭐ Star on GitHub</a>
+  </div>
+</section>
+
+<div class="hero-screenshot">
+  <img src="screenshots/01-dashboard.png" alt="RetireePlan Dashboard" loading="eager">
+</div>
+
+<div class="privacy-banner">
+  🔒 <strong>Your data never leaves your machine.</strong> RetireePlan runs entirely on your own hardware — desktop app, self-hosted containers, or local dev server. No cloud accounts, no telemetry.
+</div>
+
+<!-- Features -->
+<section id="features">
+  <div class="container">
+    <div class="section-heading">
+      <h2>Everything You Need</h2>
+      <p>The depth of advisor-gated software — without the advisor fees or data lock-in.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="icon">📊</div>
+        <h3>Cash-Flow Projections</h3>
+        <p>Year-by-year deterministic engine tracking income, expenses, account growth, withdrawals, and taxes through your final planning year.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🎲</div>
+        <h3>Monte Carlo Simulations</h3>
+        <p>1,000-trial simulations with normal, log-normal, or historical-bootstrap returns. Fan charts, success-rate heatmaps, and survival histograms.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🍁</div>
+        <h3>Deep Canadian Tax Engine</h3>
+        <p>Federal + provincial brackets for all 13 provinces. CPP/QPP, EI, OAS/GIS clawback, dividend gross-up, pension splitting, and RRIF minimums.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">💡</div>
+        <h3>Automated Insights</h3>
+        <p>Rule-based engine surfaces ranked, dollar-quantified recommendations — RRSP meltdown, OAS clawback avoidance, TFSA utilization, and more.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🏆</div>
+        <h3>Retirement Readiness Score</h3>
+        <p>A composite 0–100 score across Monte Carlo success, income replacement, tax efficiency, and account diversification with improvement tips.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔄</div>
+        <h3>What-If Scenarios</h3>
+        <p>Create named scenarios and compare them side-by-side with overlaid projections, net worth curves, and tax summaries.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🏠</div>
+        <h3>Real Estate & Estate</h3>
+        <p>Rental properties, principal-residence exemptions, deemed disposition on death, provincial probate, and beneficiary designations.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🤖</div>
+        <h3>AI Assistant</h3>
+        <p>Context-aware chat powered by local Ollama or GitHub Copilot. Ask: "When can I retire if I save $2,000 more per month?"</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🖥️</div>
+        <h3>Desktop & Self-Hosted</h3>
+        <p>Native macOS / Windows / Linux desktop app with bundled API, or run as Docker containers on your own server.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Screenshots -->
+<section id="screenshots" style="background: #f5f5f5;">
+  <div class="container">
+    <div class="section-heading">
+      <h2>See It In Action</h2>
+      <p>Projections, simulations, tax analytics, and more — all in one app.</p>
+    </div>
+    <div class="gallery-grid">
+      <div class="gallery-item">
+        <img src="screenshots/05-projections.png" alt="Cash-Flow Projections" loading="lazy">
+        <div class="caption">Cash-Flow Projections</div>
+      </div>
+      <div class="gallery-item">
+        <img src="screenshots/06-simulations.png" alt="Monte Carlo Simulations" loading="lazy">
+        <div class="caption">Monte Carlo Simulations</div>
+      </div>
+      <div class="gallery-item">
+        <img src="screenshots/08-tax-analytics.png" alt="Tax Analytics" loading="lazy">
+        <div class="caption">Tax Analytics</div>
+      </div>
+      <div class="gallery-item">
+        <img src="screenshots/07-retire-finder.png" alt="Earliest Retirement Finder" loading="lazy">
+        <div class="caption">Earliest Retirement Finder</div>
+      </div>
+      <div class="gallery-item">
+        <img src="screenshots/09-compare.png" alt="Scenario Comparison" loading="lazy">
+        <div class="caption">Scenario Comparison</div>
+      </div>
+      <div class="gallery-item">
+        <img src="screenshots/10-estate.png" alt="Estate Planning" loading="lazy">
+        <div class="caption">Estate Planning</div>
+      </div>
+      <div class="gallery-item">
+        <img src="screenshots/03-accounts.png" alt="Accounts" loading="lazy">
+        <div class="caption">Accounts &amp; Registered Plans</div>
+      </div>
+      <div class="gallery-item">
+        <img src="screenshots/14-ai-chat.png" alt="AI Assistant" loading="lazy">
+        <div class="caption">AI Assistant</div>
+      </div>
+      <div class="gallery-item">
+        <img src="screenshots/04-scenarios.png" alt="Scenarios" loading="lazy">
+        <div class="caption">What-If Scenarios</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech Stack -->
+<section>
+  <div class="container">
+    <div class="section-heading">
+      <h2>Built With Modern Tech</h2>
+      <p>TypeScript end-to-end, from the calculation engine to the UI.</p>
+    </div>
+    <div class="tech-pills">
+      <span class="tech-pill">TypeScript (strict)</span>
+      <span class="tech-pill">React 19</span>
+      <span class="tech-pill">NestJS 11</span>
+      <span class="tech-pill">Prisma 6</span>
+      <span class="tech-pill">Electron 32</span>
+      <span class="tech-pill">Vite 6</span>
+      <span class="tech-pill">Material UI 6</span>
+      <span class="tech-pill">D3.js</span>
+      <span class="tech-pill">Vitest</span>
+      <span class="tech-pill">Playwright</span>
+      <span class="tech-pill">SQLite / PostgreSQL</span>
+      <span class="tech-pill">Docker</span>
+    </div>
+  </div>
+</section>
+
+<!-- Getting Started -->
+<section id="get-started" style="background: #f5f5f5;">
+  <div class="container">
+    <div class="section-heading">
+      <h2>Get Started in Minutes</h2>
+      <p>Three ways to run RetireePlan — pick what suits you.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="number">1</div>
+        <h3>Desktop App</h3>
+        <p>Download the installer for macOS, Windows, or Linux. Everything is bundled — no Node.js or database setup required.</p>
+        <br>
+        <a href="https://github.com/JoeRegnier/retiree-plan/releases" class="btn btn-primary">Download</a>
+      </div>
+      <div class="step">
+        <div class="number">2</div>
+        <h3>Self-Hosted Containers</h3>
+        <p>Pull pre-built images from GitHub Container Registry and run with <code>docker compose up</code>. Perfect for a home server.</p>
+        <br>
+        <a href="https://github.com/JoeRegnier/retiree-plan#-quick-start" class="btn btn-outline">Instructions</a>
+      </div>
+      <div class="step">
+        <div class="number">3</div>
+        <h3>Developer Mode</h3>
+        <p>Clone the repo, <code>npm install</code>, <code>npm run dev</code>. Full-stack hot-reload development in under 2 minutes.</p>
+        <br>
+        <a href="https://github.com/JoeRegnier/retiree-plan/blob/main/docs/INSTALL.md" class="btn btn-outline">Dev Guide</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Built for Canadians, by Canadians</h2>
+  <p>RetireePlan is open-source and looking for collaborators — developers, financial planners, tax specialists, and anyone passionate about Canadian personal finance.</p>
+  <div class="ctas" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+    <a href="https://github.com/JoeRegnier/retiree-plan" class="btn btn-primary">⭐ Star on GitHub</a>
+    <a href="https://github.com/JoeRegnier/retiree-plan/blob/main/CONTRIBUTING.md" class="btn btn-outline">Contribute</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>
+    Made with 💻 in Canada &nbsp;·&nbsp;
+    <a href="https://github.com/JoeRegnier/retiree-plan">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://github.com/JoeRegnier/retiree-plan/blob/main/LICENSE">MIT License</a> &nbsp;·&nbsp;
+    <a href="https://github.com/JoeRegnier/retiree-plan/discussions">Discussions</a>
+  </p>
+</footer>
+
+</body>
+</html>

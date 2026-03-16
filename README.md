@@ -1,8 +1,26 @@
-# RetireePlan
+<div align="center">
 
-**Open-source Canadian financial & retirement planning — built for Canadians, by Canadians.**
+# 🍁 RetireePlan
+
+### Open-source Canadian financial & retirement planning
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Desktop Release](https://github.com/JoeRegnier/retiree-plan/actions/workflows/desktop-release.yml/badge.svg)](https://github.com/JoeRegnier/retiree-plan/actions/workflows/desktop-release.yml)
+[![Container Images](https://github.com/JoeRegnier/retiree-plan/actions/workflows/container-release.yml/badge.svg)](https://github.com/JoeRegnier/retiree-plan/actions/workflows/container-release.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript&logoColor=white)](#-tech-stack)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+**Built for Canadians, by Canadians.**
+
+[Getting Started](#-quick-start) · [Screenshots](#-screenshots) · [Documentation](#-documentation) · [Contributing](#-contributing)
+
+</div>
+
+---
 
 RetireePlan is a self-hosted desktop and web application that gives individual investors the same depth of planning capability as expensive advisor-gated software. Model your complete financial life, run thousands of Monte Carlo simulations, optimize CPP/OAS timing, minimize lifetime taxes, and plot a confident path to retirement — all without sharing your data with anyone.
+
+> **Your data never leaves your machine.** RetireePlan runs entirely on your own hardware — desktop app, self-hosted containers, or local dev server. No cloud accounts, no telemetry, no third-party analytics.
 
 ---
 
@@ -134,7 +152,22 @@ Download the latest release for your platform from the [Releases page](../../rel
 
 The app bundles its own API server — no Node.js or database setup required.
 
-### Option B — Web / Development Mode
+### Option B — Self-Hosted Containers
+
+Pull the pre-built images from GitHub Container Registry:
+
+```bash
+docker compose up -d
+```
+
+Or use the images directly:
+
+```bash
+docker pull ghcr.io/joeregnier/retiree-plan-api:latest
+docker pull ghcr.io/joeregnier/retiree-plan-web:latest
+```
+
+### Option C — Web / Development Mode
 
 See the full [Installation & Developer Guide](docs/INSTALL.md).
 
@@ -142,7 +175,7 @@ See the full [Installation & Developer Guide](docs/INSTALL.md).
 
 ```bash
 # 1. Clone
-git clone https://github.com/your-org/retiree-plan.git
+git clone https://github.com/JoeRegnier/retiree-plan.git
 cd retiree-plan
 
 # 2. Install dependencies
@@ -225,9 +258,13 @@ retiree-plan/
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contributing & Collaborators
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+**This project is looking for collaborators!** RetireePlan started as a solo project, but the vision is much bigger — a world-class open-source alternative to paid retirement planning tools. If you're a developer, a financial planner, a tax specialist, or just passionate about Canadian personal finance, I'd love to partner up.
+
+Interested in co-maintaining, building features, or taking RetireePlan to market? Open an issue titled "Collaboration Interest" or reach out via [GitHub Discussions](../../discussions).
+
+Contributions of all sizes are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 **Ways to contribute:**
 - 🐛 Report bugs via [GitHub Issues](../../issues)
@@ -235,7 +272,8 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 - 🧪 Add test coverage (Vitest unit tests, Playwright E2E)
 - 🍁 Improve Canadian tax accuracy (provincial edge cases, new tax years)
 - 🌐 Add or improve user-facing documentation
-- 📦 Help with the desktop packaging pipeline (Windows/Linux)
+- 📦 Help with the desktop packaging pipeline
+- 🧮 Implement new financial calculators (CPP optimizer, GIS planner, etc.)
 
 ---
 
@@ -248,3 +286,11 @@ RetireePlan is released under the [MIT License](LICENSE). See [LICENSE](LICENSE)
 ## ⚠️ Disclaimer
 
 RetireePlan is a **planning and modelling tool**, not financial advice. All projections are estimates based on assumptions you provide. Tax calculations are illustrative and may not reflect your specific situation. Consult a qualified financial planner or tax professional before making major financial decisions.
+
+---
+
+<div align="center">
+
+**If RetireePlan helps you plan your retirement, consider giving it a ⭐ on GitHub!**
+
+</div>

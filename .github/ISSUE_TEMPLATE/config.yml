@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/JoeRegnier/retiree-plan/discussions
+    about: Ask questions, share ideas, or connect with other users
+  - name: 📖 Documentation
+    url: https://github.com/JoeRegnier/retiree-plan/tree/main/docs
+    about: Browse project guides and reference documentation

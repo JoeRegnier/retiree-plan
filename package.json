@@ -4,6 +4,27 @@
   "private": true,
   "description": "DIY Canadian Financial & Retirement Planning Application",
   "license": "MIT",
+  "homepage": "https://github.com/JoeRegnier/retiree-plan#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JoeRegnier/retiree-plan.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JoeRegnier/retiree-plan/issues"
+  },
+  "keywords": [
+    "canadian",
+    "retirement",
+    "financial-planning",
+    "tax",
+    "rrsp",
+    "tfsa",
+    "cpp",
+    "oas",
+    "self-hosted",
+    "electron",
+    "privacy"
+  ],
   "engines": {
     "node": ">=24.0.0"
   },
