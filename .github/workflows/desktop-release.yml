@@ -33,11 +33,11 @@ jobs:
     steps:
       # ── Checkout ──────────────────────────────────────────────────────────
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # ── Node.js 24 ────────────────────────────────────────────────────────
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: 'npm'
@@ -202,7 +202,7 @@ jobs:
 
       # ── Upload artifacts ───────────────────────────────────────────────────
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.os }}
           path: |
@@ -241,7 +241,7 @@ jobs:
           echo "value=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
