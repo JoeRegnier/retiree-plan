@@ -29,6 +29,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Rollup ships platform-native binaries as optional dependencies. When the
+      # package-lock.json was generated on a different OS, those binaries are absent
+      # from the lockfile and npm ci skips them, causing a build failure.
+      # See: https://github.com/npm/cli/issues/4828
+      - name: Fix rollup platform binary (npm optional dep workaround)
+        run: |
+          RVER=$(node -e "process.stdout.write(require('./node_modules/rollup/package.json').version)")
+          case "$(node -e 'process.stdout.write(process.platform+"-"+process.arch)')" in
+            darwin-arm64) PKG="@rollup/rollup-darwin-arm64" ;;
+            darwin-x64)   PKG="@rollup/rollup-darwin-x64" ;;
+            win32-x64)    PKG="@rollup/rollup-win32-x64-msvc" ;;
+            *)            exit 0 ;;
+          esac
+          test -d "node_modules/$PKG" || npm install --no-save --ignore-scripts "$PKG@$RVER"
+
       - name: Apply manual release version override
         if: github.event_name == 'workflow_dispatch' && inputs.version != ''
         run: echo "DESKTOP_RELEASE_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
@@ -66,6 +81,18 @@ jobs:
         run: npm ci
         shell: bash
 
+      - name: Fix rollup platform binary (npm optional dep workaround)
+        shell: bash
+        run: |
+          RVER=$(node -e "process.stdout.write(require('./node_modules/rollup/package.json').version)")
+          case "$(node -e 'process.stdout.write(process.platform+"-"+process.arch)')" in
+            darwin-arm64) PKG="@rollup/rollup-darwin-arm64" ;;
+            darwin-x64)   PKG="@rollup/rollup-darwin-x64" ;;
+            win32-x64)    PKG="@rollup/rollup-win32-x64-msvc" ;;
+            *)            exit 0 ;;
+          esac
+          test -d "node_modules/$PKG" || npm install --no-save --ignore-scripts "$PKG@$RVER"
+
       - name: Apply manual release version override
         if: github.event_name == 'workflow_dispatch' && inputs.version != ''
         run: echo "DESKTOP_RELEASE_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
@@ -102,6 +129,17 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Fix rollup platform binary (npm optional dep workaround)
+        run: |
+          RVER=$(node -e "process.stdout.write(require('./node_modules/rollup/package.json').version)")
+          case "$(node -e 'process.stdout.write(process.platform+"-"+process.arch)')" in
+            darwin-arm64) PKG="@rollup/rollup-darwin-arm64" ;;
+            darwin-x64)   PKG="@rollup/rollup-darwin-x64" ;;
+            win32-x64)    PKG="@rollup/rollup-win32-x64-msvc" ;;
+            *)            exit 0 ;;
+          esac
+          test -d "node_modules/$PKG" || npm install --no-save --ignore-scripts "$PKG@$RVER"
 
       - name: Apply manual release version override
         if: github.event_name == 'workflow_dispatch' && inputs.version != ''
