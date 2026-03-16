@@ -161,7 +161,7 @@ jobs:
         working-directory: apps/desktop
         shell: bash
         run: |
-          ELECTRON_VER=$(node -e "process.stdout.write(require('./node_modules/electron/package.json').version)")
+          ELECTRON_VER=$(node -e "process.stdout.write(require('../../node_modules/electron/package.json').version)")
           npx @electron/rebuild \
             --version "$ELECTRON_VER" \
             --module-dir resources/server
