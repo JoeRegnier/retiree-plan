@@ -20,7 +20,7 @@
     "package:dir": "npm run build && electron-builder --dir"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.6.0",
+    "@electron/rebuild": "^4.0.3",
     "@types/node": "^22.0.0",
     "@vercel/ncc": "^0.38.3",
     "electron": "32.0.0",
