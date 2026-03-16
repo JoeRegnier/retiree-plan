@@ -46,7 +46,7 @@
     "@types/bcrypt": "^5.0.0",
     "@types/express": "^5.0.0",
     "@types/passport-jwt": "^4.0.0",
-    "prisma": "^6.0.0",
+    "prisma": "^7.5.0",
     "typescript": "^5.8.0",
     "vitest": "^3.2.0"
   }
