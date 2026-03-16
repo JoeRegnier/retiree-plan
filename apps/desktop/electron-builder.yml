@@ -17,6 +17,7 @@ extraResources:
     to: server
     filter:
       - "**/*"
+      - "!**/node_gyp_bins"
   - from: resources/web
     to: web
     filter:

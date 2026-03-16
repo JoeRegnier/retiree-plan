@@ -34,9 +34,9 @@ jobs:
       matrix:
         include:
           - image_name: retiree-plan-api
-            dockerfile: apps/api/Containerfile
+            dockerfile: apps/api/Dockerfile
           - image_name: retiree-plan-web
-            dockerfile: apps/web/Containerfile
+            dockerfile: apps/web/Dockerfile
 
     steps:
       - name: Checkout
