@@ -63,6 +63,7 @@
     "seed": "node prisma/seed.js"
   },
   "overrides": {
+    "file-type": "^21.3.2",
     "@nestjs/common": {
       "file-type": "^21.3.2"
     },

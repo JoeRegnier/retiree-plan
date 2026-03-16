@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "@github/copilot-sdk": "^0.1.32",
-    "@nestjs/common": "^11.0.0",
+    "@nestjs/common": "^11.1.16",
     "@nestjs/config": "^4.0.0",
-    "@nestjs/core": "^11.0.0",
+    "@nestjs/core": "^11.1.16",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
-    "@nestjs/testing": "^11.0.0",
+    "@nestjs/testing": "^11.1.16",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/passport-jwt": "^4.0.0",
