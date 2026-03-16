@@ -1,17 +1,56 @@
 version: 2
 updates:
-  # Enable version updates for npm
+  # npm — monorepo root (covers all workspaces via package-lock.json)
   - package-ecosystem: "npm"
-    # Look for `package.json` and `lock` files in the `root` directory
     directory: "/"
-    # Check the npm registry for updates every day (weekdays)
-    schedule:
-      interval: "daily"
-
-  # Enable version updates for Docker
-  - package-ecosystem: "docker"
-    # Look for a `Dockerfile` in the `root` directory
-    directory: "/"
-    # Check for updates once a week
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      # Batch all non-breaking minor/patch bumps into one PR per group
+      typescript-eslint:
+        patterns: ["@typescript-eslint/*"]
+      mui:
+        patterns: ["@mui/*", "@emotion/*"]
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      tanstack:
+        patterns: ["@tanstack/*"]
+      vite:
+        patterns: ["vite", "@vitejs/*", "vitest"]
+      playwright:
+        patterns: ["@playwright/*", "playwright"]
+      prisma:
+        patterns: ["prisma", "@prisma/*"]
+      nestjs:
+        patterns: ["@nestjs/*"]
+      electron:
+        patterns: ["electron", "electron-builder"]
+
+  # GitHub Actions — keep workflow action versions current
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      actions-official:
+        patterns: ["actions/*"]
+      docker-actions:
+        patterns: ["docker/*"]
+
+  # Docker base images — API container (node:22-alpine)
+  - package-ecosystem: "docker"
+    directory: "/apps/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+
+  # Docker base images — Web container (node:22-alpine + nginx:alpine)
+  - package-ecosystem: "docker"
+    directory: "/apps/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
