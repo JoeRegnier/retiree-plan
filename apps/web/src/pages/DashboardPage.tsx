@@ -515,7 +515,7 @@ function ReadinessScoreCard({ data, loading, projData, depletionAge, nwAtRetirem
 
         {/* Gauge (left) + score component bars (right) */}
         <Grid container spacing={2} alignItems="flex-start" sx={{ flexShrink: 0 }}>
-          <Grid item xs={12} sm={4} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+          <Grid size={{ xs: 12, sm: 4 }} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
             <ReadinessGauge score={data.score} size={180} />
             <Box sx={{ px: 1.5, py: 1, borderRadius: 2, bgcolor: alpha(scoreLabelColor, 0.08), border: `1px solid ${alpha(scoreLabelColor, 0.2)}`, width: '100%', textAlign: 'center' }}>
               <Typography variant="caption" sx={{ color: scoreLabelColor, fontWeight: 700, display: 'block', fontSize: '0.75rem' }}>
@@ -523,7 +523,7 @@ function ReadinessScoreCard({ data, loading, projData, depletionAge, nwAtRetirem
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={8}>
+          <Grid size={{ xs: 12, sm: 8 }}>
             <Stack spacing={1.75}>
               {components.map(c => {
                 const score = Number(c.score ?? 0);
@@ -1261,21 +1261,21 @@ export function DashboardPage() {
 
       {/* KPI cards */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} lg={4} xl>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
           <KpiCard
             title="Total Portfolio" icon={<SavingsIcon />} color={theme.palette.primary.main} loading={hhLoading}
             value={money(totalPortfolio)}
             subValue={accounts.length ? `${accounts.length} account${accounts.length !== 1 ? 's' : ''}` : 'No accounts yet'}
           />
         </Grid>
-        <Grid item xs={12} sm={6} lg={4} xl>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
           <KpiCard
             title="Annual Income" icon={<TrendingUpIcon />} color="#00C49F" loading={hhLoading}
             value={money(totalIncome)}
             subValue={totalIncome > 0 ? `${money(Math.round(totalIncome / 12))}/mo` : 'Add income sources'}
           />
         </Grid>
-        <Grid item xs={12} sm={6} lg={4} xl>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
           <KpiCard
             title="Years to Retirement"
             icon={<HourglassTopIcon />}
@@ -1285,7 +1285,7 @@ export function DashboardPage() {
             subValue={yearsToRetire > 0 ? `Age ${retirementAge} · ${retirementYear}` : `Age ${currentAge}`}
           />
         </Grid>
-        <Grid item xs={12} sm={6} lg={4} xl>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
           <KpiCard
             title={nwAtRetirement != null ? 'Net Worth at Retirement' : 'Scenarios'}
             icon={depletionAge ? <WarningAmberIcon /> : <CheckCircleIcon />}
@@ -1300,7 +1300,7 @@ export function DashboardPage() {
             }
           />
         </Grid>
-        <Grid item xs={12} sm={6} lg={4} xl>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
           <IncomeReplacementCard projData={projData} retirementAge={retirementAge} loading={hhLoading || projLoading} />
         </Grid>
       </Grid>
@@ -1308,7 +1308,7 @@ export function DashboardPage() {
       {/* Readiness Score + Plan Completeness */}
       {(readinessData || readinessLoading || planCompleteness) && (
         <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <ReadinessScoreCard
               data={readinessData} loading={readinessLoading}
               projData={projData} depletionAge={depletionAge} nwAtRetirement={nwAtRetirement}
@@ -1317,7 +1317,7 @@ export function DashboardPage() {
             />
           </Grid>
           {planCompleteness && (
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <PlanCompletenessCard data={planCompleteness} navigate={navigate} />
             </Grid>
           )}
@@ -1326,7 +1326,7 @@ export function DashboardPage() {
 
       {/* Automated Insights */}
       <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <InsightsCard
             householdId={hh?.id}
             input={insightsInput}
@@ -1338,7 +1338,7 @@ export function DashboardPage() {
 
       {/* Portfolio allocation + milestones */}
       <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Portfolio Allocation</Typography>
@@ -1386,7 +1386,7 @@ export function DashboardPage() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>Key Milestones</Typography>
@@ -1477,7 +1477,7 @@ export function DashboardPage() {
           </Stack>
           <Grid container spacing={2}>
             {scenarios.map((sc, i) => (
-              <Grid item xs={12} sm={6} md={4} key={sc.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={sc.id}>
                 <ScenarioCard sc={sc} idx={i} />
               </Grid>
             ))}
@@ -1491,7 +1491,7 @@ export function DashboardPage() {
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Quick Navigation</Typography>
           <Grid container spacing={1.5}>
             {navTiles.map(tile => (
-              <Grid item xs={6} sm={3} key={tile.path}>
+              <Grid size={{ xs: 6, sm: 3 }} key={tile.path}>
                 <Box
                   onClick={() => navigate(tile.path)}
                   sx={{

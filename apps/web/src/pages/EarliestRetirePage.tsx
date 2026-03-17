@@ -380,7 +380,7 @@ export function EarliestRetirePage() {
           </Stack>
           <Grid container spacing={2} alignItems="flex-end">
             {/* Scenario */}
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 label="Base Scenario" select fullWidth size="small"
                 value={selectedScenarioId}
@@ -393,7 +393,7 @@ export function EarliestRetirePage() {
             </Grid>
 
             {/* Target NW */}
-            <Grid item xs={12} sm={3}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <TextField
                 label="Target Net Worth at End" size="small" fullWidth
                 value={targetInput}
@@ -408,7 +408,7 @@ export function EarliestRetirePage() {
             </Grid>
 
             {/* Life expectancy */}
-            <Grid item xs={6} sm={2}>
+            <Grid size={{ xs: 6, sm: 2 }}>
               <TextField
                 label="Life Expectancy" size="small" fullWidth type="number"
                 value={lifeExpectancy}
@@ -418,7 +418,7 @@ export function EarliestRetirePage() {
             </Grid>
 
             {/* Sweep range */}
-            <Grid item xs={12} sm={3}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                 Test retirement ages: {sweepMin}–{sweepMax}
               </Typography>
@@ -434,7 +434,7 @@ export function EarliestRetirePage() {
             </Grid>
 
             {/* Run button */}
-            <Grid item xs={12} sm="auto">
+            <Grid size={{ xs: 12, sm: 'auto' }}>
               <Button
                 variant="contained" size="large" fullWidth
                 startIcon={sweeping ? <CircularProgress size={18} color="inherit" /> : <SearchIcon />}
@@ -464,7 +464,7 @@ export function EarliestRetirePage() {
         <>
           {/* KPI row */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card sx={{
                 borderLeft: '4px solid',
                 borderColor: earliestViable ? 'success.main' : 'error.main',
@@ -501,7 +501,7 @@ export function EarliestRetirePage() {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card sx={{ height: '100%' }}>
                 <CardContent>
                   <Typography variant="overline" color="text.secondary">Ages Meeting Target</Typography>
@@ -517,7 +517,7 @@ export function EarliestRetirePage() {
             </Grid>
 
             {selectedPoint && (
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <Card sx={{
                   borderLeft: '4px solid',
                   borderColor: selectedPoint.finalNetWorth >= targetNW ? '#90CAF9' : 'warning.main',

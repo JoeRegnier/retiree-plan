@@ -206,7 +206,7 @@ export function TaxAnalyticsPage() {
             )}
           </Box>
           <Grid container spacing={3} alignItems="center">
-            <Grid item xs={12} sm={5}>
+            <Grid size={{ xs: 12, sm: 5 }}>
               <TextField
                 label="Annual Income"
                 type="number"
@@ -217,12 +217,12 @@ export function TaxAnalyticsPage() {
                 inputProps={{ min: 0, max: 1_000_000, step: 1000 }}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField label="Province" select fullWidth value={province} onChange={(e) => { setProvince(e.target.value); setCustomized(true); }}>
                 {PROVINCE_OPTIONS.map((p) => <MenuItem key={p.code} value={p.code}>{p.name}</MenuItem>)}
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="caption" color="text.secondary">Effective Rate</Typography>
@@ -240,25 +240,25 @@ export function TaxAnalyticsPage() {
 
       {/* Tax Summary */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Card><CardContent>
             <Typography variant="overline" color="text.secondary">Federal Tax</Typography>
             <Typography variant="h5">${fedTax.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</Typography>
           </CardContent></Card>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Card><CardContent>
             <Typography variant="overline" color="text.secondary">Provincial Tax</Typography>
             <Typography variant="h5">${provTax.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</Typography>
           </CardContent></Card>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Card><CardContent>
             <Typography variant="overline" color="text.secondary">Total Tax</Typography>
             <Typography variant="h5">${totalTax.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</Typography>
           </CardContent></Card>
         </Grid>
-        <Grid item xs={6} sm={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <Card><CardContent>
             <Typography variant="overline" color="text.secondary">After-Tax Income</Typography>
             <Typography variant="h5">${(income - totalTax).toLocaleString('en-CA', { maximumFractionDigits: 0 })}</Typography>
@@ -305,15 +305,15 @@ export function TaxAnalyticsPage() {
         <CardContent>
           <Typography variant="h6" sx={{ mb: 2 }}>OAS Clawback Reference</Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Typography variant="body2" color="text.secondary">Clawback threshold</Typography>
               <Typography fontWeight={700}>${OAS_CLAWBACK_START.toLocaleString()}</Typography>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Typography variant="body2" color="text.secondary">Clawback rate</Typography>
               <Typography fontWeight={700}>15¢ per $1 above threshold</Typography>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Typography variant="body2" color="text.secondary">Full clawback at</Typography>
               <Typography fontWeight={700}>~${(OAS_CLAWBACK_START + OAS_MAX_ANNUAL / OAS_CLAWBACK_RATE).toLocaleString('en-CA', { maximumFractionDigits: 0 })}</Typography>
             </Grid>

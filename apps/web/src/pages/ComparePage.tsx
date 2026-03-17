@@ -320,7 +320,7 @@ export function ComparePage() {
         <CardContent>
           <Grid container spacing={2} alignItems="stretch">
             {/* Scenario A picker */}
-            <Grid item xs={12} sm={5}>
+            <Grid size={{ xs: 12, sm: 5 }}>
               <Box sx={{
                 borderLeft: `4px solid ${colorA}`, borderRadius: 1,
                 pl: 1.5, pt: 0.5, pb: 0.5,
@@ -354,7 +354,7 @@ export function ComparePage() {
             </Grid>
 
             {/* vs badge */}
-            <Grid item xs={12} sm={1} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Grid size={{ xs: 12, sm: 1 }} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Box sx={{
                 bgcolor: 'action.hover', borderRadius: '50%',
                 width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -364,7 +364,7 @@ export function ComparePage() {
             </Grid>
 
             {/* Scenario B picker */}
-            <Grid item xs={12} sm={5}>
+            <Grid size={{ xs: 12, sm: 5 }}>
               <Box sx={{
                 borderLeft: `4px solid ${colorB}`, borderRadius: 1,
                 pl: 1.5, pt: 0.5, pb: 0.5,
@@ -398,7 +398,7 @@ export function ComparePage() {
             </Grid>
 
             {/* Run button */}
-            <Grid item xs={12} sm={1} sx={{ display: 'flex', alignItems: 'center' }}>
+            <Grid size={{ xs: 12, sm: 1 }} sx={{ display: 'flex', alignItems: 'center' }}>
               <Button
                 variant="contained" fullWidth
                 startIcon={runMutation.isPending ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
@@ -448,7 +448,7 @@ export function ComparePage() {
             return (
               <Grid container spacing={2}>
                 {/* Final Net Worth */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Card variant="outlined" sx={{ height: '100%' }}>
                     <CardContent>
                       <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
@@ -458,13 +458,13 @@ export function ComparePage() {
                         <WinnerIcon sx={{ fontSize: 18, color: winnerColor }} />
                       </Box>
                       <Grid container spacing={1}>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                           <Box sx={{ borderLeft: `3px solid ${colorA}`, pl: 1 }}>
                             <Typography variant="caption" sx={{ color: colorA, fontWeight: 600 }}>A</Typography>
                             <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1.1rem' }}>{fmt(vA)}</Typography>
                           </Box>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                           <Box sx={{ borderLeft: `3px solid ${colorB}`, pl: 1 }}>
                             <Typography variant="caption" sx={{ color: colorB, fontWeight: 600 }}>B</Typography>
                             <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1.1rem' }}>{fmt(vB)}</Typography>
@@ -483,7 +483,7 @@ export function ComparePage() {
                 </Grid>
 
                 {/* Peak Net Worth */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Card variant="outlined" sx={{ height: '100%' }}>
                     <CardContent>
                       <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
@@ -493,14 +493,14 @@ export function ComparePage() {
                         <TrendingUpIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
                       </Box>
                       <Grid container spacing={1}>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                           <Box sx={{ borderLeft: `3px solid ${colorA}`, pl: 1 }}>
                             <Typography variant="caption" sx={{ color: colorA, fontWeight: 600 }}>A</Typography>
                             <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1.1rem' }}>{fmt(nw(summary.peakA))}</Typography>
                             <Typography variant="caption" color="text.secondary">Year {summary.peakA.year}</Typography>
                           </Box>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                           <Box sx={{ borderLeft: `3px solid ${colorB}`, pl: 1 }}>
                             <Typography variant="caption" sx={{ color: colorB, fontWeight: 600 }}>B</Typography>
                             <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1.1rem' }}>{fmt(nw(summary.peakB))}</Typography>
@@ -513,7 +513,7 @@ export function ComparePage() {
                 </Grid>
 
                 {/* Portfolio Depleted */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Card variant="outlined" sx={{ height: '100%' }}>
                     <CardContent>
                       <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
@@ -523,7 +523,7 @@ export function ComparePage() {
                         <TrendingDownIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
                       </Box>
                       <Grid container spacing={1}>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                           <Box sx={{ borderLeft: `3px solid ${colorA}`, pl: 1 }}>
                             <Typography variant="caption" sx={{ color: colorA, fontWeight: 600 }}>A</Typography>
                             <Box mt={0.5}>
@@ -533,7 +533,7 @@ export function ComparePage() {
                             </Box>
                           </Box>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                           <Box sx={{ borderLeft: `3px solid ${colorB}`, pl: 1 }}>
                             <Typography variant="caption" sx={{ color: colorB, fontWeight: 600 }}>B</Typography>
                             <Box mt={0.5}>

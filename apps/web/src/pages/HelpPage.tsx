@@ -1173,7 +1173,7 @@ function GuideStepView({ step, onPrev, onNext, total }: {
       {step.stats && (
         <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
           {step.stats.map((stat) => (
-            <Grid item xs={12} sm={4} key={stat.label}>
+            <Grid size={{ xs: 12, sm: 4 }} key={stat.label}>
               <Paper
                 variant="outlined"
                 sx={{
@@ -1205,7 +1205,7 @@ function GuideStepView({ step, onPrev, onNext, total }: {
           <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
             <Grid container spacing={0.75}>
               {step.colourLegend.map((entry) => (
-                <Grid item xs={12} sm={6} key={entry.label}>
+                <Grid size={{ xs: 12, sm: 6 }} key={entry.label}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ width: 16, height: 16, borderRadius: 0.5, flexShrink: 0, bgcolor: entry.colour, border: `1px solid ${alpha(entry.colour, 0.4)}` }} />
                     <Typography variant="body2" sx={{ lineHeight: 1.4 }}>{entry.label}</Typography>
@@ -1477,7 +1477,7 @@ export function HelpPage() {
             </Typography>
             <Grid container spacing={1.5}>
               {TIPS.map((tip, i) => (
-                <Grid item xs={12} sm={6} key={i}>
+                <Grid size={{ xs: 12, sm: 6 }} key={i}>
                   <Paper
                     variant="outlined"
                     sx={{
@@ -1519,7 +1519,7 @@ export function HelpPage() {
           {/* FAQ Sections */}
           <Grid container spacing={2.5}>
             {SECTIONS.map((section) => (
-              <Grid item xs={12} md={6} key={section.title}>
+              <Grid size={{ xs: 12, md: 6 }} key={section.title}>
                 <Card
                   variant="outlined"
                   sx={{
@@ -1603,7 +1603,7 @@ export function HelpPage() {
       {tab === 1 && (
         <Grid container spacing={2.5}>
           {/* Sidebar: step list */}
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden', position: 'sticky', top: 80 }}>
               {/* Progress bar */}
               <Box sx={{ p: 1.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: alpha(currentStep.color, 0.06) }}>
@@ -1687,7 +1687,7 @@ export function HelpPage() {
           </Grid>
 
           {/* Main content */}
-          <Grid item xs={12} md={9}>
+          <Grid size={{ xs: 12, md: 9 }}>
             <Card variant="outlined" sx={{ borderRadius: 2 }}>
               <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <GuideStepView

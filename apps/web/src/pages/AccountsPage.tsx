@@ -589,25 +589,25 @@ export function AccountsPage() {
       {household && accounts && accounts.length > 0 && (
         <>
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card><CardContent>
                 <Typography variant="overline" color="text.secondary">Total Balance</Typography>
                 <Typography variant="h4">${totalBalance.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</Typography>
               </CardContent></Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card><CardContent>
                 <Typography variant="overline" color="text.secondary">Annual Contributions</Typography>
                 <Typography variant="h4">${totalContributions.toLocaleString('en-CA', { maximumFractionDigits: 0 })}</Typography>
               </CardContent></Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card><CardContent>
                 <Typography variant="overline" color="text.secondary">Accounts</Typography>
                 <Typography variant="h4">{accounts.length}</Typography>
               </CardContent></Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card><CardContent>
                 <Typography variant="overline" color="text.secondary">Account Types</Typography>
                 <Typography variant="h4">{Object.keys(byType).length}</Typography>
@@ -728,7 +728,7 @@ export function AccountsPage() {
             ) : (
               <Grid container spacing={2}>
                 {realEstate.map((property) => (
-                  <Grid item xs={12} md={6} key={property.id}>
+                  <Grid size={{ xs: 12, md: 6 }} key={property.id}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -802,7 +802,7 @@ export function AccountsPage() {
                       </Typography>
                     )}
                     <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{ xs: 12, md: 6 }}>
                         <Typography variant="subtitle1" sx={{ mb: 1 }}>RRSP</Typography>
                         <TableContainer>
                           <Table size="small">
@@ -848,7 +848,7 @@ export function AccountsPage() {
                         )}
                       </Grid>
 
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{ xs: 12, md: 6 }}>
                         <Typography variant="subtitle1" sx={{ mb: 1 }}>TFSA</Typography>
                         <TableContainer>
                           <Table size="small">
@@ -956,7 +956,7 @@ export function AccountsPage() {
           <Divider />
           <Typography variant="subtitle2">Asset Allocation (optional)</Typography>
           <Grid container spacing={1}>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 label="Equity %"
                 type="number"
@@ -966,7 +966,7 @@ export function AccountsPage() {
                 inputProps={{ min: 0, max: 100, step: 1 }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 label="Fixed Income %"
                 type="number"
@@ -976,7 +976,7 @@ export function AccountsPage() {
                 inputProps={{ min: 0, max: 100, step: 1 }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 label="Alternatives %"
                 type="number"
@@ -986,7 +986,7 @@ export function AccountsPage() {
                 inputProps={{ min: 0, max: 100, step: 1 }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 label="Cash %"
                 type="number"
@@ -1145,7 +1145,7 @@ export function AccountsPage() {
           </TextField>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Current Value ($)"
                 type="number"
@@ -1154,7 +1154,7 @@ export function AccountsPage() {
                 onChange={(e) => setPropertyForm({ ...propertyForm, currentValue: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Purchase Price ($)"
                 type="number"
@@ -1163,7 +1163,7 @@ export function AccountsPage() {
                 onChange={(e) => setPropertyForm({ ...propertyForm, purchasePrice: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Annual Appreciation (%)"
                 type="number"
@@ -1173,7 +1173,7 @@ export function AccountsPage() {
                 inputProps={{ min: -20, max: 30, step: 0.1 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Net Proceeds (%)"
                 type="number"
@@ -1188,7 +1188,7 @@ export function AccountsPage() {
 
           {propertyForm.propertyType === 'RENTAL' && (
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   label="Gross Rental Income ($/yr)"
                   type="number"
@@ -1197,7 +1197,7 @@ export function AccountsPage() {
                   onChange={(e) => setPropertyForm({ ...propertyForm, grossRentalIncome: e.target.value })}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   label="Rental Expenses ($/yr)"
                   type="number"

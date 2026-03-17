@@ -101,7 +101,7 @@ function CaUsTab() {
   return (
     <Grid container spacing={3}>
       {/* Exchange Rate */}
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Alert severity="info" icon={<InfoOutlinedIcon />} sx={{ mb: 1 }}>
           <AlertTitle>USD/CAD Rate</AlertTitle>
           All calculations below use the exchange rate you set here.
@@ -118,7 +118,7 @@ function CaUsTab() {
       </Grid>
 
       {/* Withholding Rate Reference */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>Canada-US Treaty Withholding Rates</Typography>
@@ -154,7 +154,7 @@ function CaUsTab() {
       </Grid>
 
       {/* RRSP Treaty Calculator */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>RRSP/RRIF Treaty Withdrawal Calculator</Typography>
@@ -162,17 +162,17 @@ function CaUsTab() {
               Estimate after-tax RRSP/RRIF withdrawals for a US resident (Article XVIII(7) treaty election).
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="RRSP/RRIF Balance (CAD)" type="number"
                   value={rrspBalance} onChange={e => setRrspBalance(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="Annual Withdrawal (CAD)" type="number"
                   value={rrspWithdrawal} onChange={e => setRrspWithdrawal(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="US Marginal Tax Rate" type="number"
                   value={usMarginalRate} onChange={e => setUsMarginalRate(Number(e.target.value))}
                   inputProps={{ step: 0.01, min: 0, max: 1 }}
@@ -187,7 +187,7 @@ function CaUsTab() {
                 ['Additional US Tax', fmt(rrspResult.additionalUsaTax, 'USD')],
                 ['Net After-Tax (USD)', fmt(rrspResult.netWithdrawalUsd, 'USD')],
               ].map(([label, val]) => (
-                <Grid item xs={6} key={label}>
+                <Grid size={{ xs: 6 }} key={label}>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
                   <Typography variant="subtitle2">{val}</Typography>
                 </Grid>
@@ -203,7 +203,7 @@ function CaUsTab() {
       </Grid>
 
       {/* SS + CPP Totalization */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>CPP + Social Security Totalization</Typography>
@@ -211,20 +211,20 @@ function CaUsTab() {
               Estimate combined retirement income from both countries. WEP reduction applied where applicable.
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="CPP Contribution Years" type="number"
                   value={cppYears} onChange={e => setCppYears(Number(e.target.value))} inputProps={{ min: 0, max: 39 }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="Avg CPP Earnings (CAD)" type="number"
                   value={cppEarnings} onChange={e => setCppEarnings(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="SSA Credits (years)" type="number"
                   value={ssCredits} onChange={e => setSsCredits(Number(e.target.value))} inputProps={{ min: 0, max: 40 }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="Avg SS Earnings (USD)" type="number"
                   value={ssEarnings} onChange={e => setSsEarnings(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
@@ -239,7 +239,7 @@ function CaUsTab() {
                 ['Net SS After WEP', fmt(totResult.netSsAfterWep, 'USD')],
                 ['Combined (CAD)', fmt(totResult.combinedAnnualCad)],
               ].map(([label, val]) => (
-                <Grid item xs={6} key={label}>
+                <Grid size={{ xs: 6 }} key={label}>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
                   <Typography variant="subtitle2" color={label === 'WEP Reduction' ? 'error' : 'inherit'}>{val}</Typography>
                 </Grid>
@@ -255,7 +255,7 @@ function CaUsTab() {
       </Grid>
 
       {/* US Estate Tax */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>US Estate Tax Exposure</Typography>
@@ -263,12 +263,12 @@ function CaUsTab() {
               Non-resident aliens have only a USD $60,000 exemption from US estate tax.
             </Typography>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={8}>
+              <Grid size={{ xs: 8 }}>
                 <TextField fullWidth size="small" label="US-Situs Assets (USD)" type="number"
                   value={usSitusAssets} onChange={e => setUsSitusAssets(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
               </Grid>
-              <Grid item xs={4}>
+              <Grid size={{ xs: 4 }}>
                 <FormControlLabel
                   control={<Switch checked={isUsDomiciliary} onChange={e => setIsUsDomiciliary(e.target.checked)} />}
                   label="US Domiciliary"
@@ -283,7 +283,7 @@ function CaUsTab() {
                 ['Est. Estate Tax (USD)', fmt(estateResult.estimatedTaxUsd, 'USD')],
                 ['Est. Estate Tax (CAD)', fmt(estateResult.estimatedTaxCad)],
               ].map(([label, val]) => (
-                <Grid item xs={6} key={label}>
+                <Grid size={{ xs: 6 }} key={label}>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
                   <Typography variant="subtitle2" color={label?.toString().includes('Tax') && estateResult.estimatedTaxUsd > 0 ? 'error' : 'inherit'}>{val}</Typography>
                 </Grid>
@@ -299,7 +299,7 @@ function CaUsTab() {
       </Grid>
 
       {/* PFIC Advisory */}
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Card>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -397,7 +397,7 @@ function ExpatTab() {
   return (
     <Grid container spacing={3}>
       {/* Departure Tax */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>Departure Tax Estimator</Typography>
@@ -405,17 +405,17 @@ function ExpatTab() {
               On emigration from Canada, you are deemed to have disposed of most capital property at FMV.
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="FMV of Capital Property (CAD)" type="number"
                   value={deptFmv} onChange={e => setDeptFmv(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="Adjusted Cost Base (CAD)" type="number"
                   value={deptAcb} onChange={e => setDeptAcb(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="Marginal Tax Rate" type="number"
                   value={deptMarginalRate} onChange={e => setDeptMarginalRate(Number(e.target.value))}
                   inputProps={{ step: 0.01, min: 0, max: 1 }}
@@ -429,7 +429,7 @@ function ExpatTab() {
                 ['Taxable Gain (50%)', fmt(departureResult.taxableGainCad)],
                 ['Est. Departure Tax', fmt(departureResult.estimatedTaxCad)],
               ].map(([label, val]) => (
-                <Grid item xs={6} key={label}>
+                <Grid size={{ xs: 6 }} key={label}>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
                   <Typography variant="subtitle2" color={label === 'Est. Departure Tax' ? 'error' : 'inherit'}>{val}</Typography>
                 </Grid>
@@ -445,7 +445,7 @@ function ExpatTab() {
       </Grid>
 
       {/* T1135 */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>T1135 — Foreign Asset Reporting</Typography>
@@ -475,7 +475,7 @@ function ExpatTab() {
       </Grid>
 
       {/* RRSP Non-Resident */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>RRSP as Non-Resident</Typography>
@@ -483,12 +483,12 @@ function ExpatTab() {
               Non-residents can keep their RRSP but face CRA withholding on withdrawals.
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="RRSP Balance (CAD)" type="number"
                   value={rrspBalance} onChange={e => setRrspBalance(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" select label="Country of Residence"
                   value={residenceCountry} onChange={e => setResidenceCountry(e.target.value)}>
                   {countryOptions.map(([code, info]) => (
@@ -497,7 +497,7 @@ function ExpatTab() {
                   <MenuItem value="NONE">Non-treaty Country</MenuItem>
                 </TextField>
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="Years Since Departure" type="number"
                   value={yearsSince} onChange={e => setYearsSince(Number(e.target.value))} inputProps={{ min: 0 }} />
               </Grid>
@@ -508,7 +508,7 @@ function ExpatTab() {
                 ['Can Contribute', rrspNrResult.canContribute ? 'Yes (2-yr rule)' : 'No'],
                 ['Withholding Rate', pct(rrspNrResult.withholdingRate)],
               ].map(([label, val]) => (
-                <Grid item xs={6} key={label}>
+                <Grid size={{ xs: 6 }} key={label}>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
                   <Typography variant="subtitle2">{val}</Typography>
                 </Grid>
@@ -524,7 +524,7 @@ function ExpatTab() {
       </Grid>
 
       {/* Treaty Withholding Table */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>Treaty Withholding Rates by Country</Typography>
@@ -559,7 +559,7 @@ function ExpatTab() {
       </Grid>
 
       {/* QROPS */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>QROPS — UK Pension Transfer</Typography>
@@ -567,17 +567,17 @@ function ExpatTab() {
               Transfer a UK pension to Canada via a HMRC-approved QROPS scheme.
             </Typography>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="UK Pension Value (GBP)" type="number"
                   value={ukPension} onChange={e => setUkPension(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">£</InputAdornment> }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="GBP/CAD Rate" type="number"
                   value={gbpCadRate} onChange={e => setGbpCadRate(Number(e.target.value))}
                   inputProps={{ step: 0.01, min: 1 }} />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <FormControlLabel
                   control={<Switch checked={withinFiveYears} onChange={e => setWithinFiveYears(e.target.checked)} />}
                   label="Transfer within 5 years of leaving UK tax residency"
@@ -591,7 +591,7 @@ function ExpatTab() {
                 ['OTC Charge (CAD)', fmt(qropsResult.otcAmountCad)],
                 ['Net Transfer (CAD)', fmt(qropsResult.transferValueCad - qropsResult.otcAmountCad)],
               ].map(([label, val]) => (
-                <Grid item xs={6} key={label}>
+                <Grid size={{ xs: 6 }} key={label}>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
                   <Typography variant="subtitle2" color={label === 'OTC Charge (CAD)' && qropsResult.otcAmountCad > 0 ? 'error' : 'inherit'}>{val}</Typography>
                 </Grid>
@@ -607,7 +607,7 @@ function ExpatTab() {
       </Grid>
 
       {/* Repatriation */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>Return-to-Canada Repatriation</Typography>
@@ -615,17 +615,17 @@ function ExpatTab() {
               Estimate Canadian tax on re-entry with foreign assets.
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="Total Foreign Assets (CAD)" type="number"
                   value={repatAssets} onChange={e => setRepatAssets(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="Unrealized Gains (CAD)" type="number"
                   value={repatGains} onChange={e => setRepatGains(Number(e.target.value))}
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" select label="Coming From"
                   value={repatCountry} onChange={e => setRepatCountry(e.target.value)}>
                   {countryOptions.map(([code, info]) => (
@@ -633,7 +633,7 @@ function ExpatTab() {
                   ))}
                 </TextField>
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }}>
                 <TextField fullWidth size="small" label="Canadian Marginal Rate" type="number"
                   value={repatMarginalRate} onChange={e => setRepatMarginalRate(Number(e.target.value))}
                   inputProps={{ step: 0.01, min: 0, max: 1 }}
@@ -647,7 +647,7 @@ function ExpatTab() {
                 ['Foreign Tax Credit', fmt(repatResult.foreignTaxCreditCad)],
                 ['Net Tax Cost', fmt(repatResult.netTaxCostCad)],
               ].map(([label, val]) => (
-                <Grid item xs={6} key={label}>
+                <Grid size={{ xs: 6 }} key={label}>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
                   <Typography variant="subtitle2" color={label === 'Net Tax Cost' ? 'error' : 'inherit'}>{val}</Typography>
                 </Grid>
@@ -663,7 +663,7 @@ function ExpatTab() {
       </Grid>
 
       {/* Disclaimer */}
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Alert severity="warning" icon={<WarningAmberIcon />}>
           <AlertTitle>Important Disclaimer</AlertTitle>
           International tax rules are complex and change regularly. All calculations are estimates for planning purposes only.

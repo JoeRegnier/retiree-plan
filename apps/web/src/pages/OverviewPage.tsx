@@ -299,7 +299,7 @@ export function OverviewPage() {
         </Typography>
         <Grid container spacing={2} justifyContent="center">
           {WHY_ITEMS.map((item) => (
-            <Grid item xs={12} sm={6} md={4} key={item}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                 <CheckCircleIcon sx={{ color: 'secondary.main', mt: 0.3, flexShrink: 0 }} />
                 <Typography variant="body1">{item}</Typography>
@@ -323,7 +323,7 @@ export function OverviewPage() {
 
         <Grid container spacing={3}>
           {FEATURES.map((f) => (
-            <Grid item xs={12} sm={6} lg={4} key={f.title}>
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={f.title}>
               <Card
                 sx={{
                   height: '100%',

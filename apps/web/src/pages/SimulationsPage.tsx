@@ -94,14 +94,14 @@ function InfoPanel({ title, what, inputs, interpretation, relevance }: InfoPanel
           <CardContent sx={{ pt: 2, pb: '12px !important' }}>
             <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{title}</Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
                   <BarChartIcon fontSize="small" color="primary" />
                   <Typography variant="caption" fontWeight={600} color="primary">What it does</Typography>
                 </Box>
                 <Typography variant="caption" color="text.secondary">{what}</Typography>
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
                   <TuneIcon fontSize="small" color="warning" />
                   <Typography variant="caption" fontWeight={600} color="warning.main">Key inputs</Typography>
@@ -117,7 +117,7 @@ function InfoPanel({ title, what, inputs, interpretation, relevance }: InfoPanel
                   ))}
                 </List>
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
                   <CheckCircleOutlineIcon fontSize="small" color="success" />
                   <Typography variant="caption" fontWeight={600} color="success.main">How to read results</Typography>
@@ -198,7 +198,7 @@ function MonteCarloTab() {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <InfoPanel
           title="Monte Carlo Simulation"
           what="Runs thousands of randomised annual-return sequences through your cash-flow model. Each trial uses a different random return path drawn from a normal distribution, revealing the full spectrum of possible retirement outcomes."
@@ -213,7 +213,7 @@ function MonteCarloTab() {
           relevance="Addresses sequence-of-returns risk: the same average return can produce very different outcomes depending on whether bad years come early or late in retirement."
         />
       </Grid>
-      <Grid item xs={12} md={4}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" sx={{ mb: 2 }}>Parameters</Typography>
@@ -264,7 +264,7 @@ function MonteCarloTab() {
           </Card>
         )}
       </Grid>
-      <Grid item xs={12} md={8}>
+      <Grid size={{ xs: 12, md: 8 }}>
         {!result ? (
           <Card sx={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Box sx={{ textAlign: 'center' }}>
@@ -346,7 +346,7 @@ function BacktestingTab() {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <InfoPanel
           title="Historical Backtesting"
           what="Tests your retirement plan against every overlapping historical return window from 1970-2024 using real TSX Composite and FTSE Canada Bond data. Each window represents a complete retirement starting from a different year in history."
@@ -361,7 +361,7 @@ function BacktestingTab() {
           relevance="Complements Monte Carlo by grounding results in actual history. A plan that survived 1966 (worst sequence ever recorded) or 2000-2002 is genuinely stress-tested."
         />
       </Grid>
-      <Grid item xs={12} md={4}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" sx={{ mb: 1 }}>Historical Backtesting</Typography>
@@ -413,7 +413,7 @@ function BacktestingTab() {
           </Card>
         )}
       </Grid>
-      <Grid item xs={12} md={8}>
+      <Grid size={{ xs: 12, md: 8 }}>
         {!result ? (
           <Card sx={{ height: 420, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Box sx={{ textAlign: 'center' }}>
@@ -486,7 +486,7 @@ function GuytonKlingerTab() {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <InfoPanel
           title="Guyton-Klinger Guardrails"
           what="Models a flexible spending strategy where withdrawals adapt each year based on portfolio performance. If your withdrawal rate exceeds the upper guardrail (default 7%), spending is cut by 10%. If it drops below the lower guardrail (default 4%), you can spend 10% more - allowing you to enjoy good markets while preserving capital in bad ones."
@@ -501,7 +501,7 @@ function GuytonKlingerTab() {
           relevance="Demonstrates why rigid 4% fixed-withdrawal rules can fail in volatile markets, and how dynamic spending rules give a plan much greater longevity."
         />
       </Grid>
-      <Grid item xs={12} md={4}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" sx={{ mb: 1 }}>Guyton-Klinger Guardrails</Typography>
@@ -558,7 +558,7 @@ function GuytonKlingerTab() {
           </Card>
         )}
       </Grid>
-      <Grid item xs={12} md={8}>
+      <Grid size={{ xs: 12, md: 8 }}>
         {!result ? (
           <Card sx={{ height: 420, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Box sx={{ textAlign: 'center' }}>
@@ -684,7 +684,7 @@ function HeatmapTab() {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <InfoPanel
           title="Success Rate Heatmap"
           what="Runs 36 Monte Carlo simulations across a grid of 6 withdrawal rates (2.5%-5.0%) x 6 equity fractions (30%-80%). Each cell shows the probability your portfolio survives the full retirement period. Reveals how sensitive your plan is to both spending rate and asset allocation simultaneously."
@@ -698,7 +698,7 @@ function HeatmapTab() {
           relevance="Uniquely powerful for understanding trade-offs: you can see at a glance whether shifting from 60% to 70% equities meaningfully improves your success rate, or whether withdrawing 3.5% vs 4.0% is the more impactful lever."
         />
       </Grid>
-      <Grid item xs={12} md={4}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" mb={2}>Parameters</Typography>
@@ -726,7 +726,7 @@ function HeatmapTab() {
           </CardContent>
         </Card>
       </Grid>
-      <Grid item xs={12} md={8}>
+      <Grid size={{ xs: 12, md: 8 }}>
         {heatmapData ? (
           <Card>
             <CardContent>
@@ -944,7 +944,7 @@ function HistoricalScenariosTab() {
     <Grid container spacing={3}>
 
       {/* ── InfoPanel ── */}
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <InfoPanel
           title="Historical Scenarios (Bootstrap Simulation)"
           what="Samples random annual returns from the actual historical record — including real crises, inflation shocks, and bull markets. Add up to 4 comparison runs with different asset mixes or ETF proxies, then overlay them in a single fan chart for direct perspective comparison."
@@ -961,7 +961,7 @@ function HistoricalScenariosTab() {
       </Grid>
 
       {/* ── Data Sources & Live Fetch ── */}
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Card variant="outlined">
           <CardContent sx={{ '&:last-child': { pb: 1.5 } }}>
             <Box
@@ -1050,7 +1050,7 @@ function HistoricalScenariosTab() {
 
       {/* ── Run Configuration Cards ── */}
       {runs.map((run, idx) => (
-        <Grid item xs={12} md={6} key={run.id}>
+        <Grid size={{ xs: 12, md: 6 }} key={run.id}>
           <Card variant="outlined" sx={{ borderLeft: `4px solid ${run.color}` }}>
             <CardContent>
               {/* Card header: editable label + remove button */}
@@ -1182,7 +1182,7 @@ function HistoricalScenariosTab() {
 
       {/* Add Run tile */}
       {runs.length < 4 && (
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Box
             sx={{
               border: '2px dashed', borderColor: 'divider', borderRadius: 2,
@@ -1202,7 +1202,7 @@ function HistoricalScenariosTab() {
       )}
 
       {/* ── Multi-series Fan Chart ── */}
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         {fanSeries.length === 0 ? (
           <Card variant="outlined" sx={{ height: 440, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Box sx={{ textAlign: 'center' }}>
