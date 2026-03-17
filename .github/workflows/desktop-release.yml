@@ -189,6 +189,15 @@ jobs:
         working-directory: apps/desktop
         run: npm run build
 
+      # dmg-license is an optional dep of dmg-builder; absent from the Linux-
+      # generated lockfile so npm ci skips it. Install it explicitly on macOS.
+      - name: Fix dmg-license (optional dep missing from Linux lockfile)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          DVER=$(node -e "process.stdout.write(require('./node_modules/dmg-license/package.json').version)" 2>/dev/null || echo "1.0.11")
+          test -d "node_modules/dmg-license" || npm install --no-save --ignore-scripts "dmg-license@$DVER"
+
       # ── Package with electron-builder ─────────────────────────────────────
       - name: Package (macOS)
         if: runner.os == 'macOS'
