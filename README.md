@@ -12,7 +12,7 @@
 
 **Built for Canadians, by Canadians.**
 
-[Getting Started](#-quick-start) · [Screenshots](#-screenshots) · [Documentation](#-documentation) · [Contributing](#-contributing)
+[Getting Started](#-quick-start) · [Demo](#-demo) · [Screenshots](#-screenshots) · [Documentation](#-documentation) · [Contributing](#-contributing)
 
 </div>
 
@@ -113,6 +113,23 @@ See the full gap analysis and proposal in [docs/ROADMAP-proposed-enhancements.md
 | Data | RESP Planner | 🔜 Planned |
 | Desktop | Auto-update mechanism | 🔜 Planned |
 | Desktop | Windows/Linux packaged installers | ✅ Shipped |
+
+---
+
+## 🎬 Demo
+
+> **[▶ Watch the 90-second walkthrough on GitHub Pages →](https://joeregnier.github.io/retiree-plan/#demo)**
+
+The demo video is generated automatically with Playwright against the seeded test account and embedded on the [project site](https://joeregnier.github.io/retiree-plan/). To regenerate it locally:
+
+```bash
+# Both servers must be running first:
+npm run dev:api & npm run dev:web &
+
+# Then record:
+npm run demo:record
+# → saves docs/demo.webm
+```
 
 ---
 

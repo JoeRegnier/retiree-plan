@@ -57,6 +57,8 @@
     "predb:migrate": "node prisma/backup.js --label pre-migrate",
     "desktop:dev": "npm run dev -w apps/desktop",
     "desktop:build": "npm run package -w apps/desktop",
+    "demo:record": "tsx scripts/record-demo.ts",
+    "screenshots:update": "tsx scripts/take-screenshots.ts",
     "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules e2e/node_modules"
   },
   "prisma": {
