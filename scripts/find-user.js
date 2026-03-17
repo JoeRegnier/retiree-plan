@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { PrismaLibSql } = require('@prisma/adapter-libsql');
 
 async function main() {
   const email = process.argv[2];
@@ -7,7 +8,9 @@ async function main() {
     process.exit(2);
   }
 
-  const prisma = new PrismaClient();
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL environment variable is required');
+  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url }) });
   try {
     const user = await prisma.user.findUnique({ where: { email } }) || await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (!user) {
