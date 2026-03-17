@@ -448,6 +448,34 @@ export function AppLayout() {
         <Box id="main-content" component="main" sx={{ p: { xs: 2, md: 3 } }}>
           <Outlet />
         </Box>
+
+        <Box
+          component="footer"
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            py: 2,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Box
+            component="a"
+            href="https://www.buymeacoffee.com/ai.joe"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Buy me a coffee"
+            sx={{ display: 'inline-flex', lineHeight: 0 }}
+          >
+            <Box
+              component="img"
+              src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+              alt="Buy Me A Coffee"
+              sx={{ height: 40, width: 'auto' }}
+            />
+          </Box>
+        </Box>
       </Box>
 
       {/* Tour + Onboarding + Quick Actions — mounted once, controlled by context */}
