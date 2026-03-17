@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@github/copilot-sdk": "^0.1.32",
+    "@libsql/client": "^0.17.0",
     "@nestjs/common": "^11.1.16",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.1.16",
@@ -25,7 +26,8 @@
     "@nestjs/schedule": "^6.1.1",
     "@nestjs/serve-static": "^5.0.0",
     "@nestjs/swagger": "^11.0.0",
-    "@prisma/client": "^6.0.0",
+    "@prisma/adapter-libsql": "^7.5.0",
+    "@prisma/client": "^7.5.0",
     "@retiree-plan/finance-engine": "*",
     "@retiree-plan/shared": "*",
     "bcrypt": "^6.0.0",
@@ -46,7 +48,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/passport-jwt": "^4.0.0",
-    "prisma": "^6.0.0",
+    "prisma": "^7.5.0",
     "typescript": "^5.8.0",
     "vitest": "^4.1.0"
   }

@@ -14,9 +14,13 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
+const { PrismaLibSql } = require('@prisma/adapter-libsql');
 const bcrypt = require('bcrypt');
 
-const prisma = new PrismaClient();
+const _dbUrl = process.env.DATABASE_URL;
+if (!_dbUrl) throw new Error('DATABASE_URL environment variable is required');
+const _adapter = new PrismaLibSql({ url: _dbUrl });
+const prisma = new PrismaClient({ adapter: _adapter });
 
 const TEST_EMAIL    = 'test@retireeplan.dev';
 const TEST_PASSWORD = 'TestPassword123!';
