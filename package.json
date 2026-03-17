@@ -88,5 +88,8 @@
     "@angular-devkit/core": {
       "ajv": "^8.18.0"
     }
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
   }
 }
