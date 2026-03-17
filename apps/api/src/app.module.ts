@@ -21,6 +21,7 @@ import { HealthController } from './health.controller';
 import { BrokerageModule } from './brokerage/brokerage.module';
 import { RealEstateModule } from './real-estate/real-estate.module';
 import { GoalsModule } from './goals/goals.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { GoalsModule } from './goals/goals.module';
         ]
       : []),
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     DatabaseModule,
     AuthModule,
