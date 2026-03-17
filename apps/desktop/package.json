@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.5.0",
     "@vercel/ncc": "^0.38.3",
     "electron": "41.0.2",
     "electron-builder": "^26.8.2",
