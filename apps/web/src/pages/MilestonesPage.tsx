@@ -314,7 +314,7 @@ export function MilestonesPage() {
             const total = items.reduce((s, m) => s + m.amount, 0);
             if (items.length === 0) return null;
             return (
-              <Grid item xs={12} sm={6} md={3} key={type}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={type}>
                 <Card variant="outlined">
                   <CardContent>
                     <Chip
@@ -341,7 +341,7 @@ export function MilestonesPage() {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             {MILESTONE_TEMPLATES.map((template) => (
-              <Grid item xs={12} sm={6} key={template.name}>
+              <Grid size={{ xs: 12, sm: 6 }} key={template.name}>
                 <Card
                   sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 }, transition: 'box-shadow 0.2s' }}
                   onClick={() => applyTemplate(template)}
@@ -371,7 +371,7 @@ export function MilestonesPage() {
         <DialogContent>
           {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
           <Grid container spacing={2} mt={0.5}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Name"
                 fullWidth
@@ -380,7 +380,7 @@ export function MilestonesPage() {
                 required
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 label="Age at Event"
                 type="number"
@@ -390,7 +390,7 @@ export function MilestonesPage() {
                 onChange={(e) => setForm((f) => ({ ...f, age: Number(e.target.value) }))}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 label="Type"
                 select
@@ -403,7 +403,7 @@ export function MilestonesPage() {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Amount ($)"
                 type="number"
@@ -413,7 +413,7 @@ export function MilestonesPage() {
                 onChange={(e) => setForm((f) => ({ ...f, amount: Number(e.target.value) }))}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Description (optional)"
                 fullWidth

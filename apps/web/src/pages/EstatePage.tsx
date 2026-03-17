@@ -92,7 +92,7 @@ export function EstatePage() {
 
       <Grid container spacing={3}>
         {/* Inputs */}
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" mb={2}>Asset Balances</Typography>
@@ -107,7 +107,7 @@ export function EstatePage() {
                   { key: 'otherAssetsACB', label: 'Other Assets ACB' },
                   { key: 'liabilities', label: 'Total Liabilities' },
                 ].map(({ key, label }) => (
-                  <Grid item xs={12} sm={6} key={key}>
+                  <Grid size={{ xs: 12, sm: 6 }} key={key}>
                     <TextField
                       label={label}
                       type="number"
@@ -124,7 +124,7 @@ export function EstatePage() {
               <Divider sx={{ my: 2 }} />
               <Typography variant="h6" mb={2}>Tax Rates</Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="Marginal Rate at Death"
                     type="number"
@@ -136,7 +136,7 @@ export function EstatePage() {
                     helperText="e.g. 0.50 for 50%"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="Cap Gains Effective Rate"
                     type="number"
@@ -148,7 +148,7 @@ export function EstatePage() {
                     helperText="e.g. 0.245 (50% incl × 49%)"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     label="Province"
                     select fullWidth size="small"
@@ -177,7 +177,7 @@ export function EstatePage() {
         </Grid>
 
         {/* Results */}
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           {!result && (
             <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CardContent sx={{ textAlign: 'center', py: 6 }}>
@@ -198,7 +198,7 @@ export function EstatePage() {
                   { label: 'Total Tax & Fees', value: result.totalTaxAndFees, color: 'error.main' },
                   { label: 'Net to Heirs', value: result.netEstateToHeirs, color: 'success.main' },
                 ].map(({ label, value, color }) => (
-                  <Grid item xs={12} sm={4} key={label}>
+                  <Grid size={{ xs: 12, sm: 4 }} key={label}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" color="text.secondary">{label}</Typography>

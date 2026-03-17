@@ -335,7 +335,7 @@ export function ProjectionsPage() {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Scenario" select fullWidth size="small"
                 inputProps={{ 'data-tour': 'scenario-select' }}
@@ -345,14 +345,14 @@ export function ProjectionsPage() {
                 {(scenarios ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
               </TextField>
             </Grid>
-            <Grid item xs={6} sm={3}>
+            <Grid size={{ xs: 6, sm: 3 }}>
               <Button fullWidth variant="contained" startIcon={<PlayArrowIcon />}
                 data-tour="run-projection-btn"
                 onClick={handleRun} disabled={isRunning || !selectedScenarioId}>
                 {runProjection.isPending ? <CircularProgress size={20} /> : 'Run Projection'}
               </Button>
             </Grid>
-            <Grid item xs={6} sm={3}>
+            <Grid size={{ xs: 6, sm: 3 }}>
               <Button fullWidth variant="outlined" onClick={handleRunMC}
                 data-tour="run-mc-btn"
                 disabled={isRunning || !selectedScenarioId || !projectionData}>

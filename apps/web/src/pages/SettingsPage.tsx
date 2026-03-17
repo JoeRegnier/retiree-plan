@@ -185,7 +185,7 @@ export function SettingsPage() {
 
       <Grid container spacing={3}>
         {/* Profile */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>Profile</Typography>
@@ -220,7 +220,7 @@ export function SettingsPage() {
         </Grid>
 
         {/* Preferences */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>Default Assumptions</Typography>
@@ -258,7 +258,7 @@ export function SettingsPage() {
         </Grid>
 
         {/* Integrations */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>Integrations</Typography>
@@ -299,7 +299,7 @@ export function SettingsPage() {
         </Grid>
 
         {/* Data management */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>Data Management</Typography>
@@ -339,7 +339,7 @@ export function SettingsPage() {
           </Card>
         </Grid>
         {/* Local data location (desktop only) */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>Local Data Location</Typography>
@@ -416,7 +416,7 @@ export function SettingsPage() {
           </Card>
         </Grid>
         {/* ── Database Backup & Restore ── */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>

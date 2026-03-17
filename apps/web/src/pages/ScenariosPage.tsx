@@ -225,7 +225,7 @@ export function ScenariosPage() {
           {(scenarios ?? []).map((s) => {
             const p = parseParams(s);
             return (
-              <Grid item xs={12} md={6} lg={4} key={s.id}>
+              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={s.id}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <CardContent sx={{ flex: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
@@ -290,23 +290,23 @@ export function ScenariosPage() {
           {/* ── Tab 0: Basics ── */}
           {activeTab === 0 && (
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   label="Scenario Name" fullWidth
                   value={name} onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Base Case – Retire at 65"
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   label="Description (optional)" fullWidth multiline rows={3}
                   value={description} onChange={(e) => setDescription(e.target.value)}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Divider />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Tip: fill in the remaining tabs to fine-tune market assumptions, benefit timing, and spending phases.
                 </Typography>
@@ -317,35 +317,35 @@ export function ScenariosPage() {
           {/* ── Tab 1: Timeline ── */}
           {activeTab === 1 && (
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="overline" color="text.secondary">Retirement Window</Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography gutterBottom>Retirement Age: <strong>{params.retirementAge}</strong></Typography>
                 <Slider value={params.retirementAge} min={50} max={75} step={1}
                   onChange={(_, v) => setParam('retirementAge', v as number)} marks valueLabelDisplay="auto" />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography gutterBottom>Life Expectancy: <strong>{params.lifeExpectancy}</strong></Typography>
                 <Slider value={params.lifeExpectancy} min={75} max={105} step={1}
                   onChange={(_, v) => setParam('lifeExpectancy', v as number)} marks valueLabelDisplay="auto" />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Divider />
                 <Typography variant="overline" color="text.secondary" sx={{ mt: 1, display: 'block' }}>Government Benefits</Typography>
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <Typography gutterBottom>CPP Start Age: <strong>{params.cppStartAge}</strong></Typography>
                 <Slider value={params.cppStartAge} min={60} max={70} step={1}
                   onChange={(_, v) => setParam('cppStartAge', v as number)} marks valueLabelDisplay="auto" />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <Typography gutterBottom>OAS Start Age: <strong>{params.oasStartAge}</strong></Typography>
                 <Slider value={params.oasStartAge} min={65} max={70} step={1}
                   onChange={(_, v) => setParam('oasStartAge', v as number)} marks valueLabelDisplay="auto" />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <Typography gutterBottom>
                   RRIF Conversion: <strong>{params.rrifStartAge}</strong>
                   {params.rrifStartAge < 65 && (
@@ -376,10 +376,10 @@ export function ScenariosPage() {
           {/* ── Tab 2: Returns ── */}
           {activeTab === 2 && (
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="overline" color="text.secondary">Market Assumptions</Typography>
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   label="Expected Return" type="number" fullWidth
                   value={(params.expectedReturnRate * 100).toFixed(1)}
@@ -388,7 +388,7 @@ export function ScenariosPage() {
                   inputProps={{ min: 0, max: 20, step: 0.1 }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   label="Inflation Rate" type="number" fullWidth
                   value={(params.inflationRate * 100).toFixed(1)}
@@ -397,7 +397,7 @@ export function ScenariosPage() {
                   inputProps={{ min: 0, max: 10, step: 0.1 }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   label="Volatility (σ)" type="number" fullWidth
                   value={(params.volatility * 100).toFixed(1)}
@@ -407,13 +407,13 @@ export function ScenariosPage() {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Divider />
                 <Typography variant="overline" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                   Non-Registered Tax Drag
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={7}>
+              <Grid size={{ xs: 12, sm: 7 }}>
                 <Typography gutterBottom>
                   Annual tax on non-reg growth: <strong>{((params.nonRegTaxDragRate ?? 0) * 100).toFixed(0)}%</strong>
                   <Tooltip title="Fraction of non-reg growth taxed each year as income (mimics dividend/interest taxation). 0% = fully deferred; 30–40% = heavily interest-bearing.">
@@ -430,13 +430,13 @@ export function ScenariosPage() {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Divider />
                 <Typography variant="overline" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                   Cash / Savings Accounts
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={7}>
+              <Grid size={{ xs: 12, sm: 7 }}>
                 <Typography gutterBottom>
                   Savings account rate: <strong>{((params.cashSavingsRate ?? 0.025) * 100).toFixed(1)}%</strong>
                   <Tooltip title="Annual interest / growth rate applied to CASH-type accounts and any income surplus that isn't actively invested (bank accounts, HISAs, etc.).  Typically 2–4%.">
@@ -452,7 +452,7 @@ export function ScenariosPage() {
                   valueLabelFormat={(v) => `${v}%`}
                 />
               </Grid>
-              <Grid item xs={12} sm={5}>
+              <Grid size={{ xs: 12, sm: 5 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -474,7 +474,7 @@ export function ScenariosPage() {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Divider />
                 <Typography variant="overline" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                   Portfolio Glide Path
@@ -483,7 +483,7 @@ export function ScenariosPage() {
                   </Tooltip>
                 </Typography>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TableContainer component={Box} sx={{ mb: 1 }}>
                   <Table size="small">
                     <TableHead>
@@ -550,10 +550,10 @@ export function ScenariosPage() {
           {/* ── Tab 3: Spending ── */}
           {activeTab === 3 && (
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="overline" color="text.secondary">Fallback Budget</Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   label="Annual Expenses (fallback)"
                   type="number" fullWidth
@@ -565,7 +565,7 @@ export function ScenariosPage() {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Divider />
                 <Typography variant="overline" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                   Phased Retirement Spending
@@ -578,7 +578,7 @@ export function ScenariosPage() {
                   then rising healthcare costs. Choose a preset or customize phase multipliers.
                 </Typography>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                   {SPENDING_PRESETS.map((preset) => (
                     <Chip
@@ -593,7 +593,7 @@ export function ScenariosPage() {
                 </Stack>
               </Grid>
               {hasMatchingSpendingPreset(SMILE_CURVE_PHASES) && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                     <Chip size="small" color="primary" variant="outlined" label="Phase 1: Active Retirement (age 60-74)" />
                     <Chip size="small" color="primary" variant="outlined" label="Phase 2: Slow-Go Years (age 75-84)" />
@@ -601,7 +601,7 @@ export function ScenariosPage() {
                   </Stack>
                 </Grid>
               )}
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TableContainer component={Box} sx={{ mb: 1 }}>
                   <Table size="small">
                     <TableHead>

@@ -199,7 +199,7 @@ export function GoalsPage() {
         <>
           {/* Summary row */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card>
                 <CardContent sx={{ textAlign: 'center' }}>
                   <Typography variant="h3" sx={{ fontWeight: 700 }}>{goals.length}</Typography>
@@ -207,7 +207,7 @@ export function GoalsPage() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card>
                 <CardContent sx={{ textAlign: 'center' }}>
                   <Typography variant="h3" sx={{ fontWeight: 700, color: '#2196f3' }}>
@@ -217,7 +217,7 @@ export function GoalsPage() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card>
                 <CardContent sx={{ textAlign: 'center' }}>
                   <Typography variant="h3" sx={{ fontWeight: 700, color: '#ff9800' }}>
@@ -232,7 +232,7 @@ export function GoalsPage() {
           {/* Goal cards */}
           <Grid container spacing={2}>
             {goals.map((goal) => (
-              <Grid item xs={12} sm={6} md={4} key={goal.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={goal.id}>
                 <Card sx={{ height: '100%', borderLeft: `4px solid ${CATEGORY_COLORS[goal.category] ?? '#999'}` }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>

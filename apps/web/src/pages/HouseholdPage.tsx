@@ -398,19 +398,19 @@ export function HouseholdPage() {
       ) : (
         <Box>
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card><CardContent>
                 <Typography variant="overline" color="text.secondary">Members</Typography>
                 <Typography variant="h4">{household.members.length}</Typography>
               </CardContent></Card>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card><CardContent>
                 <Typography variant="overline" color="text.secondary">Annual Income</Typography>
                 <Typography variant="h4">${totalIncome.toLocaleString()}</Typography>
               </CardContent></Card>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card><CardContent>
                 <Typography variant="overline" color="text.secondary">Annual Expenses</Typography>
                 <Typography variant="h4">${totalExpenses.toLocaleString()}</Typography>
@@ -487,16 +487,16 @@ export function HouseholdPage() {
                         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Financial Details</Typography>
                         <Grid container spacing={1}>
                           {m.rrspContributionRoom != null && (
-                            <Grid item xs={6}><Typography variant="body2">RRSP Room: <strong>${m.rrspContributionRoom.toLocaleString()}</strong></Typography></Grid>
+                            <Grid size={{ xs: 6 }}><Typography variant="body2">RRSP Room: <strong>${m.rrspContributionRoom.toLocaleString()}</strong></Typography></Grid>
                           )}
                           {m.tfsaContributionRoom != null && (
-                            <Grid item xs={6}><Typography variant="body2">TFSA Room: <strong>${m.tfsaContributionRoom.toLocaleString()}</strong></Typography></Grid>
+                            <Grid size={{ xs: 6 }}><Typography variant="body2">TFSA Room: <strong>${m.tfsaContributionRoom.toLocaleString()}</strong></Typography></Grid>
                           )}
                           {m.priorYearIncome != null && (
-                            <Grid item xs={6}><Typography variant="body2">Prior Year Income: <strong>${m.priorYearIncome.toLocaleString()}</strong></Typography></Grid>
+                            <Grid size={{ xs: 6 }}><Typography variant="body2">Prior Year Income: <strong>${m.priorYearIncome.toLocaleString()}</strong></Typography></Grid>
                           )}
                           {m.cppExpectedBenefit != null && (
-                            <Grid item xs={6}><Typography variant="body2">CPP at 65: <strong>${m.cppExpectedBenefit.toLocaleString()}/mo</strong></Typography></Grid>
+                            <Grid size={{ xs: 6 }}><Typography variant="body2">CPP at 65: <strong>${m.cppExpectedBenefit.toLocaleString()}/mo</strong></Typography></Grid>
                           )}
                         </Grid>
                       </Box>
@@ -648,24 +648,24 @@ export function HouseholdPage() {
         <DialogContent sx={{ pt: 3, pb: 1 }}>
           <Grid container spacing={2}>
             {/* Name */}
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField label="Name" value={memberForm.name}
                 onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} fullWidth
                 InputLabelProps={{ shrink: true }} />
             </Grid>
             {/* DOB + Retirement Age */}
-            <Grid item xs={12} sm={7}>
+            <Grid size={{ xs: 12, sm: 7 }}>
               <TextField label="Date of Birth" type="date" value={memberForm.dateOfBirth}
                 onChange={(e) => setMemberForm({ ...memberForm, dateOfBirth: e.target.value })}
                 fullWidth InputLabelProps={{ shrink: true }} />
             </Grid>
-            <Grid item xs={12} sm={5}>
+            <Grid size={{ xs: 12, sm: 5 }}>
               <TextField label="Retirement Age" type="number" value={memberForm.retirementAge}
                 onChange={(e) => setMemberForm({ ...memberForm, retirementAge: e.target.value })}
                 fullWidth inputProps={{ min: 50, max: 80 }} />
             </Grid>
             {/* Province */}
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField label="Province" select value={memberForm.province}
                 onChange={(e) => setMemberForm({ ...memberForm, province: e.target.value })} fullWidth>
                 {PROVINCE_OPTIONS.map((p) => <MenuItem key={p.code} value={p.code}>{p.name}</MenuItem>)}
@@ -673,7 +673,7 @@ export function HouseholdPage() {
             </Grid>
 
             {/* Financial Details section */}
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Divider sx={{ mt: 0.5, mb: 1.5 }} />
               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Financial Details</Typography>
               <Typography variant="caption" color="text.disabled">
@@ -681,26 +681,26 @@ export function HouseholdPage() {
               </Typography>
             </Grid>
             {/* RRSP + TFSA side-by-side */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField label="RRSP Contribution Room" type="number" value={memberForm.rrspContributionRoom}
                 onChange={(e) => setMemberForm({ ...memberForm, rrspContributionRoom: e.target.value })}
                 fullWidth InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
                 helperText="From CRA Notice of Assessment" />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField label="TFSA Contribution Room" type="number" value={memberForm.tfsaContributionRoom}
                 onChange={(e) => setMemberForm({ ...memberForm, tfsaContributionRoom: e.target.value })}
                 fullWidth InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
                 helperText="From CRA My Account" />
             </Grid>
             {/* Prior Income + CPP side-by-side */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField label="Prior Year Earned Income" type="number" value={memberForm.priorYearIncome}
                 onChange={(e) => setMemberForm({ ...memberForm, priorYearIncome: e.target.value })}
                 fullWidth InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
                 helperText="Determines next year’s RRSP room" />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField label="CPP Benefit at 65 (monthly)" type="number" value={memberForm.cppExpectedBenefit}
                 onChange={(e) => setMemberForm({ ...memberForm, cppExpectedBenefit: e.target.value })}
                 fullWidth InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
@@ -738,11 +738,11 @@ export function HouseholdPage() {
           <TextField label="Annual Amount ($)" type="number" value={incomeForm.annualAmount}
             onChange={(e) => setIncomeForm({ ...incomeForm, annualAmount: e.target.value })} fullWidth />
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField label="Start Age" type="number" value={incomeForm.startAge}
                 onChange={(e) => setIncomeForm({ ...incomeForm, startAge: e.target.value })} fullWidth />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField label="End Age" type="number" value={incomeForm.endAge}
                 onChange={(e) => setIncomeForm({ ...incomeForm, endAge: e.target.value })} fullWidth />
             </Grid>
@@ -788,11 +788,11 @@ export function HouseholdPage() {
           <TextField label="Annual Amount ($)" type="number" value={expenseForm.annualAmount}
             onChange={(e) => setExpenseForm({ ...expenseForm, annualAmount: e.target.value })} fullWidth />
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField label="Start Age" type="number" value={expenseForm.startAge}
                 onChange={(e) => setExpenseForm({ ...expenseForm, startAge: e.target.value })} fullWidth />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField label="End Age" type="number" value={expenseForm.endAge}
                 onChange={(e) => setExpenseForm({ ...expenseForm, endAge: e.target.value })} fullWidth />
             </Grid>
