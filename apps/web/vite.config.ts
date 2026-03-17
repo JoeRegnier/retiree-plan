@@ -19,15 +19,21 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // React core
-          'vendor-react': ['react', 'react-dom', 'react-router'],
-          // MUI components + icons (largest individual dependency)
-          'vendor-mui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
-          // D3 visualisation
-          'vendor-d3': ['d3'],
-          // Data fetching
-          'vendor-query': ['@tanstack/react-query'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            if (id.includes('@mui') || id.includes('@emotion')) {
+              return 'vendor-mui';
+            }
+            if (id.includes('/d3') || id.includes('/d3-')) {
+              return 'vendor-d3';
+            }
+            if (id.includes('@tanstack')) {
+              return 'vendor-query';
+            }
+          }
         },
       },
     },
