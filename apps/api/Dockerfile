@@ -9,7 +9,8 @@ COPY packages/finance-engine/package*.json ./packages/finance-engine/
 COPY apps/api/package*.json ./apps/api/
 COPY prisma ./prisma/
 
-RUN npm ci --workspace=packages/shared --workspace=packages/finance-engine --workspace=apps/api
+RUN npm ci --workspace=packages/shared --workspace=packages/finance-engine --workspace=apps/api \
+	&& npx prisma generate
 
 COPY packages/shared ./packages/shared/
 COPY packages/finance-engine ./packages/finance-engine/
