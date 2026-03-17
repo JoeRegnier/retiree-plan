@@ -4,8 +4,13 @@
  */
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { PrismaClient } = require('@prisma/client');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { PrismaLibSql } = require('@prisma/adapter-libsql');
 
-const prisma = new PrismaClient();
+const _dbUrl = process.env.DATABASE_URL;
+if (!_dbUrl) throw new Error('DATABASE_URL environment variable is required');
+const _adapter = new PrismaLibSql({ url: _dbUrl });
+const prisma = new PrismaClient({ adapter: _adapter });
 
 const TSX_RETURNS = {
   1970: 0.03,  1971: 0.10,  1972: 0.27,  1973: -0.04, 1974: -0.27,

@@ -4,8 +4,12 @@
  * Sources: Bank of Canada, Morningstar Canada, FTSE Russell historical data.
  */
 import { PrismaClient } from '@prisma/client';
+import { PrismaLibSql } from '@prisma/adapter-libsql';
 
-const prisma = new PrismaClient();
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL environment variable is required');
+const adapter = new PrismaLibSql({ url });
+const prisma = new PrismaClient({ adapter } as any);
 
 const TSX_RETURNS: Record<number, number> = {
   1970: 0.03,  1971: 0.10,  1972: 0.27,  1973: -0.04, 1974: -0.27,
