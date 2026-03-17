@@ -11,13 +11,25 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      footer.app-footer {
+        text-align: center;
+        padding: 12px 0;
+        border-top: 1px solid currentColor;
+      }
+
+      footer.app-footer img {
+        height: 40px;
+        width: auto;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <footer style="text-align:center;padding:12px 0;border-top:1px solid #e0e0e0;">
+    <footer class="app-footer">
       <a href="https://www.buymeacoffee.com/ai.joe" target="_blank" rel="noopener noreferrer">
-        <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height:40px;width:auto;" referrerpolicy="no-referrer" loading="lazy" decoding="async" />
+        <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" referrerpolicy="no-referrer" loading="lazy" decoding="async" />
       </a>
     </footer>
   </body>
