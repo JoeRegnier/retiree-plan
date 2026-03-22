@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WITHDRAWAL_STRATEGY_IDS, ACCOUNT_BUCKETS } from '../types/withdrawal.js';
 
 /** A single glide-path step: at `age`, switch the portfolio return rate to `returnRate`. */
 const glidePathStepSchema = z.object({
@@ -60,6 +61,16 @@ export const scenarioParametersSchema = z.object({
    * in the cash savings bucket — a conservative, realistic assumption.
    */
   investSurplus: z.boolean().default(false).optional(),
+  /**
+   * Withdrawal strategy to apply in the projection engine.
+   * Default: 'oas-optimized' (minimise OAS clawback — current behaviour).
+   */
+  withdrawalStrategy: z.enum(WITHDRAWAL_STRATEGY_IDS).default('oas-optimized').optional(),
+  /**
+   * Custom withdrawal priority order — only used when withdrawalStrategy = 'custom'.
+   * Array of account bucket identifiers in preferred withdrawal order.
+   */
+  withdrawalOrder: z.array(z.enum(ACCOUNT_BUCKETS)).optional(),
 });
 
 export const createScenarioSchema = z.object({

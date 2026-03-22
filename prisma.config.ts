@@ -4,6 +4,9 @@ import { PrismaLibSql } from '@prisma/adapter-libsql';
 
 export default defineConfig({
   schema: path.resolve(__dirname, 'prisma/schema.prisma'),
+  datasource: {
+    url: process.env.DATABASE_URL ?? '',
+  },
   migrate: {
     async adapter() {
       const url = process.env.DATABASE_URL;

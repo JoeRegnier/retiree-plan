@@ -55,6 +55,16 @@ export interface Account {
   fixedIncomePercent: number | null;
   alternativesPercent: number | null;
   cashPercent: number | null;
+  /** Adjusted cost basis for non-registered accounts — used for ACB tracking and capital gains on withdrawal. */
+  costBasis: number | null;
+  /** True if this RRSP account was opened as a spousal RRSP. */
+  isSpousalRrsp: boolean | null;
+  /** Member ID of the spouse who makes contributions (claimant of the deduction). */
+  contributorMemberId: string | null;
+  /** Member ID of the spouse who holds and withdraws from the plan (annuitant). */
+  annuitantMemberId: string | null;
+  /** Tax year of the most recent spousal RRSP contribution — needed for 3-year attribution rule. */
+  lastContributionYear: number | null;
   householdId: string;
   createdAt: string;
   updatedAt: string;
@@ -120,6 +130,12 @@ export interface ProjectionYear {
   cashWithdrawal?: number;
   /** Surplus directed to the cash savings bucket (when investSurplus=false) */
   surplusToCash?: number;
+  /** Running adjusted cost basis of the non-registered account at end of this year. */
+  nonRegAcb?: number;
+  /** Capital gain included in income this year from non-reg withdrawal (50% inclusion rate already applied). */
+  nonRegCapitalGain?: number;
+  /** Withdrawal strategy id in effect this year. */
+  withdrawalStrategy?: string;
 }
 
 /** Result of a cash-flow projection */
