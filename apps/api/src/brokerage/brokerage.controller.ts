@@ -8,6 +8,7 @@ import {
   UseGuards,
   Req,
   HttpCode,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { BrokerageService, BrokerageProvider } from './brokerage.service';
@@ -104,7 +105,7 @@ export class BrokerageController {
     @Body() body: { householdId: string },
   ) {
     if (!body.householdId) {
-      throw new Error('householdId is required');
+      throw new BadRequestException('householdId is required');
     }
     return this.brokerage.syncPositions(req.user.id, body.householdId);
   }

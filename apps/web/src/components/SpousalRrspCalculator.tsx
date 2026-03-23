@@ -67,8 +67,6 @@ export function SpousalRrspCalculator() {
     currentYear: CURRENT_YEAR,
   });
 
-  const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | { value: unknown }>) =>
-    setForm((f) => ({ ...f, [field]: Number((e.target as HTMLInputElement).value) || (e.target as HTMLInputElement).value }));
 
   const handleAnalyse = async () => {
     setLoading(true);

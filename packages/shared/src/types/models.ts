@@ -58,7 +58,7 @@ export interface Account {
   /** Adjusted cost basis for non-registered accounts — used for ACB tracking and capital gains on withdrawal. */
   costBasis: number | null;
   /** True if this RRSP account was opened as a spousal RRSP. */
-  isSpousalRrsp: boolean | null;
+  isSpousalRrsp: boolean;
   /** Member ID of the spouse who makes contributions (claimant of the deduction). */
   contributorMemberId: string | null;
   /** Member ID of the spouse who holds and withdraws from the plan (annuitant). */

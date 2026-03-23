@@ -243,7 +243,12 @@ interface WithdrawalAmounts {
 
 function applyWithdrawalStrategy(inputs: WithdrawalInputs): WithdrawalAmounts {
   const { shortfall, cash, rrsp, tfsa, nonReg, forcedRrspWithdrawal, rrspHeadroom, isWorking, strategy, customOrder } = inputs;
-  if (isWorking) return { cashW: 0, rrspW: forcedRrspWithdrawal, tfsaW: 0, nonRegW: 0 };
+  if (isWorking) {
+    // Allow cash to cover any expense shortfall during pre-retirement; only RRIF
+    // forced withdrawals come from RRSP.
+    const cashW = Math.min(shortfall, cash);
+    return { cashW, rrspW: forcedRrspWithdrawal, tfsaW: 0, nonRegW: 0 };
+  }
   const availRrsp = Math.max(0, rrsp - forcedRrspWithdrawal);
   switch (strategy) {
     case 'oas-optimized': return _oasOptimized(shortfall, cash, availRrsp, tfsa, nonReg, rrspHeadroom, forcedRrspWithdrawal);

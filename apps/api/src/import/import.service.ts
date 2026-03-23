@@ -123,7 +123,7 @@ export class ImportService {
 
         if (acc.matchedLocalAccountId) {
           await tx.account.update({
-            where: { id: acc.matchedLocalAccountId, householdId },
+            where: { id: acc.matchedLocalAccountId },
             data: {
               balance: acc.balance,
               brokerageAccountId: accountId,
@@ -168,8 +168,9 @@ export class ImportService {
    *   Currency, Account, Net Amount, …
    *
    * Strategy:
-   *  1. Uses "EOD Balance" or "Balance" rows if present (most accurate).
-   *  2. Falls back to running sum of Net Amount per account.
+   *  1. Uses "EOD Balance" or "Balance" rows to determine account balances.
+   *     Currently requires explicit balance rows; no fallback to a running
+   *     sum of Net Amount is implemented.
    */
   async previewWealthsimpleCSV(householdId: string, buffer: Buffer): Promise<OFXPreviewResult> {
     const parsed = this._parseWealthsimpleCSV(buffer);
@@ -411,10 +412,11 @@ export class ImportService {
   async applyMonarchCSV(
     householdId: string,
     expenses: Array<{ category: string; annualAmount: number }>,
-  ): Promise<{ created: number }> {
+  ): Promise<{ created: number; updated: number }> {
     if (!expenses.length) throw new BadRequestException('No expenses to import');
 
     let created = 0;
+    let updated = 0;
     await this.prisma.$transaction(async (tx) => {
       for (const e of expenses) {
         const name     = e.category.slice(0, 255);
@@ -432,13 +434,21 @@ export class ImportService {
             indexToInflation: true,
           },
         });
-        // Count as created only for new rows (updatedAt === createdAt is unreliable;
-        // Prisma upsert doesn't expose which branch ran, so we track via pre-check).
-        created++;
+        // Determine whether this was a create or an update by checking existence
+        // before the upsert (Prisma upsert doesn't expose which branch executed).
+        const existing = await tx.expense.findUnique({
+          where: { householdId_name: { householdId, name } },
+          select: { id: true },
+        });
+        if (existing) {
+          updated++;
+        } else {
+          created++;
+        }
         void result;
       }
     });
-    return { created };
+    return { created, updated };
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────

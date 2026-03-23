@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { encryptToken, decryptToken } from '../crypto/token-cipher';
 
@@ -251,6 +251,13 @@ export class BrokerageService {
     userId: string,
     householdId: string,
   ): Promise<{ synced: number; provider: 'QUESTRADE' }> {
+    // Verify the authenticated user owns the household before modifying its accounts.
+    const household = await this.prisma.household.findFirst({
+      where: { id: householdId, userId },
+      select: { id: true },
+    });
+    if (!household) throw new ForbiddenException('You do not have access to this household');
+
     const allPositions = await this.getQuestradePositions(userId);
 
     let synced = 0;
@@ -282,9 +289,9 @@ export class BrokerageService {
         where: { id: local.id },
         data: {
           costBasis:          totalCost > 0 ? totalCost : null,
-          equityPercent:      totalMV > 0 ? Math.round((equityMV / totalMV) * 100) : null,
-          fixedIncomePercent: totalMV > 0 ? Math.round((fixedMV  / totalMV) * 100) : null,
-          cashPercent:        totalMV > 0 ? Math.round((cashMV   / totalMV) * 100) : null,
+          equityPercent:      totalMV > 0 ? equityMV / totalMV : null,
+          fixedIncomePercent: totalMV > 0 ? fixedMV  / totalMV : null,
+          cashPercent:        totalMV > 0 ? cashMV   / totalMV : null,
         },
       });
       synced++;
