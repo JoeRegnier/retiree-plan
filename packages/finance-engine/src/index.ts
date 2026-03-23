@@ -11,6 +11,7 @@ export * from './optimization/withdrawal-optimizer.js';
 export * from './optimization/spousal-rrsp.js';
 export * from './optimization/bucket-strategy.js';
 export * from './estate/estate.js';
+export * from './estate/legacy-strategies.js';
 export * from './scoring/readiness-score.js';
 export * from './scoring/plan-completeness.js';
 export * from './international/cross-border.js';

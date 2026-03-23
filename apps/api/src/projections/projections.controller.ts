@@ -64,6 +64,11 @@ export class ProjectionsController {
     return this.projectionsService.runEstateCalculation(body);
   }
 
+  @Post('estate/strategies')
+  runLegacyStrategies(@Body() body: any) {
+    return this.projectionsService.runLegacyStrategies(body);
+  }
+
   @Post('readiness-score')
   computeReadinessScore(@Body() body: any) {
     return this.projectionsService.computeReadinessScore(body);

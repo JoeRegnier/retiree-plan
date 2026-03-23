@@ -461,8 +461,10 @@ The current Milestones page accepts freeform events. Add a template library with
 
 ---
 
-#### 7.3 Legacy & Estate Giving Planner  
+#### 7.3 Legacy & Estate Giving Planner ✅ SHIPPED
 **Impact: M | Effort: M**
+
+**Shipped:** March 2026. Location: Estate page — "Legacy Strategies" tab.
 
 Extend the Estate page to include proactive estate planning strategies:
 
@@ -758,7 +760,7 @@ Quebec residents contribute to QPP, not CPP. QPP has slightly different rates an
 | 5.2 | Bucket Strategy Modeller | M | M | ★★★☆☆ | ✅ Shipped |
 | 6.2 | Net Worth Sparkline Timeline | H | S | ★★★☆☆ | ✅ Shipped |
 | 6.6 | PDF Report Improvements | M | M | ★★★☆☆ | ✅ Shipped |
-| 7.3 | Legacy & Estate Giving Planner | M | M | ★★★☆☆ | — |
+| 7.3 | Legacy & Estate Giving Planner | M | M | ★★★☆☆ | ✅ Shipped |
 | 8.1 | Advisor Sharing Mode | M | M | ★★★☆☆ | — |
 | 9.2 | Market Data Refresh / Assumptions Audit | M | S | ★★★☆☆ | ✅ Shipped |
 | 9.5 | Monarch Money CSV Import | M | S | ★★★☆☆ | ✅ Shipped |
@@ -807,8 +809,8 @@ Items: 3.1 (Phased Spending), 7.1 (Goals View)
 Items: 4.1 (RRSP/TFSA Room Tracker), 4.2 (Asset Allocation), 4.3 (Real Estate)  
 *Deliverable: Complete picture of the balance sheet, not just account totals.*
 
-### Sprint 7 — "Estate & Legacy"  
-Items: 4.4 (DB Pension), 7.3 (Estate Giving Planner), 6.6 (PDF improvements)  
+### Sprint 7 — "Estate & Legacy" ✅ COMPLETE (partial)
+Items: 4.4 (DB Pension), 7.3 (Estate Giving Planner) ✅, 6.6 (PDF improvements) ✅  
 *Deliverable: App is credible for near-retirement households with pensions and real estate.*
 
 ### Sprint 8 — "Sharing & Collaboration"  
