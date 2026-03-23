@@ -1,5 +1,5 @@
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -21,7 +21,7 @@ RUN npm run build --workspace=packages/shared \
 	&& npm run build --workspace=apps/api
 
 # Runtime stage
-FROM node:22-alpine AS runner
+FROM node:25-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
