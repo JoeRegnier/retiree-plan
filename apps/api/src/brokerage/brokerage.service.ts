@@ -15,6 +15,15 @@ export interface BrokerageAccount {
   currency: string;
 }
 
+export interface BrokeragePosition {
+  symbol: string;
+  description: string;
+  openQuantity: number;
+  totalCost: number;           // ACB
+  currentMarketValue: number;
+  securityType: string;        // 'Equity' | 'ETF' | 'Bond' | 'MutualFund' | 'Cash'
+}
+
 @Injectable()
 export class BrokerageService {
   private readonly logger = new Logger(BrokerageService.name);
@@ -87,9 +96,9 @@ export class BrokerageService {
     const resp = await fetch(url, { method: 'POST' });
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
+      this.logger.error(`Questrade token exchange failed (${resp.status}): ${body}`);
       throw new BadRequestException(
-        `Questrade token exchange failed (${resp.status}): ${body}. ` +
-        'Please reconnect with a fresh API token from your Questrade account settings.',
+        'Questrade token exchange failed. Please reconnect with a fresh API token from your Questrade account settings.',
       );
     }
     const data = (await resp.json()) as {
@@ -98,6 +107,13 @@ export class BrokerageService {
       api_server: string;
       expires_in: number;
     };
+
+    // H4: Validate api_server to prevent SSRF via attacker-controlled token response
+    const apiUrl = new URL(data.api_server);
+    if (apiUrl.protocol !== 'https:' || !apiUrl.hostname.endsWith('.questrade.com')) {
+      this.logger.error(`Unexpected api_server domain from Questrade: ${data.api_server}`);
+      throw new BadRequestException('Unexpected server URL in Questrade response. Please reconnect.');
+    }
 
     // Persist the new (rotated) refresh token immediately
     await this.prisma.brokerageConnection.update({
@@ -184,6 +200,103 @@ export class BrokerageService {
       balance:  acc.current_balance?.amount ?? 0,
       currency: acc.base_currency ?? 'CAD',
     }));
+  }
+
+  // ── Questrade Positions + ACB ─────────────────────────────────────────────
+
+  /**
+   * Fetch per-holding position data from Questrade for all accounts.
+   * Returns [{accountNumber, positions}] for each account.
+   */
+  async getQuestradePositions(
+    userId: string,
+  ): Promise<Array<{ accountNumber: string; positions: BrokeragePosition[] }>> {
+    const { accessToken, apiServer } = await this.exchangeQuestradeToken(userId);
+
+    const accResp = await fetch(`${apiServer}v1/accounts`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!accResp.ok) throw new BadRequestException(`Questrade accounts API failed: ${accResp.status}`);
+    const accData = (await accResp.json()) as { accounts: any[] };
+
+    return Promise.all(
+      (accData.accounts ?? []).map(async (acc: any) => {
+        try {
+          const posResp = await fetch(`${apiServer}v1/accounts/${acc.number}/positions`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (!posResp.ok) return { accountNumber: String(acc.number), positions: [] };
+          const posData = (await posResp.json()) as { positions: any[] };
+          const positions: BrokeragePosition[] = (posData.positions ?? []).map((p: any) => ({
+            symbol:              p.symbol ?? '',
+            description:         p.description ?? p.symbol ?? '',
+            openQuantity:        p.openQuantity ?? 0,
+            totalCost:           p.totalCost ?? 0,
+            currentMarketValue:  p.currentMarketValue ?? 0,
+            securityType:        p.securityType ?? 'Equity',
+          }));
+          return { accountNumber: String(acc.number), positions };
+        } catch {
+          return { accountNumber: String(acc.number), positions: [] };
+        }
+      }),
+    );
+  }
+
+  /**
+   * Sync Questrade positions + ACB to local Account rows.
+   * Updates costBasis, equityPercent, fixedIncomePercent, cashPercent.
+   */
+  async syncPositions(
+    userId: string,
+    householdId: string,
+  ): Promise<{ synced: number; provider: 'QUESTRADE' }> {
+    const allPositions = await this.getQuestradePositions(userId);
+
+    let synced = 0;
+    for (const { accountNumber, positions } of allPositions) {
+      const local = await this.prisma.account.findFirst({
+        where: {
+          householdId,
+          brokerageProvider: 'QUESTRADE',
+          brokerageAccountId: accountNumber,
+        },
+      });
+      if (!local) continue;
+
+      const totalCost = positions.reduce<number>((s, p) => s + p.totalCost, 0);
+      const totalMV   = positions.reduce<number>((s, p) => s + p.currentMarketValue, 0);
+
+      const EQUITY_TYPES = new Set(['Equity', 'StockOption', 'ETF', 'MutualFund', 'Right', 'Warrant']);
+      const FIXED_TYPES  = new Set(['Bond', 'FX', 'Option']);
+
+      const equityMV = positions
+        .filter((p) => EQUITY_TYPES.has(p.securityType))
+        .reduce<number>((s, p) => s + p.currentMarketValue, 0);
+      const fixedMV = positions
+        .filter((p) => FIXED_TYPES.has(p.securityType))
+        .reduce<number>((s, p) => s + p.currentMarketValue, 0);
+      const cashMV = Math.max(0, totalMV - equityMV - fixedMV);
+
+      await this.prisma.account.update({
+        where: { id: local.id },
+        data: {
+          costBasis:          totalCost > 0 ? totalCost : null,
+          equityPercent:      totalMV > 0 ? Math.round((equityMV / totalMV) * 100) : null,
+          fixedIncomePercent: totalMV > 0 ? Math.round((fixedMV  / totalMV) * 100) : null,
+          cashPercent:        totalMV > 0 ? Math.round((cashMV   / totalMV) * 100) : null,
+        },
+      });
+      synced++;
+    }
+
+    await this.prisma.brokerageConnection.update({
+      where: { userId_provider: { userId, provider: 'QUESTRADE' } },
+      data: { lastSyncedAt: new Date() },
+    });
+
+    this.logger.log(`Questrade position sync complete: ${synced} accounts updated`);
+    return { synced, provider: 'QUESTRADE' };
   }
 
   // ── Unified getAccounts ───────────────────────────────────────────────────

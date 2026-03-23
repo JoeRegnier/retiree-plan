@@ -47,6 +47,7 @@
     "@nestjs/testing": "^11.1.16",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
+    "@types/multer": "^2.1.0",
     "@types/passport-jwt": "^4.0.0",
     "prisma": "^7.5.0",
     "typescript": "^5.8.0",

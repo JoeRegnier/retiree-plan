@@ -1,5 +1,5 @@
 /**
- * OnboardingWizard — a 6-step dialog that appears automatically on the user's
+ * OnboardingWizard — a 7-step dialog that appears automatically on the user's
  * first login (gated by rp_onboarded in localStorage).
  *
  * Can also be re-launched from Help via useOnboarding().openOnboarding().
@@ -19,6 +19,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import TourIcon from '@mui/icons-material/Tour';
+import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import { useNavigate } from 'react-router';
 import { useTour } from '../contexts/TourContext';
 import { APP_TOUR_STEPS } from '../data/tourSteps';
@@ -65,6 +66,14 @@ const WIZARD_STEPS: WizardStep[] = [
       'Enter your RRSPs, TFSAs, non-registered accounts, pensions, and debts. The app tracks balances, contribution room, and tax impact automatically.',
     linkLabel: 'Go to Accounts',
     linkPath: '/accounts',
+  },
+  {
+    label: 'Connect Your Data',
+    icon: <CloudSyncIcon sx={{ fontSize: 32, color: 'secondary.main' }} />,
+    description:
+      'Skip manual entry with zero-effort data import. Questrade users can sync balances and holdings directly. All Canadian banks (RBC, TD, BMO, Scotiabank, CIBC) support OFX/QFX file export — upload it and your accounts are populated instantly. Wealthsimple and Monarch Money CSV exports are also supported.',
+    linkLabel: 'Go to Integrations',
+    linkPath: '/integrations',
   },
   {
     label: 'Define Your Milestones',

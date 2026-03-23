@@ -21,6 +21,7 @@ import { HealthController } from './health.controller';
 import { BrokerageModule } from './brokerage/brokerage.module';
 import { RealEstateModule } from './real-estate/real-estate.module';
 import { GoalsModule } from './goals/goals.module';
+import { ImportModule } from './import/import.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -62,6 +63,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     BrokerageModule,
     RealEstateModule,
     GoalsModule,
+    ImportModule,
   ],
   controllers: [HealthController],
 })

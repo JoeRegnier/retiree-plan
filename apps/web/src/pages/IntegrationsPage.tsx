@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -31,6 +31,9 @@ import {
   TextField,
   InputAdornment,
   Link,
+  Checkbox,
+  FormControlLabel,
+  LinearProgress,
 } from '@mui/material';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import SyncIcon from '@mui/icons-material/Sync';
@@ -39,8 +42,11 @@ import KeyIcon from '@mui/icons-material/Key';
 import EditIcon from '@mui/icons-material/Edit';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../hooks/useApi';
+import { useAuth } from '../contexts/AuthContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -83,6 +89,36 @@ interface BrokerageStatus {
   connected: boolean;
   provider: 'QUESTRADE' | 'WEALTHSIMPLE' | 'TD';
   lastSyncedAt?: string | null;
+}
+
+// ── Import preview types ──────────────────────────────────────────────────────
+
+interface OFXPreviewAccount {
+  accountId: string;
+  bankId?: string;
+  accountType: string;
+  localAccountType: string;
+  balance: number;
+  currency: string;
+  institution?: string;
+  description?: string;
+  matchedLocalAccount: { id: string; name: string } | null;
+  action: 'create' | 'update';
+}
+
+interface OFXPreviewResult {
+  accounts: OFXPreviewAccount[];
+}
+
+interface MonarchExpensePreview {
+  category: string;
+  monthlyAvg: number;
+  annualAmount: number;
+}
+
+interface MonarchPreviewResult {
+  expenses: MonarchExpensePreview[];
+  totalCategories: number;
 }
 
 // ── Static config for each brokerage integration ──────────────────────────────
@@ -169,6 +205,7 @@ const LOCAL_CATEGORIES = [
 
 export function IntegrationsPage() {
   const { apiFetch } = useApi();
+  const { token } = useAuth();
   const qc = useQueryClient();
 
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
@@ -190,6 +227,41 @@ export function IntegrationsPage() {
     error: string;
   } | null>(null);
   const [brokSyncResults, setBrokSyncResults] = useState<Record<string, number>>({});
+
+  // ── Import state ────────────────────────────────────────────────────────────
+  const ofxInputRef  = useRef<HTMLInputElement>(null);
+  const wsInputRef   = useRef<HTMLInputElement>(null);
+  const monInputRef  = useRef<HTMLInputElement>(null);
+
+  const [ofxPreview,     setOfxPreview]     = useState<OFXPreviewResult | null>(null);
+  const [ofxSkip,        setOfxSkip]        = useState<Record<string, boolean>>({});
+  const [ofxImportDone,  setOfxImportDone]  = useState<{ created: number; updated: number } | null>(null);
+
+  const [wsPreview,      setWsPreview]      = useState<OFXPreviewResult | null>(null);
+  const [wsSkip,         setWsSkip]         = useState<Record<string, boolean>>({});
+  const [wsImportDone,   setWsImportDone]   = useState<{ created: number; updated: number } | null>(null);
+
+  const [monarchPreview,    setMonarchPreview]    = useState<MonarchPreviewResult | null>(null);
+  const [monarchSkip,       setMonarchSkip]       = useState<Record<string, boolean>>({});
+  const [monarchImportDone, setMonarchImportDone] = useState<{ created: number } | null>(null);
+
+  const [positionsSyncResult, setPositionsSyncResult] = useState<{ synced: number } | null>(null);
+
+  // ── File upload helper (bypasses apiFetch's hard-coded Content-Type) ────────
+  const apiUpload = async <T = unknown>(path: string, formData: FormData): Promise<T> => {
+    const res = await fetch(`/api${path}`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error((err as any).message || `HTTP ${res.status}`);
+    }
+    return res.json() as Promise<T>;
+  };
 
   const { data: status, isLoading: statusLoading } = useQuery<YnabStatus>({
     queryKey: ['ynab-status'],
@@ -359,6 +431,125 @@ export function IntegrationsPage() {
     },
   });
 
+  // ── Import mutations ──────────────────────────────────────────────────────
+
+  const ofxPreviewMutation = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('householdId', householdId);
+      return apiUpload<OFXPreviewResult>('/import/ofx/preview', fd);
+    },
+    onSuccess: (data) => {
+      setOfxPreview(data);
+      setOfxSkip({});
+    },
+  });
+
+  const ofxApplyMutation = useMutation({
+    mutationFn: () => {
+      const accounts = (ofxPreview?.accounts ?? []).map((a) => ({
+        accountId:            a.accountId,
+        localAccountType:     a.localAccountType,
+        balance:              a.balance,
+        currency:             a.currency,
+        description:          a.description,
+        institution:          a.institution,
+        matchedLocalAccountId: a.matchedLocalAccount?.id ?? null,
+        skip:                 !!(ofxSkip[a.accountId]),
+      }));
+      return apiFetch<{ created: number; updated: number }>('/import/ofx/apply', {
+        method: 'POST',
+        body: JSON.stringify({ householdId, accounts }),
+      });
+    },
+    onSuccess: (data) => {
+      setOfxImportDone(data);
+      setOfxPreview(null);
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+
+  const wsPreviewMutation = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('householdId', householdId);
+      return apiUpload<OFXPreviewResult>('/import/csv/wealthsimple/preview', fd);
+    },
+    onSuccess: (data) => {
+      setWsPreview(data);
+      setWsSkip({});
+    },
+  });
+
+  const wsApplyMutation = useMutation({
+    mutationFn: () => {
+      const accounts = (wsPreview?.accounts ?? []).map((a) => ({
+        accountId:            a.accountId,
+        localAccountType:     a.localAccountType,
+        balance:              a.balance,
+        currency:             a.currency,
+        description:          a.description,
+        institution:          a.institution,
+        matchedLocalAccountId: a.matchedLocalAccount?.id ?? null,
+        skip:                 !!(wsSkip[a.accountId]),
+      }));
+      return apiFetch<{ created: number; updated: number }>('/import/csv/wealthsimple/apply', {
+        method: 'POST',
+        body: JSON.stringify({ householdId, accounts }),
+      });
+    },
+    onSuccess: (data) => {
+      setWsImportDone(data);
+      setWsPreview(null);
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+
+  const monarchPreviewMutation = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('householdId', householdId);
+      return apiUpload<MonarchPreviewResult>('/import/csv/monarch/preview', fd);
+    },
+    onSuccess: (data) => {
+      setMonarchPreview(data);
+      setMonarchSkip({});
+    },
+  });
+
+  const monarchApplyMutation = useMutation({
+    mutationFn: () => {
+      const expenses = (monarchPreview?.expenses ?? [])
+        .filter((e) => !monarchSkip[e.category])
+        .map(({ category, annualAmount }) => ({ category, annualAmount }));
+      return apiFetch<{ created: number }>('/import/csv/monarch/apply', {
+        method: 'POST',
+        body: JSON.stringify({ householdId, expenses }),
+      });
+    },
+    onSuccess: (data) => {
+      setMonarchImportDone(data);
+      setMonarchPreview(null);
+      qc.invalidateQueries({ queryKey: ['expenses'] });
+    },
+  });
+
+  const syncPositionsMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ synced: number; provider: string }>('/brokerage/questrade/sync-positions', {
+        method: 'POST',
+        body: JSON.stringify({ householdId }),
+      }),
+    onSuccess: (data) => {
+      setPositionsSyncResult({ synced: data.synced });
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['brokerage-status'] });
+    },
+  });
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   const getMappingForCategory = (ynabCategoryId: string) =>
@@ -388,8 +579,9 @@ export function IntegrationsPage() {
         Integrations
       </Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
-        Connect your YNAB account to automatically import spending data into your retirement plan. You can
-        also sync account balances from Questrade, Wealthsimple, and TD.
+        Connect your financial accounts to automatically populate your retirement plan. Supported integrations:
+        YNAB budgeting, Questrade (balances + positions), Wealthsimple (balance sync + CSV import), and
+        universal OFX/QFX file import for RBC, TD, BMO, Scotiabank, CIBC, and all Canadian brokerages.
       </Typography>
 
       {syncResult && (
@@ -686,6 +878,11 @@ export function IntegrationsPage() {
                   Sync complete — {syncCount} account{syncCount !== 1 ? 's' : ''} updated.
                 </Alert>
               )}
+              {cfg.provider === 'QUESTRADE' && positionsSyncResult !== null && (
+                <Alert severity="success" sx={{ mb: 2, py: 0.5 }} onClose={() => setPositionsSyncResult(null)}>
+                  Positions sync complete — {positionsSyncResult.synced} account{positionsSyncResult.synced !== 1 ? 's' : ''} updated with cost basis &amp; allocation data.
+                </Alert>
+              )}
               {!brokStatus?.connected ? (
                 <Button
                   variant="contained"
@@ -736,8 +933,23 @@ export function IntegrationsPage() {
                           onClick={() => syncBrokerageMutation.mutate({ provider: cfg.provider })}
                           disabled={syncBrokerageMutation.isPending || !householdId}
                         >
-                          Sync Now
+                          Sync Balances
                         </Button>
+                        {cfg.provider === 'QUESTRADE' && (
+                          <Tooltip title="Fetch individual holdings to update cost basis (ACB) and asset allocation percentages">
+                            <span>
+                              <Button
+                                variant="outlined"
+                                color="secondary"
+                                startIcon={syncPositionsMutation.isPending ? <CircularProgress size={16} /> : <AccountTreeIcon />}
+                                onClick={() => syncPositionsMutation.mutate()}
+                                disabled={syncPositionsMutation.isPending || !householdId}
+                              >
+                                Sync Positions + ACB
+                              </Button>
+                            </span>
+                          </Tooltip>
+                        )}
                       </>
                     )}
                     <Button
@@ -756,6 +968,385 @@ export function IntegrationsPage() {
           </Card>
         );
       })}
+
+      {/* ── File & CSV Import Section ─────────────────────────── */}
+      <Typography variant="h5" sx={{ mt: 5, mb: 1, fontWeight: 700 }}>
+        File &amp; CSV Import
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Import data from your bank or brokerage without connecting directly. Every Canadian bank
+        (RBC, TD, BMO, Scotiabank, CIBC, National Bank, Desjardins) supports OFX/QFX export from
+        their web portal.
+      </Typography>
+
+      {/* ── OFX / QFX Import ────────────────────────────────── */}
+      <Card sx={{ mt: 2 }}>
+        <CardHeader
+          title={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" fontWeight={600}>Universal OFX / QFX Import</Typography>
+              <Chip label="All Canadian Banks & Brokerages" size="small" color="primary" variant="outlined" />
+            </Box>
+          }
+          subheader="Upload an OFX or QFX statement file to import account balances. Covers RBC, TD, BMO, Scotiabank, CIBC, National Bank, Desjardins, Qtrade, BMO InvestorLine, Scotia iTRADE, and more."
+        />
+        <Divider />
+        <CardContent>
+          {ofxImportDone && (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setOfxImportDone(null)}>
+              Import complete — {ofxImportDone.created} account{ofxImportDone.created !== 1 ? 's' : ''} created,{' '}
+              {ofxImportDone.updated} updated.
+            </Alert>
+          )}
+          {ofxPreviewMutation.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {(ofxPreviewMutation.error as Error)?.message ?? 'Failed to parse OFX file.'}
+            </Alert>
+          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            How to export: log in to your bank → Accounts → Download / Export → select OFX or QFX format →
+            upload below. Investment accounts use QFX; banking accounts use OFX.
+          </Typography>
+          <input
+            ref={ofxInputRef}
+            type="file"
+            accept=".ofx,.qfx"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && householdId) ofxPreviewMutation.mutate(file);
+              e.target.value = '';
+            }}
+          />
+          <Button
+            variant="contained"
+            startIcon={ofxPreviewMutation.isPending ? <CircularProgress size={16} /> : <UploadFileIcon />}
+            onClick={() => ofxInputRef.current?.click()}
+            disabled={ofxPreviewMutation.isPending || !householdId}
+          >
+            Upload OFX / QFX File
+          </Button>
+          {!householdId && (
+            <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+              Set up a household first.
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Wealthsimple CSV Import ──────────────────────────── */}
+      <Card sx={{ mt: 3 }}>
+        <CardHeader
+          title={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" fontWeight={600}>Wealthsimple Activity CSV Import</Typography>
+              <Chip label="3M+ Users" size="small" variant="outlined" />
+            </Box>
+          }
+          subheader="Upload your Wealthsimple Activity CSV export to sync account balances. More reliable than the live token connection."
+        />
+        <Divider />
+        <CardContent>
+          {wsImportDone && (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setWsImportDone(null)}>
+              Import complete — {wsImportDone.created} created, {wsImportDone.updated} updated.
+            </Alert>
+          )}
+          {wsPreviewMutation.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {(wsPreviewMutation.error as Error)?.message ?? 'Failed to parse Wealthsimple CSV.'}
+            </Alert>
+          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            In the Wealthsimple web app: go to <strong>Activity</strong> → click <strong>Export</strong> →
+            select a date range → download the CSV → upload it here. Supports RRSP, TFSA, non-registered,
+            and crypto accounts.
+          </Typography>
+          <input
+            ref={wsInputRef}
+            type="file"
+            accept=".csv"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && householdId) wsPreviewMutation.mutate(file);
+              e.target.value = '';
+            }}
+          />
+          <Button
+            variant="contained"
+            startIcon={wsPreviewMutation.isPending ? <CircularProgress size={16} /> : <UploadFileIcon />}
+            onClick={() => wsInputRef.current?.click()}
+            disabled={wsPreviewMutation.isPending || !householdId}
+          >
+            Upload Wealthsimple CSV
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* ── Monarch Money CSV Import ─────────────────────────── */}
+      <Card sx={{ mt: 3 }}>
+        <CardHeader
+          title={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" fontWeight={600}>Monarch Money CSV Import</Typography>
+              <Chip label="Budget → Expenses" size="small" variant="outlined" />
+            </Box>
+          }
+          subheader="Upload your Monarch Money transaction export to automatically populate your annual expense categories."
+        />
+        <Divider />
+        <CardContent>
+          {monarchImportDone && (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMonarchImportDone(null)}>
+              Import complete — {monarchImportDone.created} expense categor{monarchImportDone.created !== 1 ? 'ies' : 'y'} created.
+            </Alert>
+          )}
+          {monarchPreviewMutation.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {(monarchPreviewMutation.error as Error)?.message ?? 'Failed to parse Monarch CSV.'}
+            </Alert>
+          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            In Monarch Money: go to <strong>Settings → Export Data</strong> → download the transactions CSV →
+            upload it here. Monthly averages per category will be computed and added as annual expenses.
+          </Typography>
+          <input
+            ref={monInputRef}
+            type="file"
+            accept=".csv"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && householdId) monarchPreviewMutation.mutate(file);
+              e.target.value = '';
+            }}
+          />
+          <Button
+            variant="contained"
+            startIcon={monarchPreviewMutation.isPending ? <CircularProgress size={16} /> : <UploadFileIcon />}
+            onClick={() => monInputRef.current?.click()}
+            disabled={monarchPreviewMutation.isPending || !householdId}
+          >
+            Upload Monarch Money CSV
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* ── OFX Preview Dialog ─────────────────────────────────────── */}
+      {ofxPreview && (
+        <Dialog open onClose={() => setOfxPreview(null)} maxWidth="md" fullWidth>
+          <DialogTitle>OFX Import Preview</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Found {ofxPreview.accounts.length} account{ofxPreview.accounts.length !== 1 ? 's' : ''}.
+              Review and confirm which accounts to import. Uncheck any accounts you want to skip.
+            </Typography>
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell padding="checkbox" />
+                    <TableCell>Description</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell align="right">Balance</TableCell>
+                    <TableCell>Action</TableCell>
+                    <TableCell>Matches</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {ofxPreview.accounts.map((acc) => (
+                    <TableRow key={acc.accountId} selected={!ofxSkip[acc.accountId]}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={!ofxSkip[acc.accountId]}
+                          onChange={(e) =>
+                            setOfxSkip((prev) => ({ ...prev, [acc.accountId]: !e.target.checked }))
+                          }
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{acc.description ?? acc.accountId}</Typography>
+                        {acc.bankId && (
+                          <Typography variant="caption" color="text.secondary">{acc.bankId}</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={acc.localAccountType} size="small" />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight={600}>
+                          {new Intl.NumberFormat('en-CA', { style: 'currency', currency: acc.currency }).format(acc.balance)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={acc.action === 'update' ? 'Update balance' : 'Create new account'}
+                          color={acc.action === 'update' ? 'warning' : 'success'}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {acc.matchedLocalAccount && (
+                          <Typography variant="caption" color="text.secondary">
+                            → {acc.matchedLocalAccount.name}
+                          </Typography>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {ofxApplyMutation.isError && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {(ofxApplyMutation.error as Error)?.message ?? 'Import failed.'}
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOfxPreview(null)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={() => ofxApplyMutation.mutate()}
+              disabled={ofxApplyMutation.isPending || ofxPreview.accounts.every((a) => ofxSkip[a.accountId])}
+            >
+              {ofxApplyMutation.isPending ? <CircularProgress size={16} /> : 'Confirm Import'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      {/* ── Wealthsimple CSV Preview Dialog ──────────────────────── */}
+      {wsPreview && (
+        <Dialog open onClose={() => setWsPreview(null)} maxWidth="md" fullWidth>
+          <DialogTitle>Wealthsimple CSV Import Preview</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Found {wsPreview.accounts.length} account{wsPreview.accounts.length !== 1 ? 's' : ''} in the Wealthsimple CSV.
+              Review and confirm which accounts to import.
+            </Typography>
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell padding="checkbox" />
+                    <TableCell>Account</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell align="right">Balance</TableCell>
+                    <TableCell>Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {wsPreview.accounts.map((acc) => (
+                    <TableRow key={acc.accountId}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={!wsSkip[acc.accountId]}
+                          onChange={(e) =>
+                            setWsSkip((prev) => ({ ...prev, [acc.accountId]: !e.target.checked }))
+                          }
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{acc.description ?? acc.accountId}</TableCell>
+                      <TableCell><Chip label={acc.localAccountType} size="small" /></TableCell>
+                      <TableCell align="right">
+                        <Typography fontWeight={600}>
+                          {new Intl.NumberFormat('en-CA', { style: 'currency', currency: acc.currency }).format(acc.balance)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={acc.action === 'update' ? 'Update balance' : 'Create new'}
+                          color={acc.action === 'update' ? 'warning' : 'success'}
+                          size="small" variant="outlined"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setWsPreview(null)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={() => wsApplyMutation.mutate()}
+              disabled={wsApplyMutation.isPending || wsPreview.accounts.every((a) => wsSkip[a.accountId])}
+            >
+              {wsApplyMutation.isPending ? <CircularProgress size={16} /> : 'Confirm Import'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      {/* ── Monarch Money CSV Preview Dialog ─────────────────────── */}
+      {monarchPreview && (
+        <Dialog open onClose={() => setMonarchPreview(null)} maxWidth="sm" fullWidth>
+          <DialogTitle>Monarch Money Expense Categories</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Found {monarchPreview.totalCategories} spending categories. These will be added to your
+              plan as annual expenses. Uncheck any categories to skip.
+            </Typography>
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell padding="checkbox" />
+                    <TableCell>Category</TableCell>
+                    <TableCell align="right">Monthly Avg</TableCell>
+                    <TableCell align="right">Annual</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {monarchPreview.expenses.map((e) => (
+                    <TableRow key={e.category}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={!monarchSkip[e.category]}
+                          onChange={(ev) =>
+                            setMonarchSkip((prev) => ({ ...prev, [e.category]: !ev.target.checked }))
+                          }
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{e.category}</TableCell>
+                      <TableCell align="right">
+                        {new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(e.monthlyAvg)}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography fontWeight={600}>
+                          {new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(e.annualAmount)}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {monarchApplyMutation.isError && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {(monarchApplyMutation.error as Error)?.message ?? 'Import failed.'}
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setMonarchPreview(null)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={() => monarchApplyMutation.mutate()}
+              disabled={monarchApplyMutation.isPending || monarchPreview.expenses.every((e) => monarchSkip[e.category])}
+            >
+              {monarchApplyMutation.isPending ? <CircularProgress size={16} /> : 'Import Expenses'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       {/* ── Brokerage Connect Dialog ──────────────────────────── */}
       {brokDialog && (() => {

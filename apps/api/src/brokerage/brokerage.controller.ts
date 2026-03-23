@@ -92,4 +92,20 @@ export class BrokerageController {
       provider.toUpperCase() as BrokerageProvider,
     );
   }
+
+  /**
+   * Sync Questrade positions + ACB to local account rows.
+   * Updates costBasis, equityPercent, fixedIncomePercent, cashPercent.
+   * POST /brokerage/questrade/sync-positions  body: { householdId }
+   */
+  @Post('questrade/sync-positions')
+  async syncQuestradePositions(
+    @Req() req: any,
+    @Body() body: { householdId: string },
+  ) {
+    if (!body.householdId) {
+      throw new Error('householdId is required');
+    }
+    return this.brokerage.syncPositions(req.user.id, body.householdId);
+  }
 }

@@ -83,6 +83,8 @@ model Expense {
   household        Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  @@unique([householdId, name])
 }
 
 model Account {
