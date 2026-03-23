@@ -27,7 +27,7 @@ export const createAccountSchema = z.object({
   /** Adjusted cost basis for non-registered accounts (purchase price of holdings). */
   costBasis: z.number().min(0).nullable().default(null),
   /** True if this RRSP was opened as a spousal RRSP. Only valid for RRSP type. */
-  isSpousalRrsp: z.boolean().nullable().default(null),
+  isSpousalRrsp: z.boolean().default(false),
   /** Member ID of the contributing spouse (claimant of the tax deduction). */
   contributorMemberId: z.string().nullable().default(null),
   /** Member ID of the annuitant spouse (plan holder; withdraws in retirement). */
