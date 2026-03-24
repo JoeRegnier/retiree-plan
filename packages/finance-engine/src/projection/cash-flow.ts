@@ -3,6 +3,7 @@ import type { ProjectionYear } from '@retiree-plan/shared';
 import { RRIF_MINIMUM_WITHDRAWAL, RRSP_2024, TFSA_ANNUAL_LIMIT_2024 } from '@retiree-plan/shared';
 import { calculateTotalTax } from '../tax/canadian-tax.js';
 import { calculateCppBenefit, calculateOasBenefit } from '../benefits/government.js';
+import type { WithdrawalStrategyId, AccountBucket } from '@retiree-plan/shared';
 
 /**
  * A single income source with optional age-range bounds.
@@ -162,6 +163,29 @@ export interface CashFlowInput {
   tfsaReturnRate?: number;
   /** Optional annual return rate for the non-registered account. */
   nonRegReturnRate?: number;
+  /**
+   * Withdrawal strategy to apply. Default: 'oas-optimized' (existing behaviour).
+   * 'rrsp-first' aggressively draws RRSP before 71. 'tfsa-last' preserves TFSA for estate.
+   * 'non-reg-first' draws non-reg ahead of shelter. 'proportional' draws pro-rata.
+   * 'custom' uses withdrawalOrder.
+   */
+  withdrawalStrategy?: WithdrawalStrategyId;
+  /** Only used when withdrawalStrategy = 'custom'. Priority list of account buckets. */
+  withdrawalOrder?: AccountBucket[];
+  /**
+   * Adjusted cost basis of the non-registered account at the start of the projection.
+   * When omitted, cost basis is assumed equal to the opening balance (no embedded gain).
+   */
+  nonRegInitialAcb?: number;
+  /**
+   * Enable flexible spending guardrails (Guyton-Klinger style).
+   * Annual expenses are clamped within [floor, ceiling] × previous-year real expenses.
+   */
+  flexSpendingEnabled?: boolean;
+  /** Spending floor fraction (e.g. 0.90). Default 0.90. */
+  flexSpendingFloor?: number;
+  /** Spending ceiling fraction (e.g. 1.10). Default 1.10. */
+  flexSpendingCeiling?: number;
 }
 
 /** Returns the RRIF minimum withdrawal rate for the given age (CRA schedule). */
@@ -199,6 +223,124 @@ function resolveSpendingFactor(age: number, spendingPhases?: SpendingPhase[]): n
   return match ? match.factor : 1;
 }
 
+// ---------------------------------------------------------------------------
+// Withdrawal strategy dispatch helpers
+// ---------------------------------------------------------------------------
+
+interface WithdrawalInputs {
+  shortfall: number;
+  cash: number; rrsp: number; tfsa: number; nonReg: number;
+  forcedRrspWithdrawal: number;
+  rrspHeadroom: number;
+  isWorking: boolean;
+  strategy: WithdrawalStrategyId;
+  customOrder?: AccountBucket[];
+}
+
+interface WithdrawalAmounts {
+  cashW: number; rrspW: number; tfsaW: number; nonRegW: number;
+}
+
+function applyWithdrawalStrategy(inputs: WithdrawalInputs): WithdrawalAmounts {
+  const { shortfall, cash, rrsp, tfsa, nonReg, forcedRrspWithdrawal, rrspHeadroom, isWorking, strategy, customOrder } = inputs;
+  if (isWorking) {
+    // Allow cash to cover any expense shortfall during pre-retirement; only RRIF
+    // forced withdrawals come from RRSP.
+    const cashW = Math.min(shortfall, cash);
+    return { cashW, rrspW: forcedRrspWithdrawal, tfsaW: 0, nonRegW: 0 };
+  }
+  const availRrsp = Math.max(0, rrsp - forcedRrspWithdrawal);
+  switch (strategy) {
+    case 'oas-optimized': return _oasOptimized(shortfall, cash, availRrsp, tfsa, nonReg, rrspHeadroom, forcedRrspWithdrawal);
+    case 'rrsp-first':    return _rrspFirst(shortfall, cash, availRrsp, tfsa, nonReg, forcedRrspWithdrawal);
+    case 'tfsa-last':     return _tfsaLast(shortfall, cash, availRrsp, tfsa, nonReg, rrspHeadroom, forcedRrspWithdrawal);
+    case 'non-reg-first': return _nonRegFirst(shortfall, cash, availRrsp, tfsa, nonReg, rrspHeadroom, forcedRrspWithdrawal);
+    case 'proportional':  return _proportional(shortfall, cash, availRrsp, tfsa, nonReg, forcedRrspWithdrawal);
+    case 'custom':        return _customOrder(shortfall, cash, availRrsp, tfsa, nonReg, forcedRrspWithdrawal, customOrder ?? ['CASH', 'RRSP', 'TFSA', 'NON_REG']);
+    default:              return _oasOptimized(shortfall, cash, availRrsp, tfsa, nonReg, rrspHeadroom, forcedRrspWithdrawal);
+  }
+}
+
+/** OAS-optimized (default): Cash → RRSP≤threshold → TFSA → Non-Reg → RRSP>threshold */
+function _oasOptimized(sh: number, cash: number, availRrsp: number, tfsa: number, nonReg: number, headroom: number, forced: number): WithdrawalAmounts {
+  const cashW      = Math.min(sh, cash);
+  const rem1       = sh - cashW;
+  const rrspBelowW = Math.min(rem1, availRrsp, headroom);
+  const rem2       = rem1 - rrspBelowW;
+  const tfsaW      = Math.min(rem2, tfsa);
+  const rem3       = rem2 - tfsaW;
+  const nonRegW    = Math.min(rem3, nonReg);
+  const rem4       = rem3 - nonRegW;
+  const rrspAboveW = Math.min(rem4, Math.max(0, availRrsp - rrspBelowW));
+  return { cashW, rrspW: forced + rrspBelowW + rrspAboveW, tfsaW, nonRegW };
+}
+
+/** RRSP-first (meltdown): Cash → RRSP → Non-Reg → TFSA */
+function _rrspFirst(sh: number, cash: number, availRrsp: number, tfsa: number, nonReg: number, forced: number): WithdrawalAmounts {
+  const cashW   = Math.min(sh, cash);
+  const rem1    = sh - cashW;
+  const rrspW   = Math.min(rem1, availRrsp);
+  const rem2    = rem1 - rrspW;
+  const nonRegW = Math.min(rem2, nonReg);
+  const rem3    = rem2 - nonRegW;
+  const tfsaW   = Math.min(rem3, tfsa);
+  return { cashW, rrspW: forced + rrspW, tfsaW, nonRegW };
+}
+
+/** TFSA-last (estate): Cash → RRSP≤threshold → Non-Reg → RRSP>threshold → TFSA */
+function _tfsaLast(sh: number, cash: number, availRrsp: number, tfsa: number, nonReg: number, headroom: number, forced: number): WithdrawalAmounts {
+  const cashW      = Math.min(sh, cash);
+  const rem1       = sh - cashW;
+  const rrspBelowW = Math.min(rem1, availRrsp, headroom);
+  const rem2       = rem1 - rrspBelowW;
+  const nonRegW    = Math.min(rem2, nonReg);
+  const rem3       = rem2 - nonRegW;
+  const rrspAboveW = Math.min(rem3, Math.max(0, availRrsp - rrspBelowW));
+  const rem4       = rem3 - rrspAboveW;
+  const tfsaW      = Math.min(rem4, tfsa);
+  return { cashW, rrspW: forced + rrspBelowW + rrspAboveW, tfsaW, nonRegW };
+}
+
+/** Non-reg first (capital gains): Cash → Non-Reg → RRSP≤threshold → TFSA → RRSP>threshold */
+function _nonRegFirst(sh: number, cash: number, availRrsp: number, tfsa: number, nonReg: number, headroom: number, forced: number): WithdrawalAmounts {
+  const cashW      = Math.min(sh, cash);
+  const rem1       = sh - cashW;
+  const nonRegW    = Math.min(rem1, nonReg);
+  const rem2       = rem1 - nonRegW;
+  const rrspBelowW = Math.min(rem2, availRrsp, headroom);
+  const rem3       = rem2 - rrspBelowW;
+  const tfsaW      = Math.min(rem3, tfsa);
+  const rem4       = rem3 - tfsaW;
+  const rrspAboveW = Math.min(rem4, Math.max(0, availRrsp - rrspBelowW));
+  return { cashW, rrspW: forced + rrspBelowW + rrspAboveW, tfsaW, nonRegW };
+}
+
+/** Proportional: draw pro-rata from all non-zero accounts. */
+function _proportional(sh: number, cash: number, availRrsp: number, tfsa: number, nonReg: number, forced: number): WithdrawalAmounts {
+  const total = cash + availRrsp + tfsa + nonReg;
+  if (total <= 0) return { cashW: 0, rrspW: forced, tfsaW: 0, nonRegW: 0 };
+  const scale = Math.min(sh, total) / total;
+  return { cashW: round(cash * scale), rrspW: round(forced + availRrsp * scale), tfsaW: round(tfsa * scale), nonRegW: round(nonReg * scale) };
+}
+
+/** Custom order: user-defined priority array, cascades until shortfall met. */
+function _customOrder(sh: number, cash: number, availRrsp: number, tfsa: number, nonReg: number, forced: number, order: AccountBucket[]): WithdrawalAmounts {
+  let rem = sh;
+  let cashW = 0, rrspW = forced, tfsaW = 0, nonRegW = 0;
+  const avail: Record<AccountBucket, number> = { CASH: cash, RRSP: availRrsp, TFSA: tfsa, NON_REG: nonReg };
+  for (const bucket of order) {
+    if (rem <= 0) break;
+    const take = Math.min(rem, avail[bucket]);
+    avail[bucket] -= take;
+    rem -= take;
+    if (bucket === 'CASH')    cashW   += take;
+    if (bucket === 'RRSP')    rrspW   += take;
+    if (bucket === 'TFSA')    tfsaW   += take;
+    if (bucket === 'NON_REG') nonRegW += take;
+  }
+  return { cashW, rrspW, tfsaW, nonRegW };
+}
+
 /**
  * Run a deterministic year-by-year cash-flow projection.
  * This is the core projection engine — Monte Carlo wraps this
@@ -212,11 +354,23 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
   const nonRegTaxDragRate = input.nonRegTaxDragRate ?? 0;
   const cashSavingsRate   = input.cashSavingsRate ?? 0.025;
   const investSurplus     = input.investSurplus ?? false;
+  const strategy          = input.withdrawalStrategy ?? 'oas-optimized';
+
+  // Flex spending guardrail settings
+  const flexEnabled  = input.flexSpendingEnabled ?? false;
+  const flexFloor    = input.flexSpendingFloor    ?? 0.90;
+  const flexCeiling  = input.flexSpendingCeiling  ?? 1.10;
 
   let rrsp   = input.rrspBalance;
   let tfsa   = input.tfsaBalance;
   let nonReg = input.nonRegBalance;
-  let cash   = input.cashBalance ?? 0;  // savings / chequing bucket
+  let cash   = input.cashBalance ?? 0;
+
+  // ACB tracking: if no initial ACB provided, assume no embedded gain
+  let nonRegAcb = input.nonRegInitialAcb ?? nonReg;
+
+  // Flex spending: track previous year's real expense level for clamping
+  let prevBaseExpenses: number | null = null;
 
   for (let age = input.currentAge; age <= input.endAge; age++) {
     const yearIndex = age - input.currentAge;
@@ -254,6 +408,7 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     const nonRegRate = input.nonRegReturnRate ?? returnRate;
     rrsp   *= 1 + rrspRate;
     tfsa   *= 1 + tfsaRate;
+    // Market value grows; ACB does not (unrealised gains accumulate)
     nonReg *= 1 + nonRegRate;
     cash   *= 1 + cashSavingsRate;
 
@@ -322,7 +477,17 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     } else {
       baseExpenses = input.annualExpenses * inflationFactor;
     }
-    const expenses = baseExpenses * spendingFactor;
+    let expenses = baseExpenses * spendingFactor;
+
+    // ── Flex spending guardrails (Guyton-Klinger style) ───────────────────────
+    // Clamps expenses within [floor, ceiling] × last-year's real spend level.
+    // Only applied in retirement when we have a meaningful prior-year base.
+    if (flexEnabled && !isWorking && prevBaseExpenses !== null) {
+      const floor   = prevBaseExpenses * (1 + input.inflationRate) * flexFloor;
+      const ceiling = prevBaseExpenses * (1 + input.inflationRate) * flexCeiling;
+      expenses = Math.max(floor, Math.min(ceiling, expenses));
+    }
+    prevBaseExpenses = baseExpenses * spendingFactor;
 
     // ── RRIF mandatory minimum ────────────────────────────────────────────────
     // Once the RRSP is converted to a RRIF (default age 71), CRA requires a
@@ -349,28 +514,9 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     const estimatedShortfall = Math.max(0, expenses - estimatedNetKnown);
 
     // ── Discretionary withdrawals (shortfall above RRIF minimum) ─────────────
-    // Pre-retirement: investment accounts are locked — only the cash bucket
-    // bridges gaps.
-    //
-    // Post-retirement: OAS-clawback-aware drawdown order.
-    //
-    // The CRA OAS recovery tax claws back $0.15 for every $1 of net income
-    // above the threshold (~$90,997 in 2024). To minimise this:
-    //   1. Cash bucket — no withdrawal tax
-    //   2. RRSP/RRIF up to the OAS clawback threshold (taxable but optimal
-    //      when room is available — the "RRSP meltdown" zone)
-    //   3. TFSA — supplements RRSP when drawing more RRSP would push income
-    //      above the threshold; withdrawals are tax-free and don't affect OAS
-    //   4. Non-registered — capital gains treatment
-    //   5. RRSP/RRIF beyond threshold — last resort to avoid running out of money
-    //
-    // This blended RRSP + TFSA approach minimises lifetime tax by keeping
-    // annual taxable income just below the clawback zone.
-
-    // OAS clawback threshold, inflation-adjusted from the 2024 base value.
+    // Dispatches to the configured withdrawal strategy. RRIF minimums are always
+    // honoured first; the strategy determines voluntary draw ordering.
     const OAS_CLAWBACK_THRESHOLD_2024 = 90_997;
-    // Headroom = how much more RRSP we can draw this year before tipping into
-    // the OAS clawback zone (forced RRIF minimum is already committed).
     const rrspHeadroom = !isWorking
       ? Math.max(
           0,
@@ -381,49 +527,39 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
         )
       : 0;
 
-    // 1. Cash bucket — no tax on withdrawal
-    const cashWithdrawal = Math.min(estimatedShortfall, cash);
-    const rem1 = estimatedShortfall - cashWithdrawal;
+    const { cashW: cashWithdrawal, rrspW: rrspWithdrawal, tfsaW: tfsaWithdrawal, nonRegW: nonRegWithdrawal } =
+      applyWithdrawalStrategy({
+        shortfall: estimatedShortfall,
+        cash, rrsp, tfsa, nonReg,
+        forcedRrspWithdrawal, rrspHeadroom,
+        isWorking, strategy,
+        customOrder: input.withdrawalOrder,
+      });
 
-    // 2. RRSP voluntary draw, capped at OAS headroom
-    const additionalRrspBelowThreshold = isWorking
-      ? 0
-      : Math.min(rem1, Math.max(0, rrsp - forcedRrspWithdrawal), rrspHeadroom);
-    const rem2 = rem1 - additionalRrspBelowThreshold;
-
-    // 3. TFSA — tax-free, no clawback impact; use when RRSP headroom is
-    //    exhausted but shortfall still remains
-    const tfsaWithdrawal = isWorking ? 0 : Math.min(rem2, tfsa);
-    const rem3 = rem2 - tfsaWithdrawal;
-
-    // 4. Non-registered
-    const nonRegWithdrawal = isWorking ? 0 : Math.min(rem3, nonReg);
-    const rem4 = rem3 - nonRegWithdrawal;
-
-    // 5. RRSP beyond clawback threshold — last resort
-    const additionalRrspBeyondThreshold = isWorking
-      ? 0
-      : Math.min(
-          rem4,
-          Math.max(
-            0,
-            rrsp - forcedRrspWithdrawal - additionalRrspBelowThreshold,
-          ),
-        );
-
-    const additionalRrsp = additionalRrspBelowThreshold + additionalRrspBeyondThreshold;
-    const rrspWithdrawal = forcedRrspWithdrawal + additionalRrsp;
+    // ── ACB tracking for non-registered withdrawal ────────────────────────────
+    // ACB reduces proportionally to the fraction of market value withdrawn.
+    // Capital gains (50% inclusion) are added to taxable income.
+    let nonRegCapitalGain = 0;
+    if (nonRegWithdrawal > 0 && nonReg > 0) {
+      const acbReductionRatio = Math.min(nonRegWithdrawal / nonReg, 1);
+      const acbReduced = nonRegAcb * acbReductionRatio;
+      const grossGain  = nonRegWithdrawal - acbReduced;
+      nonRegCapitalGain = Math.max(0, grossGain) * 0.5; // 50% inclusion rate
+      nonRegAcb -= acbReduced;
+      if (nonRegAcb < 0) nonRegAcb = 0;
+    }
 
     tfsa   -= tfsaWithdrawal;
     cash   -= cashWithdrawal;
     rrsp   -= rrspWithdrawal;
     nonReg -= nonRegWithdrawal;
+    if (nonReg < 0) nonReg = 0;
 
     // ── OAS clawback (second pass with full income picture) ───────────────────
     // Clawback is based on total net income including RRIF withdrawals.
     // Deflate to 2024 dollars so the comparison uses the published threshold.
     const taxableIncomeForClawback =
-      employmentIncome + cppIncome + rrspWithdrawal + nonRegTaxDrag;
+      employmentIncome + cppIncome + rrspWithdrawal + nonRegTaxDrag + nonRegCapitalGain;
     const taxableIncomeIn2024Dollars = taxableIncomeForClawback / inflationFactor;
 
     // Recalculate OAS with actual clawback applied
@@ -437,11 +573,9 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     const oasClawback = round(Math.max(0, oasBenefitGross - oasIncome));
 
     // ── Final tax (all taxable sources) ───────────────────────────────────────
-    // Taxable income:
-    //   Pre-retirement: employment income reduced by RRSP deduction + CPP + OAS + non-reg drag
-    //   Retirement:     rrspDeduction=0, so this equals employment(0) + CPP + OAS + RRIF withdrawal + drag
+    // Taxable income includes capital gains from non-reg withdrawals (50% inclusion already applied).
     const taxableIncome =
-      employmentIncome - rrspDeduction + cppIncome + oasIncome + rrspWithdrawal + nonRegTaxDrag;
+      employmentIncome - rrspDeduction + cppIncome + oasIncome + rrspWithdrawal + nonRegTaxDrag + nonRegCapitalGain;
 
     // Total gross cash received (for display / charting) — does NOT include the RRSP
     // redirect since that money flowed directly to the RRSP account, never the wallet.
@@ -463,8 +597,11 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     const surplusAmount = Math.max(0, netCashFlow);
     const surplusToNonReg = investSurplus ? surplusAmount : 0;
     const surplusToCash   = investSurplus ? 0 : surplusAmount;
-    if (surplusToNonReg > 0) nonReg += surplusToNonReg;
-    if (surplusToCash   > 0) cash   += surplusToCash;
+    if (surplusToNonReg > 0) {
+      nonRegAcb += surplusToNonReg; // new money enters non-reg at cost basis
+      nonReg    += surplusToNonReg;
+    }
+    if (surplusToCash > 0) cash += surplusToCash;
 
     // ── Contribution room diagnostics ─────────────────────────────────────────
     const rrspContributionYear = isWorking ? (input.rrspContribution ?? 0) : 0;
@@ -517,6 +654,10 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
       cashWithdrawal: round(cashWithdrawal),
       unusedRrspRoom: round(unusedRrspRoom),
       unusedTfsaRoom: round(unusedTfsaRoom),
+      // ACB / capital gains fields
+      nonRegAcb: round(nonRegAcb),
+      nonRegCapitalGain: round(nonRegCapitalGain),
+      withdrawalStrategy: strategy,
     });
   }
 

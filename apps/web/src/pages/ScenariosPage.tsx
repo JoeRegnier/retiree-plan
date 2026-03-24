@@ -4,7 +4,7 @@ import {
   DialogActions, TextField, Grid, IconButton, Chip, CircularProgress, Alert,
   Tooltip, Slider, InputAdornment, Tab, Tabs, Divider,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Switch, FormControlLabel, Stack,
+  Switch, FormControlLabel, Stack, Select, MenuItem, FormControl, InputLabel,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -38,6 +38,8 @@ interface ScenarioParameters {
   cashSavingsRate?: number;
   /** When true, income surplus after expenses is automatically invested in non-reg. Default false. */
   investSurplus?: boolean;
+  /** Withdrawal strategy applied by the projection engine. Default: 'oas-optimized'. */
+  withdrawalStrategy?: string;
 }
 
 interface Scenario {
@@ -101,6 +103,7 @@ const DEFAULT_PARAMS: ScenarioParameters = {
   spendingPhases: [],
   cashSavingsRate: 0.025,
   investSurplus: false,
+  withdrawalStrategy: 'oas-optimized',
 };
 
 function parseParams(s: Scenario): ScenarioParameters {
@@ -564,6 +567,125 @@ export function ScenariosPage() {
                   inputProps={{ min: 0, step: 1000 }}
                 />
               </Grid>
+
+              {/* ── Withdrawal Strategy ── */}
+              <Grid size={{ xs: 12 }}>
+                <Divider />
+                <Typography variant="overline" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Withdrawal Strategy
+                  <Tooltip title="Controls the order in which account types are drawn down in retirement. Affects lifetime tax, OAS clawback, and estate value.">
+                    <span style={{ marginLeft: 6, cursor: 'help', fontSize: 14, color: '#888' }}>ⓘ</span>
+                  </Tooltip>
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 7 }}>
+                <FormControl fullWidth>
+                  <InputLabel id="withdrawal-strategy-label">Drawdown Strategy</InputLabel>
+                  <Select
+                    labelId="withdrawal-strategy-label"
+                    value={params.withdrawalStrategy ?? 'oas-optimized'}
+                    label="Drawdown Strategy"
+                    onChange={(e) => setParam('withdrawalStrategy', e.target.value)}
+                  >
+                    <MenuItem value="oas-optimized">
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>OAS Optimized (default)</Typography>
+                        <Typography variant="caption" color="text.secondary">Draw RRSP below OAS threshold first — minimises clawback.</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="rrsp-first">
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>RRSP First (Meltdown)</Typography>
+                        <Typography variant="caption" color="text.secondary">Aggressively drain RRSP before 71 to avoid large RRIF income later.</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="tfsa-last">
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>TFSA Last (Estate Maximizer)</Typography>
+                        <Typography variant="caption" color="text.secondary">Preserve tax-free TFSA for heirs; draw taxable accounts first.</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="non-reg-first">
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>Non-Reg First (Capital Gains)</Typography>
+                        <Typography variant="caption" color="text.secondary">Realise capital gains early while sheltering registered accounts.</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="proportional">
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>Proportional</Typography>
+                        <Typography variant="caption" color="text.secondary">Draw from all account types pro-rata each year.</Typography>
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* ── Flexible Spending ── */}
+              <Grid size={{ xs: 12 }}>
+                <Divider />
+                <Typography variant="overline" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Flexible Spending Guardrails
+                  <Tooltip title="When enabled, annual expenses automatically flex up or down within the floor/ceiling band based on portfolio performance. Modelled after the Guyton-Klinger decision rules.">
+                    <span style={{ marginLeft: 6, cursor: 'help', fontSize: 14, color: '#888' }}>ⓘ</span>
+                  </Tooltip>
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={params.flexSpending ?? false}
+                      onChange={(e) => setParam('flexSpending', e.target.checked)}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>Enable flexible spending</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Allow spending to adjust within guardrails year-over-year.
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ alignItems: 'flex-start' }}
+                />
+              </Grid>
+              {(params.flexSpending ?? false) && (
+                <>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography gutterBottom>
+                      Floor: <strong>{((params.flexFloor ?? 0.9) * 100).toFixed(0)}%</strong> of base expenses
+                    </Typography>
+                    <Slider
+                      value={(params.flexFloor ?? 0.9) * 100}
+                      min={60} max={100} step={5}
+                      onChange={(_, v) => setParam('flexFloor', (v as number) / 100)}
+                      marks={[{ value: 60, label: '60%' }, { value: 80, label: '80%' }, { value: 100, label: '100%' }]}
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={(v) => `${v}%`}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      ~${Math.round((params.annualExpenses ?? 0) * (params.flexFloor ?? 0.9)).toLocaleString()}/yr minimum
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography gutterBottom>
+                      Ceiling: <strong>{((params.flexCeiling ?? 1.2) * 100).toFixed(0)}%</strong> of base expenses
+                    </Typography>
+                    <Slider
+                      value={(params.flexCeiling ?? 1.2) * 100}
+                      min={100} max={150} step={5}
+                      onChange={(_, v) => setParam('flexCeiling', (v as number) / 100)}
+                      marks={[{ value: 100, label: '100%' }, { value: 125, label: '125%' }, { value: 150, label: '150%' }]}
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={(v) => `${v}%`}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      ~${Math.round((params.annualExpenses ?? 0) * (params.flexCeiling ?? 1.2)).toLocaleString()}/yr maximum
+                    </Typography>
+                  </Grid>
+                </>
+              )}
 
               <Grid size={{ xs: 12 }}>
                 <Divider />

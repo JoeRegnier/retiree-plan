@@ -5,6 +5,7 @@ import {
   runBacktest,
   runGuytonKlinger,
   calculateEstate,
+  calculateLegacyStrategies,
   runHistoricalBootstrapSimulation,
   calculateReadinessScore,
   generateInsights as runInsightsEngine,
@@ -15,6 +16,7 @@ import type {
   BacktestInput,
   GKInput,
   EstateInput,
+  LegacyStrategiesInput,
   HistoricalBootstrapInput,
   InsightInput,
 } from '@retiree-plan/finance-engine';
@@ -71,6 +73,10 @@ export class ProjectionsService {
 
   runEstateCalculation(input: EstateInput) {
     return calculateEstate(input);
+  }
+
+  runLegacyStrategies(input: LegacyStrategiesInput) {
+    return calculateLegacyStrategies(input);
   }
 
   computeReadinessScore(input: CashFlowInput) {

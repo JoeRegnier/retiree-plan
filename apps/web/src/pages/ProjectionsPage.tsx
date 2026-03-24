@@ -15,6 +15,9 @@ import { SankeyChart } from '../components/charts/SankeyChart';
 import { WaterfallChart } from '../components/charts/WaterfallChart';
 import { IncomeAllocationChart } from '../components/charts/IncomeAllocationChart';
 import { DrawdownWaterfallChart } from '../components/charts/DrawdownWaterfallChart';
+import { WithdrawalOptimizerCard } from '../components/WithdrawalOptimizerCard';
+import { BucketStrategyCard } from '../components/BucketStrategyCard';
+import { SpousalRrspCalculator } from '../components/SpousalRrspCalculator';
 import { useQuickActions } from '../contexts/QuickActionsContext';
 
 interface Household { id: string; name: string; members: any[]; accounts: any[]; }
@@ -266,6 +269,12 @@ export function ProjectionsPage() {
       ...(nonRegRate != null ? { nonRegReturnRate: nonRegRate } : {}),
       ...(p.glidePathSteps?.length ? { glidePathSteps: p.glidePathSteps } : {}),
       ...(p.spendingPhases?.length ? { spendingPhases: p.spendingPhases } : {}),
+      // Flex spending guardrails
+      flexSpendingEnabled: p.flexSpending ?? false,
+      ...(p.flexFloor != null ? { flexSpendingFloor: p.flexFloor } : {}),
+      ...(p.flexCeiling != null ? { flexSpendingCeiling: p.flexCeiling } : {}),
+      // Withdrawal strategy
+      withdrawalStrategy: (p.withdrawalStrategy ?? 'oas-optimized') as import('@retiree-plan/shared').WithdrawalStrategyId,
     };
   }, [household, selectedScenarioId, scenarios, expenseItems, primaryMember]);
 
@@ -407,6 +416,9 @@ export function ProjectionsPage() {
             <Tab label="Waterfall" />
             <Tab label="Year-by-Year" />
             <Tab label="Drawdown" />
+            <Tab label="Strategy" />
+            <Tab label="Buckets" />
+            <Tab label="Spousal RRSP" />
           </Tabs>
 
           {tab === 0 && (
@@ -529,6 +541,29 @@ export function ProjectionsPage() {
                 />
               </CardContent>
             </Card>
+          )}
+
+          {tab === 7 && (
+            <WithdrawalOptimizerCard projectionPayload={buildPayload()} />
+          )}
+
+          {tab === 8 && (() => {
+            const scenario = scenarios?.find((s: Scenario) => s.id === selectedScenarioId);
+            const p = scenario ? parseParams(scenario) : null;
+            const totalPortfolio = projectionData[0]?.totalNetWorth ?? 0;
+            const currentAge = primaryMember ? calcAge(primaryMember.dateOfBirth) : 65;
+            return (
+              <BucketStrategyCard
+                currentAge={currentAge}
+                lifeExpectancyAge={p?.lifeExpectancy ?? 90}
+                totalPortfolio={totalPortfolio}
+                annualExpenses={p?.annualExpenses ?? 60_000}
+              />
+            );
+          })()}
+
+          {tab === 9 && (
+            <SpousalRrspCalculator />
           )}
         </>
       )}

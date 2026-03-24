@@ -146,7 +146,7 @@ When the household has two members, calculate the tax savings from allocating up
 
 ---
 
-#### 2.4 Spousal RRSP Contribution Optimizer  
+#### 2.4 Spousal RRSP Contribution Optimizer ✅ SHIPPED
 **Impact: M | Effort: S**
 
 For couples with income disparity, calculate:
@@ -155,7 +155,9 @@ For couples with income disparity, calculate:
 - 3-year attribution rule warning
 - Break-even years for the strategy to pay off
 
-Short calculator card on the HouseholdPage / Accounts — no new route needed.
+`analyzeSpousalRrsp()` in `spousal-rrsp.ts` computes contributor marginal tax saved, annuitant marginal tax on withdrawal, net annual saving, attribution risk flag (`lastContributionYear + 3` rule), and recommendation text. `Account` schema extended with `isSpousalRrsp`, `contributorMemberId`, `annuitantMemberId`, `lastContributionYear`, `costBasis` (Prisma migration `20260322193414_add_spousal_rrsp_and_acb`). `SpousalRrspCalculator` component on ProjectionsPage (Spousal RRSP tab) with contributor/annuitant income + province inputs, attribution risk Alert, and 3 metric cards. API endpoint: `POST /optimization/spousal-rrsp`.
+
+**Shipped:** March 2026. Location: Projections page Spousal RRSP tab + engine `spousal-rrsp.ts`.
 
 ---
 
@@ -296,7 +298,7 @@ Many Canadians have DB pensions that are modelled crudely as a fixed "Pension" i
 
 ### Theme 5 — Withdrawal Strategy
 
-#### 5.1 Withdrawal Order Optimizer  
+#### 5.1 Withdrawal Order Optimizer ✅ SHIPPED
 **Impact: H | Effort: H**
 
 Today the engine uses a hardcoded withdrawal order: TFSA → Cash → RRSP/RRIF → Non-Reg. This is a reasonable default but is rarely optimal. The optimizer should:
@@ -307,11 +309,13 @@ Today the engine uses a hardcoded withdrawal order: TFSA → Cash → RRSP/RRIF 
 3. Recommend the strategy with the lowest lifetime tax + highest final estate value
 4. Display the recommended year-by-year withdrawal schedule as a stacked bar chart
 
-**Engine change:** Parameterize withdrawal priority in `CashFlowInput` as `withdrawalOrder: ('TFSA' | 'RRSP' | 'NON_REG' | 'CASH')[]`.
+`CashFlowInput` now accepts `withdrawalStrategy` (one of `oas-optimized`, `rrsp-first`, `tfsa-last`, `non-reg-first`, `proportional`, `custom`) and `withdrawalOrder` for custom sequences. `compareWithdrawalStrategies()` in `withdrawal-optimizer.ts` runs all strategies, ranks by lifetime tax (ties broken by final net worth), and returns a `WithdrawalComparisonResult` with `recommendedStrategyId` and savings estimate. Flexible spending guardrails (`flexSpendingEnabled`, floor, ceiling) added to `CashFlowInput`. ACB tracking for non-registered accounts. Strategy selector dropdown on ScenariosPage. `WithdrawalOptimizerCard` on ProjectionsPage (Strategy tab) renders a ranked comparison table with Best chip, lifetime tax, OAS clawback, final net worth, and depletion age. API endpoint: `POST /optimization/withdrawal-comparison`.
+
+**Shipped:** March 2026. Location: Projections page Strategy tab + ScenariosPage spending section + engine `withdrawal-optimizer.ts`.
 
 ---
 
-#### 5.2 Bucket Strategy Modeller  
+#### 5.2 Bucket Strategy Modeller ✅ SHIPPED
 **Impact: M | Effort: M**
 
 A visual bucket framework (popularized by Harold Evensky) where the portfolio is mentally divided into:
@@ -320,12 +324,9 @@ A visual bucket framework (popularized by Harold Evensky) where the portfolio is
 - **Bucket 2 (Conservative):** 3–10 years of expenses; bonds and GICs
 - **Bucket 3 (Growth):** Remainder; equities for long-term growth
 
-The model shows:
-- How long each bucket lasts under the current projection
-- When Bucket 1 needs to be refilled from Bucket 2 or 3
-- Comparison: bucket strategy success rate vs. all-in-one approach
+`runBucketProjection()` in `bucket-strategy.ts` simulates the three-bucket cascade (B3 → B2 → B1 refill) year-by-year with configurable `cashYears`, `conservativeYears`, `annualRefill` toggle, and threshold-based top-up. `BucketStrategyCard` on ProjectionsPage (Buckets tab) with cash/conservative year controls, annual refill toggle, and a custom inline SVG stacked bar chart (no Recharts dependency). API endpoint: `POST /optimization/bucket-strategy`.
 
-This maps naturally to the existing multi-account structure.
+**Shipped:** March 2026. Location: Projections page Buckets tab + engine `bucket-strategy.ts`.
 
 ---
 
@@ -460,8 +461,10 @@ The current Milestones page accepts freeform events. Add a template library with
 
 ---
 
-#### 7.3 Legacy & Estate Giving Planner  
+#### 7.3 Legacy & Estate Giving Planner ✅ SHIPPED
 **Impact: M | Effort: M**
+
+**Shipped:** March 2026. Location: Estate page — "Legacy Strategies" tab.
 
 Extend the Estate page to include proactive estate planning strategies:
 
@@ -500,6 +503,32 @@ Both spouses can log in and see the same household:
 
 ### Theme 9 — Data & Integration
 
+**Context:** The average Canadian retiree holds accounts at a Big 5 bank + one brokerage. We currently have no reliable data pull from RBC, BMO, Scotiabank, or CIBC — ~80% of Canadian banking relationships — requiring 100% manual entry. This theme closes that gap. Full technical specs: [guide-16-integrations-roadmap.md](guide-16-integrations-roadmap.md).
+
+---
+
+#### 9.0 Questrade: Positions, ACB & Activity History ✅ SHIPPED
+**Impact: H | Effort: S**
+
+Questrade is already integrated for balances. The existing OAuth infrastructure supports three additional high-value endpoint calls at no extra auth cost.
+
+**Positions + ACB (Tier 1 — immediate):**
+- `GET {apiServer}v1/accounts/{number}/positions` → per-holding: symbol, openQuantity, averageEntryPrice, totalCost
+- Write `account.costBasis = sum(position.totalCost)` for non-registered accounts → enables accurate capital gains projection
+- Compute `account.equityPercent` / `fixedIncomePercent` / `cashPercent` from security type distribution
+- Auto-populate `account.estimatedReturnRate` from asset mix using capital market assumptions
+
+**Activity/Transaction History (Tier 2):**
+- `GET {apiServer}v1/accounts/{number}/activities?startTime=...&endTime=...` (31-day windows, paginated)
+- Reconstruct RRSP/TFSA contribution history → auto-calculate remaining contribution room
+- Surface as a "Sync Contribution History" action on AccountsPage
+
+**New endpoints:** `GET /brokerage/questrade/positions`, `POST /brokerage/questrade/sync-positions`
+
+**Shipped:** March 2026. Location: BrokerageService `getQuestradePositions` / `syncPositions` + `POST /brokerage/questrade/sync-positions` endpoint + IntegrationsPage "Sync Positions + ACB" button.
+
+---
+
 #### 9.1 CRA My Account Data Import  
 **Impact: H | Effort: H**
 
@@ -510,7 +539,7 @@ Allow users to import key data directly from the CRA via the MyGovID API (when a
 - CPP Statement of Contributions (to improve benefit fraction estimate)
 - T1 income slips to pre-populate prior-year income
 
-This dramatically reduces setup friction and data-entry errors.
+Canada's FCAC accreditation regime is expected to open in Q3 2026 — register as a data recipient then. Until that API is available, support Notice of Assessment PDF parsing (text extraction + regex for key fields).
 
 ---
 
@@ -530,27 +559,124 @@ AssumptionsAuditDialog component with assumptions table (TFSA limit, RRSP max, C
 
 ---
 
-#### 9.3 CSV / Spreadsheet Import  
-**Impact: M | Effort: S**
+#### 9.3 Universal OFX/QFX File Import ✅ SHIPPED
+**Impact: H | Effort: M**
 
-Let power users import household data from a CSV template:
+Every Canadian bank and brokerage (TD, RBC, BMO, Scotiabank, CIBC, National Bank, Qtrade, BMO InvestorLine, Scotia iTRADE, CIBC Investor's Edge) supports OFX/QFX export from their web portal. This single import format covers the entire Big 5 ecosystem without requiring a third-party aggregator.
 
-- Downloadable template with column headers matching the data model
-- Map income sources, account balances, expenses from CSV
-- Preview + confirm step before updating the live plan
+- `POST /import/ofx` — accepts `.ofx` or `.qfx` file upload
+- Parse OFX SGML/XML: extract `<BANKACCTFROM>` account details, `<LEDGERBAL>` balance, `<STMTTRN>` transactions
+- For investment accounts: parse `<INVPOSLIST>` positions and `<INVTRANLIST>` trades
+- Preview UI: "Found 3 accounts: TD RRSP $142,000 | TD TFSA $68,000 | TD Chequing $12,000. Import?"
+- Upsert Account balances; optionally import transactions for expense analysis
+- Zero-dependency SGML/XML parser (`ofx-parser.ts`) handles both SGML open-tag and XML `<TAG>value</TAG>` forms; detects RRSP/TFSA/RRIF/LIRA/RESP/FHSA from broker-ID hints
 
-Reduces friction for users migrating from spreadsheet-based plans.
+**Replaces and supersedes the old 9.4 TD-only scope** — this covers all institutions.
+
+**Shipped:** March 2026. Location: `apps/api/src/import/ofx-parser.ts` + `POST /import/ofx/preview` + `POST /import/ofx/apply` + IntegrationsPage OFX/QFX upload card with 3-column preview dialog.
 
 ---
 
-#### 9.4 TD Bank Transaction Import (OFX/CSV)  
+#### 9.4 Wealthsimple: CSV Activity Import + OAuth Upgrade ✅ SHIPPED (Phase 1)
+**Impact: H | Effort: M**
+
+Wealthsimple has 3M+ users and is the most common brokerage for Canadian millennials, but has no public developer API. Two-phase approach:
+
+**Phase 1 — CSV Import (immediate, stable):** ✅ SHIPPED
+- Accept Wealthsimple Activity CSV export (`Activity Date, Type, Symbol, Quantity, Price, Commission, Currency, Account`)
+- `POST /import/wealthsimple/preview` + `POST /import/wealthsimple/apply`
+- Detects RRSP/TFSA/RRIF/RESP/LIRA/CASH from account name; uses EOD Balance rows for accuracy; strict validation (throws if no balance rows found)
+- Update account balances; match against existing accounts by provider + name
+
+**Phase 2 — OAuth (once Wealthsimple opens developer program):**
+- Wealthsimple uses OAuth2 internally (observed: `api.production.wealthsimple.com/v1/oauth/token`)
+- Apply for official partnership/developer access
+- Once available: pull accounts, positions, tax documents (T3, T5, T5008)
+- Replace current fragile Bearer-token scraping entirely
+
+**Current state:** existing Bearer-token flow is a liability — it breaks on app updates and violates ToS. Phase 1 CSV import provides a stable fallback immediately.
+
+**Shipped:** March 2026. Location: `ImportService._parseWealthsimpleCSV` + `POST /import/wealthsimple/preview|apply` + IntegrationsPage Wealthsimple CSV card with preview dialog.
+
+---
+
+#### 9.5 Monarch Money CSV Import ✅ SHIPPED
 **Impact: M | Effort: S**
 
-The TD brokerage integration currently creates only a placeholder connection (no API). As an interim:
+Monarch Money is the fastest-growing Canadian budgeting app (replacing Mint for many users who switched after the January 2024 shutdown). It connects to RBC, TD, Scotiabank, BMO, CIBC, Desjardins, EQ Bank, Neo Financial, and Tangerine via Plaid/Flinks.
 
-- Let TD users download their account statement as OFX or CSV from EasyWeb
-- Upload it to the app
-- The app extracts account balances and updates the matching account record
+- Accept Monarch CSV export: `Date, Merchant, Category, Account, Original Statement, Notes, Amount, Tags`
+- `POST /import/monarch/preview` + `POST /import/monarch/apply`
+- Maps 12 Monarch categories to local expense categories; computes monthly averages per category → upserts `Expense` rows (unique on `householdId + name`)
+- Show onboarding prompt: "Are you a Mint or Monarch user? Import your spending history in one click."
+
+**Shipped:** March 2026. Location: `ImportService._parseMonarchCSV` + `POST /import/monarch/preview|apply` + IntegrationsPage Monarch Money card with expense preview dialog.
+
+---
+
+#### 9.6 Flinks Bank Aggregator (Big 5 + 200 Canadian FIs)  
+**Impact: H | Effort: H**
+
+[Flinks](https://flinks.com) is Canada's leading financial data aggregator — the Plaid equivalent for Canadian banks. A single Flinks integration covers RBC, TD, Scotiabank, BMO, CIBC, National Bank, Desjardins, Meridian, EQ Bank, Tangerine, Simplii, Neo Financial, and 190+ more institutions.
+
+**Integration model:**
+- Embed Flinks Connect (white-labelled iframe SDK) on the IntegrationsPage — user logs in to their bank inside the iframe; credentials never touch our server
+- After successful auth, Flinks returns a `loginId`
+- Backend: `POST /flinks/connect` → call Flinks API `GetAccountsSummaryAsync` → poll for accounts + balances
+- New `FlinksConnection` DB model stores encrypted `loginId`; `Account` gets `flinksAccountId`
+- Nightly background sync via `GetAccountsSummary` using cached loginId
+
+**Data available:** Account list, account type (CHEQUING, SAVINGS, RRSP, TFSA, non-reg), balance, 90–366 days of categorized transactions.
+
+**Pricing:** ~$0.15–$0.50/connection/month. Free developer tier for testing.
+
+**Why this matters:** Eliminates the need for individual RBC, BMO, Scotiabank, CIBC integrations. Covers Desjardins — essential for the Quebec market.
+
+---
+
+#### 9.7 Wealthica Investment Aggregator (130 Canadian Brokerages)  
+**Impact: H | Effort: H**
+
+[Wealthica](https://wealthica.com/developers/) is a Canadian portfolio tracker with an official public API and OAuth2. It aggregates investment data from 130+ Canadian financial institutions including RBC Direct Investing, TD WebBroker, BMO InvestorLine, CIBC Investor's Edge, Scotia iTRADE, Qtrade, NBDB, Manulife (group plans), Sun Life, Interactive Brokers Canada.
+
+**Integration model:**
+- OAuth2 PKCE flow: user grants Wealthica consent → `api.wealthica.com/oauth/token`
+- Pull: `GET /v1/accounts`, `GET /v1/portfolio/positions` (book_value = ACB), `GET /v1/portfolio/transactions`
+- Write to DB: Account balance, `costBasis` (from book_value), equityPercent/fixedIncomePercent, brokerageProvider (institution name)
+
+**The leverage:** One Wealthica connection covers virtually all Canadian brokerages where we have no direct API. Especially valuable for users at RBC Direct, TD WebBroker, or BMO InvestorLine.
+
+---
+
+#### 9.8 Group RRSP / DPSP / Pension Plan CSV Import  
+**Impact: M | Effort: S**
+
+Many Canadians hold significant retirement savings through employer-sponsored group plans administered by Manulife, Sun Life, or Canada Life. These platforms don't offer public consumer APIs, but all support statement CSV/PDF export.
+
+- Standardized import template for group plan data (account type, balance, annual contribution, employer match %, vesting schedule, plan type: Group RRSP, DPSP, DC pension)
+- `POST /import/csv?format=group-plan`
+- Auto-detect common Manulife, Sun Life statement CSV column layouts
+- Special handling: DC pension → project as additional RRSP-like balance; DB pension → create income source
+
+---
+
+#### 9.9 Guided Onboarding Wizard with Integration Steps ✅ SHIPPED
+**Impact: H | Effort: M**
+
+Replace the current blank-slate onboarding with a guided 5-step wizard that routes users to the integrations most relevant to them:
+
+1. **Household basics** (names, DOBs, province, retirement age)
+2. **Connect finances** — three parallel tracks shown side-by-side:
+   - 🏦 Bank accounts → Flinks Connect or OFX file upload
+   - 📊 Investments → Questrade/Wealthsimple/Wealthica or OFX/CSV upload
+   - 💰 Budget → YNAB/Monarch or CSV upload
+3. **Income sources** (CPP estimate, OAS, employment income, pensions)
+4. **Goals** (retirement income target, legacy amount, major milestones)
+5. **First projection** → auto-run on completion → land on Dashboard with populated plan
+
+**Target metric:** A user who connects via Flinks + Questrade should have ≥80% of their data pre-populated in under 5 minutes, without a single manual balance entry.
+
+**Shipped:** March 2026. Location: `OnboardingWizard.tsx` updated to 7 steps — added step 4 "Connect Your Data" (between Add Accounts and Milestones) linking to `/integrations` with CloudSync icon and description of all import formats.
 
 ---
 
@@ -613,38 +739,44 @@ Quebec residents contribute to QPP, not CPP. QPP has slightly different rates an
 | 1.2 | Automated Insights Engine | H | M | ★★★★★ | ✅ Shipped |
 | 2.1 | CPP Timing Optimizer | H | M | ★★★★★ | — |
 | 2.3 | Pension Splitting Optimizer | H | M | ★★★★★ | — |
-| 5.1 | Withdrawal Order Optimizer | H | H | ★★★★☆ | — |
-| 3.4 | Quick What-If Calculator | H | S | ★★★★☆ | ✅ Shipped |
-| 4.1 | RRSP/TFSA Room Tracker | H | M | ★★★★☆ | ✅ Shipped |
-| 6.1 | Income Replacement Card | H | S | ★★★★☆ | ✅ Shipped |
-| 7.1 | Goals-Based View | H | M | ★★★★☆ | ✅ Shipped |
+| 9.0 | Questrade: Positions, ACB & Activity History | H | S | ★★★★★ | ✅ Shipped |
+| 9.3 | Universal OFX/QFX File Import (all Big 5 + brokerages) | H | M | ★★★★★ | ✅ Shipped |
+| 9.9 | Guided Onboarding Wizard with Integration Steps | H | M | ★★★★★ | ✅ Shipped |
 | 2.2 | OAS Deferral + Clawback Optimizer | H | M | ★★★★☆ | — |
 | 3.1 | Phased Spending Template | H | M | ★★★★☆ | ✅ Shipped |
-| 4.3 | Real Estate / Rental Income | M | M | ★★★☆☆ | ✅ Shipped |
-| 4.4 | Defined Benefit Pension Deep-Dive | H | M | ★★★☆☆ | — |
+| 3.4 | Quick What-If Calculator | H | S | ★★★★☆ | ✅ Shipped |
+| 4.1 | RRSP/TFSA Room Tracker | H | M | ★★★★☆ | ✅ Shipped |
+| 5.1 | Withdrawal Order Optimizer | H | H | ★★★★☆ | ✅ Shipped |
+| 6.1 | Income Replacement Card | H | S | ★★★★☆ | ✅ Shipped |
+| 7.1 | Goals-Based View | H | M | ★★★★☆ | ✅ Shipped |
+| 9.4 | Wealthsimple CSV Import + OAuth Upgrade | H | M | ★★★★☆ | ✅ Shipped |
+| 9.6 | Flinks Bank Aggregator (Big 5 + 200 Canadian FIs) | H | H | ★★★★☆ | — |
+| 9.7 | Wealthica Investment Aggregator (130 Canadian brokerages) | H | H | ★★★★☆ | — |
 | 1.3 | Plan Completeness Checklist | M | S | ★★★☆☆ | ✅ Shipped |
 | 2.5 | GIS Planner | M | M | ★★★☆☆ | — |
-| 5.2 | Bucket Strategy Modeller | M | M | ★★★☆☆ | — |
+| 4.2 | Asset Allocation Modeller | M | M | ★★★☆☆ | ✅ Shipped |
+| 4.3 | Real Estate / Rental Income | M | M | ★★★☆☆ | ✅ Shipped |
+| 4.4 | Defined Benefit Pension Deep-Dive | H | M | ★★★☆☆ | — |
+| 5.2 | Bucket Strategy Modeller | M | M | ★★★☆☆ | ✅ Shipped |
 | 6.2 | Net Worth Sparkline Timeline | H | S | ★★★☆☆ | ✅ Shipped |
 | 6.6 | PDF Report Improvements | M | M | ★★★☆☆ | ✅ Shipped |
-| 7.3 | Legacy & Estate Giving Planner | M | M | ★★★☆☆ | — |
+| 7.3 | Legacy & Estate Giving Planner | M | M | ★★★☆☆ | ✅ Shipped |
 | 8.1 | Advisor Sharing Mode | M | M | ★★★☆☆ | — |
-| 4.2 | Asset Allocation Modeller | M | M | ★★★☆☆ | ✅ Shipped |
 | 9.2 | Market Data Refresh / Assumptions Audit | M | S | ★★★☆☆ | ✅ Shipped |
+| 9.5 | Monarch Money CSV Import | M | S | ★★★☆☆ | ✅ Shipped |
+| 9.8 | Group RRSP / DPSP / Pension Plan CSV Import | M | S | ★★★☆☆ | — |
 | 10.1 | RDSP | M | M | ★★★☆☆ | — |
 | 10.3 | RESP Planner | M | M | ★★★☆☆ | — |
-| 6.4 | Sequence-of-Returns Heatmap | M | S | ★★☆☆☆ | — |
-| 6.5 | Purchasing Power Chart | M | S | ★★☆☆☆ | — |
+| 2.4 | Spousal RRSP Optimizer | M | S | ★★☆☆☆ | ✅ Shipped |
 | 3.2 | Expense Category Drill-Down | M | M | ★★☆☆☆ | — |
 | 3.3 | Healthcare Cost Modeller | M | S | ★★☆☆☆ | — |
 | 5.3 | Dynamic Withdrawal (Floor-and-Upside) | M | M | ★★☆☆☆ | — |
 | 6.3 | Account Drawdown Animation | M | M | ★★☆☆☆ | ✅ Shipped |
+| 6.4 | Sequence-of-Returns Heatmap | M | S | ★★☆☆☆ | — |
+| 6.5 | Purchasing Power Chart | M | S | ★★☆☆☆ | — |
 | 7.2 | Milestone Templates | M | S | ★★☆☆☆ | ✅ Shipped |
 | 8.2 | Household Multi-User Accounts | M | H | ★★☆☆☆ | — |
 | 9.1 | CRA Data Import | H | H | ★★☆☆☆ | — |
-| 9.3 | CSV / Spreadsheet Import | M | S | ★★☆☆☆ | — |
-| 9.4 | TD Bank OFX/CSV Import | M | S | ★★☆☆☆ | — |
-| 2.4 | Spousal RRSP Optimizer | M | S | ★★☆☆☆ | — |
 | 10.2 | Corporation / Holding Company | M | H | ★★☆☆☆ | — |
 | 10.4 | QPP Differentiation | S | S | ★☆☆☆☆ | — |
 
@@ -677,13 +809,22 @@ Items: 3.1 (Phased Spending), 7.1 (Goals View)
 Items: 4.1 (RRSP/TFSA Room Tracker), 4.2 (Asset Allocation), 4.3 (Real Estate)  
 *Deliverable: Complete picture of the balance sheet, not just account totals.*
 
-### Sprint 7 — "Estate & Legacy"  
-Items: 4.4 (DB Pension), 7.3 (Estate Giving Planner), 6.6 (PDF improvements)  
+### Sprint 7 — "Estate & Legacy" ✅ COMPLETE (partial)
+Items: 4.4 (DB Pension), 7.3 (Estate Giving Planner) ✅, 6.6 (PDF improvements) ✅  
 *Deliverable: App is credible for near-retirement households with pensions and real estate.*
 
 ### Sprint 8 — "Sharing & Collaboration"  
-Items: 8.1 (Advisor Share), 9.3 (CSV Import), 7.2 (Milestone Templates)  
+Items: 8.1 (Advisor Share), 7.2 (Milestone Templates)  
 *Deliverable: Users can work with an advisor through the app.*
+
+### Sprint 9 — "Zero-Friction Data Onboarding" ✅ COMPLETE
+Items: 9.0 (Questrade Positions + ACB), 9.3 (Universal OFX/QFX Import), 9.4 (Wealthsimple CSV Import), 9.5 (Monarch Money CSV), 9.9 (Onboarding Wizard)  
+*Deliverable: A new user whose broker is Questrade or whose bank supports OFX export can onboard in under 5 minutes with all balances pre-populated. No manual entry required.*  
+*Shipped: March 2026.*
+
+### Sprint 10 — "Integration Aggregators"  
+Items: 9.6 (Flinks Bank Aggregator), 9.7 (Wealthica Investment Aggregator), 9.5 (Monarch Money CSV), 9.8 (Group Plan CSV)  
+*Deliverable: Single-connection coverage for 200+ Canadian FIs (Flinks) and 130+ Canadian brokerages (Wealthica). A user at RBC, BMO, TD, Scotiabank, CIBC, or Desjardins can connect their accounts without any file export.*
 
 ---
 
@@ -696,15 +837,18 @@ If all Priority ★★★★★ and ★★★★☆ items from Sprints 1–5 are
 3. ✅ Interactive what-if explorer (savings, returns, retirement age, life expectancy) in a live drawer
 4. — CPP + OAS timing optimization with lifetime NPV break-even analysis
 5. — Pension income splitting modelling with year-by-year tax savings
-6. — Multi-method withdrawal order comparison with lifetime tax minimization
+6. ✅ Multi-method withdrawal order comparison with lifetime tax minimization
 7. — Goals-based planning (can I afford what I want?) alongside deterministic projections
 8. ✅ Historical backtesting + Guyton-Klinger + Monte Carlo in a single interface
 9. ✅ Per-province probate and estate analysis
 10. ✅ Canada-US cross-border and expat tools (currently unique in the market)
 11. ✅ Brokerage account balance sync (Questrade, Wealthsimple)
+12. ✅ Universal OFX/QFX file import — covers all Big 5 banks without a third-party aggregator
+13. — Flinks bank aggregator — single connection to 200+ Canadian financial institutions
+14. — Wealthica investment aggregator — single connection to 130+ Canadian brokerages with ACB data
 
 No competitor — including Boldin, MaxiFi, Projection Lab, or any major Canadian bank's online calculator — covers this full set for a Canadian audience.
 
 ---
 
-*Document authored: March 2026. Updated March 2026 (Sprint 1 shipped). Review and re-prioritize quarterly as user feedback is collected.*
+*Document authored: March 2026. Updated March 2026 (Sprint 1 shipped; Theme 5 — Withdrawal Strategy shipped: 5.1 Withdrawal Order Optimizer, 5.2 Bucket Strategy Modeller, 2.4 Spousal RRSP Optimizer). Theme 9 — Data & Integration expanded: Flinks, Wealthica, Questrade positions, universal OFX import, Wealthsimple CSV, Monarch Money, Group Plans, and Guided Onboarding Wizard added. Sprint 9 fully shipped March 2026: 9.0 Questrade Positions + ACB, 9.3 Universal OFX/QFX Import, 9.4 Wealthsimple CSV Import (Phase 1), 9.5 Monarch Money CSV Import, 9.9 Onboarding Wizard "Connect Your Data" step — all with full security hardening (IDOR guards, SSRF validation, transaction wrapping, upsert idempotency, CSV injection sanitisation). Full technical reference: [guide-16-integrations-roadmap.md](guide-16-integrations-roadmap.md). Review and re-prioritize quarterly as user feedback is collected.*

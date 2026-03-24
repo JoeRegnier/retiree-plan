@@ -8,6 +8,7 @@ import {
   UseGuards,
   Req,
   HttpCode,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { BrokerageService, BrokerageProvider } from './brokerage.service';
@@ -91,5 +92,21 @@ export class BrokerageController {
       body.householdId,
       provider.toUpperCase() as BrokerageProvider,
     );
+  }
+
+  /**
+   * Sync Questrade positions + ACB to local account rows.
+   * Updates costBasis, equityPercent, fixedIncomePercent, cashPercent.
+   * POST /brokerage/questrade/sync-positions  body: { householdId }
+   */
+  @Post('questrade/sync-positions')
+  async syncQuestradePositions(
+    @Req() req: any,
+    @Body() body: { householdId: string },
+  ) {
+    if (!body.householdId) {
+      throw new BadRequestException('householdId is required');
+    }
+    return this.brokerage.syncPositions(req.user.id, body.householdId);
   }
 }

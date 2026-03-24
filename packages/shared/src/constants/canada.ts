@@ -147,3 +147,23 @@ export const CAPITAL_MARKET_ASSUMPTIONS = {
   inflationExpectation: 0.02,
   lastUpdated: '2026-01-01',
 } as const;
+
+/**
+ * LIF (Life Income Fund) maximum annual withdrawal rates by age.
+ * Federally-prescribed maximum percentages of the LIF balance per year.
+ * Source: OSFI / federal Pension Benefits Standards Regulations.
+ */
+export const LIF_MAXIMUM_WITHDRAWAL: Record<number, number> = {
+  55: 0.0640, 56: 0.0648, 57: 0.0657, 58: 0.0666, 59: 0.0676, 60: 0.0687,
+  61: 0.0698, 62: 0.0710, 63: 0.0723, 64: 0.0738, 65: 0.0753, 66: 0.0770,
+  67: 0.0789, 68: 0.0811, 69: 0.0835, 70: 0.0862, 71: 0.0892, 72: 0.0926,
+  73: 0.0965, 74: 0.1009, 75: 0.1059, 76: 0.1116, 77: 0.1183, 78: 0.1261,
+  79: 0.1352, 80: 0.1460, 81: 0.1588, 82: 0.1740, 83: 0.1921, 84: 0.2138,
+  85: 0.2000,
+};
+
+/**
+ * Minimum age to unlock LIRA funds / convert to LIF.
+ * Federal default is 55. AB allows 50.
+ */
+export const LIRA_MINIMUM_UNLOCK_AGE = 55;
