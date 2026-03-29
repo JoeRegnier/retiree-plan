@@ -49,6 +49,7 @@
     "@types/express": "^5.0.0",
     "@types/multer": "^2.1.0",
     "@types/passport-jwt": "^4.0.0",
+    "picomatch": "^4.0.4",
     "prisma": "^7.6.0",
     "typescript": "^5.8.0",
     "vitest": "^4.1.1"
