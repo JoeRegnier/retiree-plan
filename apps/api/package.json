@@ -51,7 +51,7 @@
     "@types/passport-jwt": "^4.0.0",
     "picomatch": "^4.0.4",
     "prisma": "^7.6.0",
-    "typescript": "^5.8.0",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.1"
   }
 }
