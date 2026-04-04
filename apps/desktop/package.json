@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "npm run build && electron .",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "node -e \"if (!process.env.CI) require('child_process').execSync('electron-builder install-app-deps', {stdio:'inherit'})\"",
     "package": "bash scripts/build-desktop.sh",
     "package:dir": "npm run build && electron-builder --dir"
   },
@@ -23,9 +23,9 @@
     "@electron/rebuild": "^4.0.3",
     "@types/node": "^25.5.0",
     "@vercel/ncc": "^0.38.3",
-    "electron": "41.0.3",
+    "electron": "41.1.0",
     "electron-builder": "^26.8.2",
-    "typescript": "^5.0.0"
+    "typescript": "^6.0.2"
   },
   "dependencies": {
     "electron-updater": "^6.3.0"

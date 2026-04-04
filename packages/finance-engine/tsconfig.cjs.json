@@ -4,6 +4,7 @@
     "outDir": "./dist/cjs",
     "module": "CommonJS",
     "moduleResolution": "Node",
+    "ignoreDeprecations": "6.0",
     "composite": false,
     "declaration": false,
     "declarationMap": false
