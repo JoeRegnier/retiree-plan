@@ -12,3 +12,4 @@ playwright-report/
 test-results/
 data/secrets.json
 .vscode/settings.json
+docs/LinkedIn-Round-3-Vote-Post.md
