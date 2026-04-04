@@ -89,6 +89,7 @@
       "ajv": "^8.18.0"
     },
     "path-to-regexp": "^8.4.0",
+    "lodash": "^4.18.0",
     "cosmiconfig": {
       "yaml": "^1.10.3"
     }
