@@ -182,8 +182,7 @@ jobs:
           DATABASE_URL="file:$(pwd)/apps/desktop/resources/template.db" \
             npx prisma db push \
               --schema=prisma/schema.prisma \
-              --accept-data-loss \
-              --skip-generate
+              --accept-data-loss
 
       # ── Compile Electron TypeScript ────────────────────────────────────────
       - name: Compile Electron main process
