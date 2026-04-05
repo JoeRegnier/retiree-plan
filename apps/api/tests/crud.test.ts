@@ -13,6 +13,8 @@ import { ScenariosService } from '../src/scenarios/scenarios.service';
 import { IncomesService } from '../src/incomes/incomes.service';
 import { ExpensesService } from '../src/expenses/expenses.service';
 import { MilestonesService } from '../src/milestones/milestones.service';
+import { BadRequestException } from '@nestjs/common';
+import { DecisionRecordsService } from '../src/decision-records/decision-records.service';
 
 // ─── Miniature Prisma mock factory ───────────────────────────────────────────
 function makePrismaMock() {
@@ -63,6 +65,13 @@ function makePrismaMock() {
       create: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    decisionRecord: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     },
@@ -427,5 +436,140 @@ describe('MilestonesService', () => {
     prisma.milestoneEvent.delete.mockResolvedValue({ id: 'mil1' });
     await service.remove('mil1');
     expect(prisma.milestoneEvent.delete).toHaveBeenCalledWith({ where: { id: 'mil1' } });
+  });
+});
+
+// ─── DecisionRecordsService ───────────────────────────────────────────────────
+describe('DecisionRecordsService', () => {
+  let service: DecisionRecordsService;
+  let prisma: ReturnType<typeof makePrismaMock>;
+
+  const mockRecord = {
+    id: 'dr1',
+    householdId: 'h1',
+    title: 'Delay CPP to age 70',
+    status: 'DECIDED',
+    context: 'Both spouses are healthy and expect longevity.',
+    decision: 'Delay CPP for both members to age 70.',
+    rationale: 'Break-even is age 78.',
+    alternatives: null,
+    consequences: null,
+    category: 'CPP_OAS_TIMING',
+    tags: null,
+    decisionDate: new Date('2026-03-12'),
+    reviewDate: new Date('2027-04-01'),
+    supersededById: null,
+    linkedScenarioIds: null,
+    linkedGoalIds: null,
+    relatedTo: [],
+    relatedFrom: [],
+    supersededBy: null,
+    supersedes: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  beforeEach(() => {
+    prisma = makePrismaMock();
+    service = new DecisionRecordsService(prisma);
+  });
+
+  it('create() calls prisma.decisionRecord.create with parsed dates', async () => {
+    prisma.decisionRecord.create.mockResolvedValue(mockRecord);
+    await service.create({
+      householdId: 'h1',
+      title: 'Delay CPP to age 70',
+      context: 'Both spouses are healthy and expect longevity.',
+      decisionDate: '2026-03-12T00:00:00.000Z',
+      reviewDate: '2027-04-01T00:00:00.000Z',
+    });
+    const callArg = prisma.decisionRecord.create.mock.calls[0][0];
+    expect(callArg.data.decisionDate).toBeInstanceOf(Date);
+    expect(callArg.data.reviewDate).toBeInstanceOf(Date);
+  });
+
+  it('findByHousehold() applies status and category filters', async () => {
+    prisma.decisionRecord.findMany.mockResolvedValue([]);
+    await service.findByHousehold('h1', { status: 'DECIDED', category: 'CPP_OAS_TIMING' });
+    expect(prisma.decisionRecord.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { householdId: 'h1', status: 'DECIDED', category: 'CPP_OAS_TIMING' },
+      }),
+    );
+  });
+
+  it('findByHousehold() omits optional filters when not provided', async () => {
+    prisma.decisionRecord.findMany.mockResolvedValue([]);
+    await service.findByHousehold('h1', {});
+    expect(prisma.decisionRecord.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { householdId: 'h1' } }),
+    );
+  });
+
+  it('findOne() throws NotFoundException when record not found', async () => {
+    prisma.decisionRecord.findFirst.mockResolvedValue(null);
+    await expect(service.findOne('missing', 'h1')).rejects.toThrow(NotFoundException);
+  });
+
+  it('findOne() returns the record when found', async () => {
+    prisma.decisionRecord.findFirst.mockResolvedValue(mockRecord);
+    const result = await service.findOne('dr1', 'h1');
+    expect(result).toEqual(mockRecord);
+  });
+
+  it('update() calls prisma.decisionRecord.update after authorization check', async () => {
+    prisma.decisionRecord.findFirst.mockResolvedValue(mockRecord);
+    prisma.decisionRecord.update.mockResolvedValue({ ...mockRecord, title: 'Updated' });
+    const result = await service.update('dr1', 'h1', { title: 'Updated' });
+    expect(prisma.decisionRecord.update).toHaveBeenCalledOnce();
+    expect(result.title).toBe('Updated');
+  });
+
+  it('remove() deletes the record after authorization check', async () => {
+    prisma.decisionRecord.findFirst.mockResolvedValue(mockRecord);
+    prisma.decisionRecord.delete.mockResolvedValue(mockRecord);
+    await service.remove('dr1', 'h1');
+    expect(prisma.decisionRecord.delete).toHaveBeenCalledWith({ where: { id: 'dr1' } });
+  });
+
+  it('supersede() throws BadRequestException if record already superseded', async () => {
+    const supersededRecord = { ...mockRecord, status: 'SUPERSEDED' };
+    prisma.decisionRecord.findFirst.mockResolvedValue(supersededRecord);
+    await expect(service.supersede('dr1', 'h1')).rejects.toThrow(BadRequestException);
+  });
+
+  it('supersede() marks record as SUPERSEDED without replacement', async () => {
+    prisma.decisionRecord.findFirst.mockResolvedValue(mockRecord);
+    prisma.decisionRecord.update.mockResolvedValue({ ...mockRecord, status: 'SUPERSEDED' });
+    const { superseded, replacement } = await service.supersede('dr1', 'h1');
+    expect(superseded.status).toBe('SUPERSEDED');
+    expect(replacement).toBeNull();
+  });
+
+  it('getGraph() returns nodes for each record and RELATED_TO edges', async () => {
+    const relatedRecord = { ...mockRecord, id: 'dr2', title: 'OAS Clawback', relatedTo: [], supersedes: [] };
+    const recordWithRelations = {
+      ...mockRecord,
+      relatedTo: [{ id: 'dr2' }],
+      supersedes: [],
+    };
+    prisma.decisionRecord.findMany.mockResolvedValue([recordWithRelations, relatedRecord]);
+    const graph = await service.getGraph('h1');
+    expect(graph.nodes).toHaveLength(2);
+    expect(graph.edges.some((e) => e.type === 'RELATED_TO')).toBe(true);
+  });
+
+  it('getDueForReview() filters by reviewDate <= today and active statuses', async () => {
+    prisma.decisionRecord.findMany.mockResolvedValue([mockRecord]);
+    const result = await service.getDueForReview('h1');
+    expect(result).toEqual([mockRecord]);
+    expect(prisma.decisionRecord.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          householdId: 'h1',
+          status: { in: ['PROPOSED', 'DECIDED'] },
+        }),
+      }),
+    );
   });
 });

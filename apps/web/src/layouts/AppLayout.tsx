@@ -44,6 +44,7 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstructions';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import PublicIcon from '@mui/icons-material/Public';
+import ArticleIcon from '@mui/icons-material/Article';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../hooks/useApi';
@@ -58,6 +59,7 @@ const NAV_ITEMS = [
   { label: 'Accounts',     path: '/accounts',      icon: <AccountBalanceIcon />,         tourId: 'nav-accounts' },
   { label: 'Milestones',   path: '/milestones',    icon: <FlagIcon />,                   tourId: 'nav-milestones' },
   { label: 'Goals',        path: '/goals',         icon: <TrackChangesIcon /> },
+  { label: 'Decisions',    path: '/decisions',     icon: <ArticleIcon /> },
   { label: 'Scenarios',    path: '/scenarios',     icon: <CompareArrowsIcon />,          tourId: 'nav-scenarios' },
   { label: 'Projections',  path: '/projections',   icon: <TimelineIcon />,               tourId: 'nav-projections' },
   { label: 'Simulations',  path: '/simulations',   icon: <CasinoIcon />,                 tourId: 'nav-simulations' },

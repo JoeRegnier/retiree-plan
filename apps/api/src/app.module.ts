@@ -22,6 +22,7 @@ import { BrokerageModule } from './brokerage/brokerage.module';
 import { RealEstateModule } from './real-estate/real-estate.module';
 import { GoalsModule } from './goals/goals.module';
 import { ImportModule } from './import/import.module';
+import { DecisionRecordsModule } from './decision-records/decision-records.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -64,6 +65,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     RealEstateModule,
     GoalsModule,
     ImportModule,
+    DecisionRecordsModule,
   ],
   controllers: [HealthController],
 })
