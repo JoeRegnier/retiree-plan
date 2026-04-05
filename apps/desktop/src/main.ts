@@ -80,6 +80,15 @@ function ensureDatabase(userDataDir: string): string {
   return dbFile;
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+// Prisma/SQLite expect forward-slash paths in the `file:` URI scheme.
+// On Windows, path.join produces backslashes; normalise them here so that
+// DATABASE_URL is always a valid SQLite file URI on every platform.
+function toDbUrl(filePath: string): string {
+  return `file:${filePath.replace(/\\/g, '/')}`;
+}
+
 // ── Wait for API readiness ─────────────────────────────────────────────────────
 
 function waitForApi(url: string, timeoutMs = 30_000): Promise<void> {
@@ -110,12 +119,25 @@ function waitForApi(url: string, timeoutMs = 30_000): Promise<void> {
 //   Node ABI – the build script handles this via @electron/rebuild.
 
 function spawnApi(env: NodeJS.ProcessEnv): void {
+  // In production there is no visible console (especially on Windows), so
+  // redirect the API's stdout/stderr to a log file so users can share it
+  // when diagnosing startup failures.
+  let stdio: 'inherit' | [number, number, number, 'ipc'] = 'inherit';
+  if (!isDev) {
+    try {
+      const logDir = app.getPath('logs');
+      fs.mkdirSync(logDir, { recursive: true });
+      const logFd = fs.openSync(path.join(logDir, 'api.log'), 'w');
+      stdio = [0 as unknown as number, logFd, logFd, 'ipc'];
+    } catch {
+      // If we can't open a log file, fall back to inherit so the app still starts.
+    }
+  }
+
   apiProcess = fork(API_ENTRY, [], {
     execPath: process.execPath,
     env,
-    // Keep stdio in parent process so console.log from nest is visible when
-    // debugging; switch to 'pipe' if you want to suppress API logs.
-    stdio: 'inherit',
+    stdio,
   });
 
   apiProcess.on('exit', (code) =>
@@ -339,7 +361,7 @@ app.whenReady().then(async () => {
         ...process.env,
         NODE_ENV: 'production',
         PORT,
-        DATABASE_URL: `file:${dbPath}`,
+        DATABASE_URL: toDbUrl(dbPath),
         JWT_SECRET: secrets.jwtSecret,
         TOKEN_ENCRYPTION_KEY: secrets.tokenEncryptionKey,
         CORS_ORIGIN: `http://localhost:${PORT}`,
@@ -490,7 +512,7 @@ app.whenReady().then(async () => {
     ...process.env,
     NODE_ENV: 'production',
     PORT,
-    DATABASE_URL: `file:${dbFile}`,
+    DATABASE_URL: toDbUrl(dbFile),
     JWT_SECRET: secrets.jwtSecret,
     TOKEN_ENCRYPTION_KEY: secrets.tokenEncryptionKey,
     // Lock CORS to our own window origin – no wildcard in production.
@@ -505,9 +527,13 @@ app.whenReady().then(async () => {
   try {
     await waitForApi(`http://localhost:${PORT}/api/health`);
   } catch (err) {
+    const logPath = (() => {
+      try { return path.join(app.getPath('logs'), 'api.log'); } catch { return ''; }
+    })();
     dialog.showErrorBox(
       'Startup Error',
-      `Could not start the application server.\n\n${String(err)}`,
+      `Could not start the application server.\n\n${String(err)}` +
+        (logPath ? `\n\nDiagnostic log: ${logPath}` : ''),
     );
     app.quit();
     return;

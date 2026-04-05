@@ -179,7 +179,11 @@ jobs:
         shell: bash
         run: |
           rm -f apps/desktop/resources/template.db
-          DATABASE_URL="file:$(pwd)/apps/desktop/resources/template.db" \
+          # Use Node to resolve an absolute path with forward slashes so that
+          # the file: URI is valid on all platforms (Windows Git Bash emits
+          # POSIX-style paths like /d/a/... which SQLite cannot parse).
+          TEMPLATE_ABS=$(node -e "const p=require('path').resolve('apps/desktop/resources/template.db'); process.stdout.write(p.replace(/\\\\/g,'/'))")
+          DATABASE_URL="file:$TEMPLATE_ABS" \
             npx prisma db push \
               --schema=prisma/schema.prisma \
               --accept-data-loss
