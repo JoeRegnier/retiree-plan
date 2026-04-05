@@ -43,7 +43,7 @@ import { ScheduleModule } from '@nestjs/schedule';
           }),
         ]
       : []),
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
     ScheduleModule.forRoot(),
     PrismaModule,
     DatabaseModule,
