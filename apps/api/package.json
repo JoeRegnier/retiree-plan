@@ -45,7 +45,7 @@
   "optionalDependencies": {
     "@libsql/darwin-arm64": "0.5.28",
     "@libsql/darwin-x64": "0.5.28",
-    "@libsql/linux-x64-gnu": "0.5.28",
+    "@libsql/linux-x64-gnu": "0.5.29",
     "@libsql/linux-x64-musl": "0.5.28",
     "@libsql/linux-arm64-gnu": "0.5.28",
     "@libsql/linux-arm64-musl": "0.5.28",
