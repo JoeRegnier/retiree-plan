@@ -116,20 +116,24 @@ jobs:
             -m
 
       # ── Write server package.json for native deps ─────────────────────────
-      # @prisma/client is intentionally omitted here – it is copied directly
-      # from the root node_modules by the step below so we always embed the
-      # exact version that was used to generate the Prisma client, with all
-      # platform-specific runtime packages already present.  Installing it
-      # fresh via npm on Windows is unreliable (postinstall may fail or produce
-      # a different minor version from the lockfile).
+      # @prisma/client MUST be listed here so that electron-builder v26 includes
+      # it (and its full transitive dep tree: @libsql/client, libsql,
+      # @libsql/<platform>, async-mutex, detect-libc …) in the packaged
+      # app.  electron-builder prunes node_modules in extraResources against
+      # the source package.json — packages not in the dep tree are stripped.
+      # We let npm install the base @prisma/client package (which includes the
+      # platform-specific libsql native binding as an optional transitive dep).
+      # The generated .prisma/client/ (WASM query compiler) is NOT distributed
+      # via npm; we copy it from the root node_modules in the step below.
       - name: Write server package.json
         shell: bash
         run: |
           API_BCRYPT_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies.bcrypt)")
+          PRISMA_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies['@prisma/client'])")
           COPILOT_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies['@github/copilot-sdk'] || '')")
           node -e "
             const fs = require('fs');
-            const deps = { bcrypt: '$API_BCRYPT_VER' };
+            const deps = { bcrypt: '$API_BCRYPT_VER', '@prisma/client': '$PRISMA_VER' };
             if ('$COPILOT_VER') deps['@github/copilot-sdk'] = '$COPILOT_VER';
             const pkg = { name: 'retiree-plan-server', version: '$RELEASE_VERSION', private: true, dependencies: deps };
             fs.writeFileSync('apps/desktop/resources/server/package.json', JSON.stringify(pkg, null, 2));
@@ -147,33 +151,26 @@ jobs:
         env:
           DATABASE_URL: "file:/tmp/dummy-build.db"
 
-      # Copy Prisma client and all runtime deps into the server bundle.
-      # Uses Node.js fs.cpSync (rmSync first) instead of shell cp -r.
-      # Rationale: `cp -r src dest` when `dest` already exists copies src
-      # INTO dest (GNU cp behaviour), producing wrong nesting.  Node's cpSync
-      # always writes to the exact destination path, regardless of whether it
-      # exists.  The full list covers @prisma/*, .prisma (generated client),
-      # libsql + @libsql/* (SQLite native bindings used by Prisma 7), and the
-      # small utility packages those bindings depend on at runtime.
-      - name: Copy Prisma client and libsql into server bundle
+      # Copy the generated .prisma/client/ into the server bundle.
+      # .prisma/client/ is the schema-specific generated client created by
+      # `prisma generate`.  It is NOT distributed via npm (npm only ships the
+      # base @prisma/client shell which re-exports from .prisma/client/).
+      # electron-builder includes .prisma/ because it is a dot-prefixed
+      # directory (not subject to npm dep-tree pruning).
+      # We do NOT copy @prisma/client, @libsql/*, libsql, etc. here — those
+      # are installed by npm in the step above and electron-builder includes
+      # them via the @prisma/client dep tree.
+      - name: Copy generated Prisma client into server bundle
         shell: bash
         run: |
           node -e "
             const fs = require('fs'), path = require('path');
-            const root = 'node_modules';
-            const dst  = 'apps/desktop/resources/server/node_modules';
-            const pkgs = [
-              '.prisma', '@prisma', '@libsql', 'libsql',
-              '@neon-rs', 'async-mutex', 'detect-libc', 'js-base64', 'promise-limit'
-            ];
-            for (const p of pkgs) {
-              const s = path.join(root, p);
-              const d = path.join(dst,  p);
-              if (!fs.existsSync(s)) { console.log('skip (not found):', p); continue; }
-              fs.rmSync(d, { recursive: true, force: true });
-              fs.cpSync(s, d, { recursive: true });
-              console.log('copied:', p);
-            }
+            const src = path.join('node_modules', '.prisma');
+            const dst = path.join('apps/desktop/resources/server/node_modules', '.prisma');
+            if (!fs.existsSync(src)) { console.error('.prisma not found in root node_modules — did prisma generate run?'); process.exit(1); }
+            fs.rmSync(dst, { recursive: true, force: true });
+            fs.cpSync(src, dst, { recursive: true });
+            console.log('copied .prisma/client to server bundle');
           "
 
       # ── Rebuild native modules for Electron's Node ABI ───────────────────
