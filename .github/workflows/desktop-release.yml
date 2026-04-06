@@ -141,9 +141,14 @@ jobs:
           "
 
       # ── Install native modules into server bundle ─────────────────────────
+      # Do NOT pass --no-package-lock here.  electron-builder v26 uses
+      # node_modules/.package-lock.json (written by npm v7+) to identify which
+      # packages are in the dep tree and therefore safe to copy into the
+      # installer.  Without it, electron-builder copies nothing from
+      # resources/server/node_modules and the packaged app has no node_modules.
       - name: Install server native deps
         working-directory: apps/desktop/resources/server
-        run: npm install --production --no-package-lock
+        run: npm install --omit=dev
 
       # ── Generate Prisma client for this platform ──────────────────────────
       - name: Prisma generate
@@ -153,13 +158,10 @@ jobs:
 
       # Copy the generated .prisma/client/ into the server bundle.
       # .prisma/client/ is the schema-specific generated client created by
-      # `prisma generate`.  It is NOT distributed via npm (npm only ships the
-      # base @prisma/client shell which re-exports from .prisma/client/).
-      # electron-builder includes .prisma/ because it is a dot-prefixed
-      # directory (not subject to npm dep-tree pruning).
-      # We do NOT copy @prisma/client, @libsql/*, libsql, etc. here — those
-      # are installed by npm in the step above and electron-builder includes
-      # them via the @prisma/client dep tree.
+      # `prisma generate`.  It is NOT an npm package (not in package-lock.json)
+      # so electron-builder's smart-copy won't include it automatically.
+      # We copy it explicitly so it sits in the same node_modules/ tree that
+      # the rest of the packages are copied from.
       - name: Copy generated Prisma client into server bundle
         shell: bash
         run: |
