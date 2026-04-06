@@ -218,13 +218,10 @@ jobs:
             --module-dir resources/server
 
       # ── Remove server package.json before packaging ────────────────────────
-      # electron-builder v26: when a package.json is present in an extraResources
-      # source directory it applies "smart node_modules copy" — only packages in
-      # the declared dep tree are copied.  This excludes .prisma/client/ (the
-      # generated WASM query compiler) because it is not a declared npm dep.
-      # Removing package.json forces electron-builder to do a literal file copy
-      # governed only by the filter patterns, so the full node_modules tree
-      # (including .prisma/) is written into the installer.
+      # Removing package.json + package-lock.json keeps the installer clean.
+      # node_modules is copied into the packaged app by the afterPack hook
+      # (scripts/afterPack.js) because electron-builder's extraResources
+      # hardcodes a filter that skips top-level node_modules directories.
       # NOTE: must come AFTER Rebuild native modules (electron-rebuild needs
       # package.json to locate native modules).
       - name: Remove server package.json before packaging
