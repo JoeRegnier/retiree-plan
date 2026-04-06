@@ -16,7 +16,9 @@ extraResources:
   - from: resources/server
     to: server
     filter:
-      - "**/*"
+      - "**/*"        # all non-hidden files and directories
+      - "**/.*/**"    # files inside hidden directories (e.g. .prisma/client/*)
+      - "!**/node_modules/.bin/**"  # skip .bin symlinks (platform-relative, not needed)
       - "!**/node_gyp_bins"
   - from: resources/web
     to: web
