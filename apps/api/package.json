@@ -15,7 +15,7 @@
     "db:push": "prisma db push"
   },
   "dependencies": {
-    "@github/copilot-sdk": "^0.2.0",
+    "@github/copilot-sdk": "^0.2.1",
     "@libsql/client": "^0.17.2",
     "@nestjs/common": "^11.1.16",
     "@nestjs/config": "^4.0.0",
