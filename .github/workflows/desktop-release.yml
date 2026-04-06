@@ -141,14 +141,44 @@ jobs:
           "
 
       # ── Install native modules into server bundle ─────────────────────────
-      # Do NOT pass --no-package-lock here.  electron-builder v26 uses
-      # node_modules/.package-lock.json (written by npm v7+) to identify which
-      # packages are in the dep tree and therefore safe to copy into the
-      # installer.  Without it, electron-builder copies nothing from
-      # resources/server/node_modules and the packaged app has no node_modules.
+      # IMPORTANT: Do NOT run npm install from within the monorepo.
+      # npm workspace detection traverses parent directories and finds the
+      # workspace root's package.json, causing packages to be hoisted to the
+      # workspace root node_modules instead of installed locally.
+      # The result: resources/server/node_modules/ is never created, so
+      # electron-builder has nothing to copy into the installer.
+      # Fix: use shell:node to run npm via child_process.execSync in an
+      # isolated temp directory completely outside the workspace tree.
       - name: Install server native deps
-        working-directory: apps/desktop/resources/server
-        run: npm install --omit=dev
+        shell: node {0}
+        run: |
+          const os = require('os'), path = require('path'), fs = require('fs');
+          const { execSync } = require('child_process');
+          // Temp dir outside the monorepo → npm has no workspace context
+          const tmp = path.join(os.tmpdir(), 'retiree-server-install');
+          if (fs.existsSync(tmp)) fs.rmSync(tmp, { recursive: true, force: true });
+          fs.mkdirSync(tmp, { recursive: true });
+          const pkg = JSON.parse(
+            fs.readFileSync(
+              path.join('apps', 'desktop', 'resources', 'server', 'package.json'),
+              'utf8'
+            )
+          );
+          fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify(pkg));
+          execSync('npm install --omit=dev --no-fund --no-audit', {
+            cwd: tmp,
+            stdio: 'inherit',
+          });
+          const src = path.join(tmp, 'node_modules');
+          const dst = path.join(
+            'apps', 'desktop', 'resources', 'server', 'node_modules'
+          );
+          if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
+          fs.cpSync(src, dst, { recursive: true });
+          console.log(
+            'server node_modules:',
+            fs.readdirSync(dst).join(', ')
+          );
 
       # ── Generate Prisma client for this platform ──────────────────────────
       - name: Prisma generate
@@ -174,6 +204,24 @@ jobs:
             fs.cpSync(src, dst, { recursive: true });
             console.log('copied .prisma/client to server bundle');
           "
+
+      # ── Remove server package.json before packaging ────────────────────────
+      # electron-builder v26: when a package.json is present in an extraResources
+      # source directory it applies "smart node_modules copy" — only packages in
+      # the declared dep tree are copied.  This excludes .prisma/client/ (the
+      # generated WASM query compiler) because it is not a declared npm dep.
+      # Removing package.json forces electron-builder to do a literal file copy
+      # governed only by the filter patterns, so the full node_modules tree
+      # (including .prisma/) is written into the installer.
+      - name: Remove server package.json before packaging
+        shell: bash
+        run: |
+          rm -f apps/desktop/resources/server/package.json
+          rm -f apps/desktop/resources/server/package-lock.json
+          echo "=== server dir after cleanup ==="
+          ls -la apps/desktop/resources/server/
+          echo "=== server/node_modules top-level ==="
+          ls apps/desktop/resources/server/node_modules/ 2>/dev/null || echo 'node_modules MISSING'
 
       # ── Rebuild native modules for Electron's Node ABI ───────────────────
       - name: Rebuild native modules for Electron
