@@ -205,6 +205,18 @@ jobs:
             console.log('copied .prisma/client to server bundle');
           "
 
+      # ── Rebuild native modules for Electron's Node ABI ───────────────────
+      # electron-rebuild REQUIRES package.json to be present — do not delete it
+      # before this step.
+      - name: Rebuild native modules for Electron
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          ELECTRON_VER=$(node -e "process.stdout.write(require('../../node_modules/electron/package.json').version)")
+          npx @electron/rebuild \
+            --version "$ELECTRON_VER" \
+            --module-dir resources/server
+
       # ── Remove server package.json before packaging ────────────────────────
       # electron-builder v26: when a package.json is present in an extraResources
       # source directory it applies "smart node_modules copy" — only packages in
@@ -213,6 +225,8 @@ jobs:
       # Removing package.json forces electron-builder to do a literal file copy
       # governed only by the filter patterns, so the full node_modules tree
       # (including .prisma/) is written into the installer.
+      # NOTE: must come AFTER Rebuild native modules (electron-rebuild needs
+      # package.json to locate native modules).
       - name: Remove server package.json before packaging
         shell: bash
         run: |
@@ -222,16 +236,6 @@ jobs:
           ls -la apps/desktop/resources/server/
           echo "=== server/node_modules top-level ==="
           ls apps/desktop/resources/server/node_modules/ 2>/dev/null || echo 'node_modules MISSING'
-
-      # ── Rebuild native modules for Electron's Node ABI ───────────────────
-      - name: Rebuild native modules for Electron
-        working-directory: apps/desktop
-        shell: bash
-        run: |
-          ELECTRON_VER=$(node -e "process.stdout.write(require('../../node_modules/electron/package.json').version)")
-          npx @electron/rebuild \
-            --version "$ELECTRON_VER" \
-            --module-dir resources/server
 
       # ── Copy React build ──────────────────────────────────────────────────
       - name: Copy web build
