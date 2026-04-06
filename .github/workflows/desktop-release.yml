@@ -112,17 +112,17 @@ jobs:
             --out apps/desktop/resources/server \
             --external bcrypt \
             --external @prisma/client \
+            --external @prisma/adapter-libsql \
             --external @github/copilot-sdk \
             -m
 
       # ── Write server package.json for native deps ─────────────────────────
-      # @prisma/client MUST be listed here so that electron-builder v26 includes
-      # it (and its full transitive dep tree: @libsql/client, libsql,
-      # @libsql/<platform>, async-mutex, detect-libc …) in the packaged
-      # app.  electron-builder prunes node_modules in extraResources against
-      # the source package.json — packages not in the dep tree are stripped.
-      # We let npm install the base @prisma/client package (which includes the
-      # platform-specific libsql native binding as an optional transitive dep).
+      # Lists the packages that ncc marks as --external so npm installs them
+      # into server/node_modules at the correct platform-native versions.
+      # @prisma/adapter-libsql MUST be external (not bundled by ncc) because
+      # its @libsql/client dep loads a platform-specific native binary
+      # (@libsql/win32-x64-msvc, @libsql/linux-x64-gnu, etc.) that must be
+      # resolved from node_modules at runtime, not from a build-time bundle.
       # The generated .prisma/client/ (WASM query compiler) is NOT distributed
       # via npm; we copy it from the root node_modules in the step below.
       - name: Write server package.json
@@ -130,10 +130,11 @@ jobs:
         run: |
           API_BCRYPT_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies.bcrypt)")
           PRISMA_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies['@prisma/client'])")
+          ADAPTER_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies['@prisma/adapter-libsql'] || '')")
           COPILOT_VER=$(node -e "process.stdout.write(require('./apps/api/package.json').dependencies['@github/copilot-sdk'] || '')")
           node -e "
             const fs = require('fs');
-            const deps = { bcrypt: '$API_BCRYPT_VER', '@prisma/client': '$PRISMA_VER' };
+            const deps = { bcrypt: '$API_BCRYPT_VER', '@prisma/client': '$PRISMA_VER', '@prisma/adapter-libsql': '$ADAPTER_VER' };
             if ('$COPILOT_VER') deps['@github/copilot-sdk'] = '$COPILOT_VER';
             const pkg = { name: 'retiree-plan-server', version: '$RELEASE_VERSION', private: true, dependencies: deps };
             fs.writeFileSync('apps/desktop/resources/server/package.json', JSON.stringify(pkg, null, 2));
