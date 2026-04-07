@@ -32,6 +32,7 @@ model Household {
   expenses              Expense[]
   milestoneEvents       MilestoneEvent[]
   ynabCategoryMappings  YnabCategoryMapping[]
+  decisionRecords       DecisionRecord[]
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 }
@@ -247,6 +248,51 @@ model BrokerageConnection {
   updatedAt    DateTime  @updatedAt
 
   @@unique([userId, provider])
+}
+
+// ─── Decision Journal ────────────────────────────────────────────────────────
+
+/// A recorded financial decision following the ADR (Architectural Decision Record) pattern.
+/// status: 'PROPOSED' | 'DECIDED' | 'SUPERSEDED' | 'DEPRECATED' | 'REJECTED'
+/// category: 'WITHDRAWAL_STRATEGY' | 'ASSET_ALLOCATION' | 'TAX_PLANNING' |
+///           'CPP_OAS_TIMING' | 'HOUSING' | 'ESTATE' | 'INCOME' | 'INSURANCE' | 'GENERAL'
+model DecisionRecord {
+  id          String    @id @default(cuid())
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  title        String
+  status       String    @default("PROPOSED")
+  context      String
+  decision     String?
+  rationale    String?
+  /// JSON: AlternativeOption[] { title, description, whyRejected? }
+  alternatives String?
+  consequences String?
+
+  category String  @default("GENERAL")
+  /// JSON: string[]
+  tags     String?
+
+  decisionDate DateTime?
+  reviewDate   DateTime?
+
+  // Supersession chain — one record supersedes at most one other record
+  supersededById String?
+  supersededBy   DecisionRecord?  @relation("Supersession", fields: [supersededById], references: [id])
+  supersedes     DecisionRecord[] @relation("Supersession")
+
+  /// JSON: string[] — cuid IDs of linked Scenario records
+  linkedScenarioIds String?
+  /// JSON: string[] — cuid IDs of linked Goal records
+  linkedGoalIds     String?
+
+  // Mind-map edges — implicit M2M self-relation
+  relatedTo   DecisionRecord[] @relation("DecisionRelations")
+  relatedFrom DecisionRecord[] @relation("DecisionRelations")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─── Phase 5: AI Chat ────────────────────────────────────────────────────────

@@ -25,6 +25,7 @@ const IntegrationsPage   = lazy(() => import('./pages/IntegrationsPage').then((m
 const AiChatPage         = lazy(() => import('./pages/AiChatPage').then((m) => ({ default: m.AiChatPage })));
 const InternationalPage  = lazy(() => import('./pages/InternationalPage').then((m) => ({ default: m.InternationalPage })));
 const GoalsPage = lazy(() => import('./pages/GoalsPage').then((m) => ({ default: m.GoalsPage })));
+const DecisionJournalPage = lazy(() => import('./pages/DecisionJournalPage').then((m) => ({ default: m.DecisionJournalPage })));
 
 function PageSpinner() {
   return (
@@ -55,6 +56,7 @@ export function App() {
               <Route path="/accounts" element={<AccountsPage />} />
               <Route path="/milestones" element={<MilestonesPage />} />
               <Route path="/goals" element={<GoalsPage />} />
+              <Route path="/decisions" element={<DecisionJournalPage />} />
               <Route path="/scenarios" element={<ScenariosPage />} />
               <Route path="/projections" element={<ProjectionsPage />} />
               <Route path="/simulations" element={<SimulationsPage />} />
