@@ -27,6 +27,7 @@ import * as d3 from 'd3';
 import { calculatePlanCompleteness } from '@retiree-plan/finance-engine';
 import { ReadinessGauge } from '../components/charts/ReadinessGauge';
 import { AssumptionsAuditDialog } from '../components/AssumptionsAuditDialog';
+import { DecisionReviewCard } from '../components/dashboard/DecisionReviewCard';
 import { useApi } from '../hooks/useApi';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -1483,6 +1484,15 @@ export function DashboardPage() {
             ))}
           </Grid>
         </Box>
+      )}
+
+      {/* Quick navigation tiles */}
+      {hh && (
+        <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <DecisionReviewCard householdId={hh?.id} />
+          </Grid>
+        </Grid>
       )}
 
       {/* Quick navigation tiles */}
