@@ -40,8 +40,7 @@ const PAGES: Array<{ route: string; filename: string; waitFor?: string; note?: s
   { route: '/goals',         filename: '13-goals.png',           waitFor: 'text=Goals' },
   { route: '/ai-chat',       filename: '14-ai-chat.png',         waitFor: 'text=AI' },
   { route: '/integrations',  filename: '15-integrations.png',    waitFor: 'text=Integrations' },
-  { route: '/settings',      filename: '16-settings.png',        waitFor: 'text=Settings' },
-];
+  { route: '/settings',      filename: '16-settings.png',        waitFor: 'text=Settings' },  { route: '/decisions',     filename: '17-decisions.png',     waitFor: 'text=Decision Journal' },];
 
 async function login(page: Page) {
   await page.goto(`${BASE_URL}/login`);
@@ -78,6 +77,10 @@ async function screenshot(page: Page, route: string, filename: string, waitFor?:
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 2, // retina quality
+  });
+  // Suppress the onboarding wizard and any first-run dialogs globally
+  await context.addInitScript(() => {
+    localStorage.setItem('rp_onboarded', 'true');
   });
   const page = await context.newPage();
 
