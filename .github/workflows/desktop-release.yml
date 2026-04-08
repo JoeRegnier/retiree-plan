@@ -345,12 +345,27 @@ jobs:
           path: artifacts
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Retiree Plan ${{ steps.release_version.outputs.value }}
-          files: artifacts/**/*
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
-          generate_release_notes: true
+        shell: bash
+        run: |
+          VERSION="${{ steps.release_version.outputs.value }}"
+          TAG="v${VERSION}"
+          PRERELEASE=""
+          if [[ "$TAG" == *"-"* ]]; then PRERELEASE="--prerelease"; fi
+
+          # Delete any existing release for this tag so this step is idempotent
+          # (avoids "target_commitish cannot be changed when release is immutable").
+          gh release delete "$TAG" --yes 2>/dev/null || echo "No existing release to delete."
+
+          # Gather all artifact files
+          mapfile -t FILES < <(find artifacts -type f -not -name '.*')
+          echo "Uploading ${#FILES[@]} file(s) to release $TAG:"
+          printf '  %s\n' "${FILES[@]}"
+
+          gh release create "$TAG" \
+            --title "Retiree Plan ${VERSION}" \
+            --generate-notes \
+            --verify-tag \
+            $PRERELEASE \
+            "${FILES[@]}"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
