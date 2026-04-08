@@ -352,9 +352,11 @@ jobs:
           PRERELEASE=""
           if [[ "$TAG" == *"-"* ]]; then PRERELEASE="--prerelease"; fi
 
+          REPO="${{ github.repository }}"
+
           # Delete any existing release for this tag so this step is idempotent
           # (avoids "target_commitish cannot be changed when release is immutable").
-          gh release delete "$TAG" --yes 2>/dev/null || echo "No existing release to delete."
+          gh release delete "$TAG" --repo "$REPO" --yes 2>/dev/null || echo "No existing release to delete."
 
           # Gather all artifact files
           mapfile -t FILES < <(find artifacts -type f -not -name '.*')
@@ -362,6 +364,7 @@ jobs:
           printf '  %s\n' "${FILES[@]}"
 
           gh release create "$TAG" \
+            --repo "$REPO" \
             --title "Retiree Plan ${VERSION}" \
             --generate-notes \
             $PRERELEASE \
