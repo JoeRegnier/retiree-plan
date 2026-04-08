@@ -107,9 +107,9 @@ async function screenshot(page: Page, route: string, filename: string, waitFor?:
   // Click the mind-map toggle button (AccountTreeIcon tooltip = "Mind Map")
   await page.click('[aria-label="Mind Map"], button:has(svg[data-testid="AccountTreeIcon"]), [value="mindmap"]');
   await page.waitForTimeout(2000); // allow D3 simulation to settle
-  const mindMapDest = path.join(OUT_DIR, '17b-decisions-mindmap.png');
+  const mindMapDest = path.join(OUT_DIR, '18-decision-mindmap.png');
   await page.screenshot({ path: mindMapDest, fullPage: true });
-  console.log('  ✓ 17b-decisions-mindmap.png');
+  console.log('  ✓ 18-decision-mindmap.png');
 
   await browser.close();
 
