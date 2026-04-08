@@ -40,7 +40,8 @@ const PAGES: Array<{ route: string; filename: string; waitFor?: string; note?: s
   { route: '/goals',         filename: '13-goals.png',           waitFor: 'text=Goals' },
   { route: '/ai-chat',       filename: '14-ai-chat.png',         waitFor: 'text=AI' },
   { route: '/integrations',  filename: '15-integrations.png',    waitFor: 'text=Integrations' },
-  { route: '/settings',      filename: '16-settings.png',        waitFor: 'text=Settings' },  { route: '/decisions',     filename: '17-decisions.png',     waitFor: 'text=Decision Journal' },];
+  { route: '/settings',      filename: '16-settings.png',        waitFor: 'text=Settings' },  { route: '/decisions',     filename: '17-decisions.png',     waitFor: 'text=Decision Journal' },
+];
 
 async function login(page: Page) {
   await page.goto(`${BASE_URL}/login`);
@@ -97,6 +98,18 @@ async function screenshot(page: Page, route: string, filename: string, waitFor?:
   for (const { route, filename, waitFor } of PAGES.slice(1)) {
     await screenshot(page, route, filename, waitFor);
   }
+
+  // ── Extra: Decision Mind Map view ─────────────────────────────────────────
+  // Navigate to decisions page, switch to mind-map mode, then screenshot.
+  console.log('\nCapturing decision mind map…');
+  await page.goto(`${BASE_URL}/decisions`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('text=Decision Journal', { timeout: 10_000 });
+  // Click the mind-map toggle button (AccountTreeIcon tooltip = "Mind Map")
+  await page.click('[aria-label="Mind Map"], button:has(svg[data-testid="AccountTreeIcon"]), [value="mindmap"]');
+  await page.waitForTimeout(2000); // allow D3 simulation to settle
+  const mindMapDest = path.join(OUT_DIR, '18-decision-mindmap.png');
+  await page.screenshot({ path: mindMapDest, fullPage: true });
+  console.log('  ✓ 18-decision-mindmap.png');
 
   await browser.close();
 

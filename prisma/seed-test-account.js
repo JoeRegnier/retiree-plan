@@ -62,6 +62,15 @@ const IDS = {
   milRrspConv: 'seed-mil-003',
   milMortgage: 'seed-mil-004',
   milInherit:  'seed-mil-005',
+  // decisions
+  decCppDefer:        'seed-dec-001',
+  decRrspMeltdown:    'seed-dec-002',
+  decWithdrawalOrder: 'seed-dec-003',
+  decAssetAlloc:      'seed-dec-004',
+  decSarahCpp:        'seed-dec-005',
+  decDownsize:        'seed-dec-006',
+  decEstate:          'seed-dec-007',
+  decInsurance:       'seed-dec-008',
 };
 
 async function main() {
@@ -225,6 +234,203 @@ async function main() {
   console.log(`  Expenses:   ${expenses.length} categories, $${(expenses.reduce((s, e) => s + e.annualAmount, 0)).toLocaleString()}/yr`);
   console.log(`  Scenarios:  ${scenarios.length} (Base Case, Early Retirement, Conservative)`);
   console.log(`  Milestones: ${milestones.length} events`);
+
+  // ── 10. Decision Records ────────────────────────────────────────────────────
+  // Create all records first (without cross-references), then wire up relatedTo.
+  const decisions = [
+    {
+      id:           IDS.decCppDefer,
+      householdId:  IDS.household,
+      title:        'Defer CPP to Age 70',
+      status:       'DECIDED',
+      category:     'CPP_OAS_TIMING',
+      context:      'David is 58 and approaching the CPP eligibility window. CPP can be started as early as 60 (reduced) or deferred past 65 to increase the benefit by 8.4% per year. With a projected portfolio of ~$1M and both spouses still earning income, there is no cash-flow pressure to claim early.',
+      decision:     'Defer David\'s CPP to age 70 to maximize the lifetime monthly benefit.',
+      rationale:    'The CPP break-even vs age 65 is approximately age 81. Based on family health history and the longevity assumptions in our base-case scenario (age 92), deferring is strongly favoured. With RRSP, TFSA, and non-registered assets available for bridge income, deferring CPP is feasible without lifestyle compromise.',
+      alternatives: JSON.stringify([
+        { title: 'Start CPP at 60',   description: 'Receive a reduced benefit (36% less than age 65 amount) immediately.', whyRejected: 'Lowers lifetime income substantially; break-even vs age 65 is only age 72.' },
+        { title: 'Start CPP at 65',  description: 'Standard start age with no adjustment.', whyRejected: 'Leaves the 42% enhancement from deferring to 70 on the table.' },
+      ]),
+      consequences: 'Will need bridge income from RRSP withdrawals or non-registered accounts between ages 65–70. CPP income at 70 will be approximately $20,000/yr (indexed), reducing portfolio draw-down rate significantly.',
+      tags:         JSON.stringify(['cpp', 'government-benefits', 'longevity', 'bridge-income']),
+      decisionDate: new Date('2025-11-15'),
+      reviewDate:   new Date('2027-04-01'),
+      linkedScenarioIds: JSON.stringify([IDS.scenBase, IDS.scenConservative]),
+    },
+    {
+      id:           IDS.decRrspMeltdown,
+      householdId:  IDS.household,
+      title:        'RRSP Meltdown Strategy (Ages 65–71)',
+      status:       'DECIDED',
+      category:     'TAX_PLANNING',
+      context:      'David\'s RRSP balance is $425K and growing. At age 71 the RRSP must be converted to a RRIF with mandatory minimum withdrawals that will likely push income into higher tax brackets. By deliberately drawing down the RRSP between ages 65 and 71 — while employment income has stopped — we can fill lower tax brackets and reduce the future RRIF impact.',
+      decision:     'Execute a structured RRSP meltdown by withdrawing $40,000–$50,000 per year from age 65 to 71, staying within the second federal bracket.',
+      rationale:    'Ontario tax modelling shows marginal rates jump significantly once RRIF minimum withdrawals kick in alongside CPP and OAS at 70. Melting the RRSP early reduces OAS clawback risk and overall lifetime tax payable by an estimated $28,000–$45,000 in present value.',
+      alternatives: JSON.stringify([
+        { title: 'No meltdown — let RRIF minimums dictate withdrawals', description: 'Simpler to manage.', whyRejected: 'Results in forced high withdrawals at 71+ pushing income into 33%+ marginal bracket and triggering partial OAS clawback.' },
+        { title: 'Accelerate meltdown before 65', description: 'Begin withdrawals while still employed.', whyRejected: 'Employment income at $120K would stack with RRSP withdrawals, making marginal rates unfavourable.' },
+      ]),
+      consequences: 'RRSP balance reduced to an estimated $150K–$200K by RRIF conversion at 71. TFSA contributions should run in parallel to shelter the withdrawn amounts from future growth taxation.',
+      tags:         JSON.stringify(['rrsp', 'rrif', 'meltdown', 'tax-planning', 'bracket-management']),
+      decisionDate: new Date('2025-11-20'),
+      reviewDate:   new Date('2026-11-01'),
+      linkedScenarioIds: JSON.stringify([IDS.scenBase]),
+    },
+    {
+      id:           IDS.decWithdrawalOrder,
+      householdId:  IDS.household,
+      title:        'Establish Tax-Efficient Withdrawal Order',
+      status:       'DECIDED',
+      category:     'WITHDRAWAL_STRATEGY',
+      context:      'Smith family holds $215K in a joint non-registered account, $610K combined RRSP, and $174.5K combined TFSA. The order in which accounts are drawn down has material tax consequences over a 25-year retirement.',
+      decision:     'Follow a three-phase withdrawal order: (1) Non-registered first to crystalize capital gains at low rates and reduce future ACB complexity. (2) RRSP/RRIF to fill lower tax brackets. (3) TFSA last as the tax-free growth reservoir for late-stage retirement and estate transfer.',
+      rationale:    'This order minimises lifetime taxes by: reducing RRSP/RRIF balance via meltdown strategy, using non-reg to take advantage of the 50% capital gains inclusion, and preserving TFSA for tax-free legacy or late-life care costs.',
+      alternatives: JSON.stringify([
+        { title: 'RRSP first', description: 'Draw RRSP down before non-registered assets.', whyRejected: 'Wastes low-bracket capacity earlier and grows non-reg assets that generate ongoing taxable investment income.' },
+        { title: 'TFSA first', description: 'Use TFSA as the primary spending account.', whyRejected: 'Sacrifices future tax-free compounding unnecessarily while RRSP balance continues to grow.' },
+      ]),
+      consequences: 'Requires annual tax modelling to recalibrate withdrawal amounts. Coordinated with RRSP meltdown strategy and TFSA maximization.',
+      tags:         JSON.stringify(['withdrawal-order', 'tfsa', 'non-registered', 'tax-efficiency']),
+      decisionDate: new Date('2025-12-01'),
+      reviewDate:   new Date('2026-12-01'),
+      linkedScenarioIds: JSON.stringify([IDS.scenBase, IDS.scenEarly, IDS.scenConservative]),
+    },
+    {
+      id:           IDS.decAssetAlloc,
+      householdId:  IDS.household,
+      title:        'Glide to 60/40 Portfolio at Retirement',
+      status:       'DECIDED',
+      category:     'ASSET_ALLOCATION',
+      context:      'Currently holding approximately 75% equities / 25% bonds across all accounts at age 58. A life-cycle approach suggests de-risking toward retirement. The chosen base scenario already uses 60/40; this decision locks in the transition schedule.',
+      decision:     'Shift from 75/25 to 60/40 equities/bonds over the 7 years to David\'s retirement at 65, reducing equity by ~2.1 percentage points per year.',
+      rationale:    'Monte Carlo simulations show the 60/40 split still achieves a 91% success rate to age 92 while significantly reducing the worst-case drawdown in early retirement (sequence-of-returns risk). The conservative scenario models 40/60 as a stress test.',
+      alternatives: JSON.stringify([
+        { title: 'Maintain 75/25 through retirement', description: 'Higher expected return, more volatile.', whyRejected: 'Sequence-of-returns risk is too high in years 1–5 of retirement when the portfolio is at peak value.' },
+        { title: 'Target 50/50 at retirement', description: 'More conservative.', whyRejected: 'Monte Carlo success rate drops to 84% — below our 90% threshold — due to insufficient real growth.' },
+      ]),
+      consequences: 'Annual rebalancing required. Tax-efficient rebalancing by directing new contributions toward bonds in RRSP where bond income is sheltered.',
+      tags:         JSON.stringify(['asset-allocation', 'glide-path', 'rebalancing', 'sequence-risk']),
+      decisionDate: new Date('2025-12-01'),
+      reviewDate:   new Date('2027-01-01'),
+      linkedScenarioIds: JSON.stringify([IDS.scenBase, IDS.scenConservative]),
+    },
+    {
+      id:           IDS.decSarahCpp,
+      householdId:  IDS.household,
+      title:        'Determine Sarah\'s CPP Start Age',
+      status:       'PROPOSED',
+      category:     'CPP_OAS_TIMING',
+      context:      'Sarah (age 55) will stop part-time work at 62. Her CPP entitlement is lower than David\'s due to part-time contributions. This decision needs to be finalized before age 60 but can be revisited annually. Spousal income-splitting and pension credit strategies interact with this choice.',
+      decision:     null,
+      rationale:    null,
+      alternatives: JSON.stringify([
+        { title: 'Start CPP at 60 (reduced)',   description: 'Provides income immediately after stopping work at 62.' },
+        { title: 'Start CPP at 65 (standard)', description: 'Standard amount with no adjustment.' },
+        { title: 'Defer CPP to 70 (enhanced)',  description: 'Same strategy as David — 42% higher monthly benefit.' },
+      ]),
+      consequences: 'Affects whether bridge income is needed at 62–65 and how much income-splitting opportunity exists at that stage.',
+      tags:         JSON.stringify(['cpp', 'sarah', 'spousal', 'income-splitting']),
+      decisionDate: null,
+      reviewDate:   new Date('2026-09-01'),
+      linkedScenarioIds: JSON.stringify([IDS.scenBase]),
+    },
+    {
+      id:           IDS.decDownsize,
+      householdId:  IDS.household,
+      title:        'Consider Downsizing Primary Residence at Age 68',
+      status:       'PROPOSED',
+      category:     'HOUSING',
+      context:      'The Smiths\' primary residence in Ontario is estimated at $950K. Maintaining a large home on retirement income involves property tax (~$8K/yr), insurance ($3K/yr), and maintenance (~$12K/yr). Downsizing at age 68 to a $500K condo could free up ~$450K of equity (principal-residence-exempt) for investment.',
+      decision:     null,
+      rationale:    null,
+      alternatives: JSON.stringify([
+        { title: 'Stay in current home indefinitely', description: 'Preserves lifestyle and familiar community.' },
+        { title: 'Downsize at 68 to smaller house/condo', description: 'Frees $400–500K of equity, reduces ongoing costs ~$15K/yr.' },
+        { title: 'Rent out portion of home', description: 'Generates rental income but adds complexity and loss of principal residence designation on rented portion.' },
+      ]),
+      consequences: 'A $450K equity release invested at 60/40 could generate an additional $18K–$22K/yr of spending capacity. Reduces estate value by approximately the same amount.',
+      tags:         JSON.stringify(['housing', 'downsizing', 'equity-release', 'estate']),
+      decisionDate: null,
+      reviewDate:   new Date('2027-06-01'),
+      linkedScenarioIds: null,
+    },
+    {
+      id:           IDS.decEstate,
+      householdId:  IDS.household,
+      title:        'Update Will & Beneficiary Designations',
+      status:       'PROPOSED',
+      category:     'ESTATE',
+      context:      'The Smiths\' wills were last updated in 2015, before significant RRSP and TFSA accumulation. With a combined registered asset base of ~$785K, improper beneficiary designations could result in the entire RRSP being included as income on the year of death, generating a substantial tax liability for the estate. Both spouses should be named as successor subscribers on TFSAs.',
+      decision:     null,
+      rationale:    null,
+      alternatives: JSON.stringify([
+        { title: 'Update wills and beneficiary designations now', description: 'Immediate action to protect estate from unnecessary tax.' },
+        { title: 'Defer until retirement', description: 'Risk remaining in the meantime.' },
+      ]),
+      consequences: 'Naming spouse as beneficiary on RRSP defers income inclusion until survivor\'s death. TFSA successor subscriber avoids probate and immediate withdrawal. Estimated tax saving of $80K–$120K for estate.',
+      tags:         JSON.stringify(['estate', 'will', 'beneficiary', 'rrsp', 'tfsa', 'probate']),
+      decisionDate: null,
+      reviewDate:   new Date('2026-06-01'),
+      linkedScenarioIds: null,
+    },
+    {
+      id:           IDS.decInsurance,
+      householdId:  IDS.household,
+      title:        'Cancel Term Life Insurance at Retirement',
+      status:       'DECIDED',
+      category:     'INSURANCE',
+      context:      'David holds a 20-year term life policy ($750K coverage, $2,800/yr premium) expiring at age 68. Sarah holds a 15-year term ($450K, $1,600/yr) expiring at age 63. By the time these policies expire, the mortgage will be paid off (age 63 per milestones), both children will be financially independent, and the portfolio will be fully self-sustaining.',
+      decision:     'Allow both term life policies to lapse at natural expiry. Do not renew or convert to permanent insurance.',
+      rationale:    'The primary need for life insurance — income replacement and mortgage coverage — disappears at retirement. The portfolio size at that point ($900K+ projected) is self-insuring. Permanent insurance premiums would be prohibitive and offer poor ROI vs investing the premiums.',
+      alternatives: JSON.stringify([
+        { title: 'Convert David\'s term to whole life at expiry (age 68)', description: 'Guarantees death benefit for estate.', whyRejected: 'Estimated premium $12K–$18K/yr for equivalent coverage; provides marginal estate benefit given the projected portfolio size.' },
+        { title: 'Purchase critical illness rider instead', description: 'Targeted protection against major illness costs.', whyRejected: 'Long-term care reserve within TFSA is a more tax-efficient vehicle for this risk.' },
+      ]),
+      consequences: 'Annual premium savings of $4,400/yr from age 63. Redirected to TFSA contributions.',
+      tags:         JSON.stringify(['insurance', 'term-life', 'premium-savings', 'retirement']),
+      decisionDate: new Date('2026-01-10'),
+      reviewDate:   new Date('2028-01-01'),
+      linkedScenarioIds: null,
+    },
+  ];
+
+  for (const dec of decisions) {
+    await prisma.decisionRecord.create({ data: dec });
+  }
+
+  // ── 10b. Wire up mind-map relations ────────────────────────────────────────
+  // CPP Defer ↔ RRSP Meltdown (deferring CPP creates need for RRSP bridge income)
+  await prisma.decisionRecord.update({
+    where: { id: IDS.decCppDefer },
+    data: { relatedTo: { connect: [{ id: IDS.decRrspMeltdown }] } },
+  });
+  // RRSP Meltdown ↔ Withdrawal Order (both are withdrawal strategy components)
+  await prisma.decisionRecord.update({
+    where: { id: IDS.decRrspMeltdown },
+    data: { relatedTo: { connect: [{ id: IDS.decWithdrawalOrder }] } },
+  });
+  // Withdrawal Order ↔ Asset Allocation (allocation affects draw-down mechanics)
+  await prisma.decisionRecord.update({
+    where: { id: IDS.decWithdrawalOrder },
+    data: { relatedTo: { connect: [{ id: IDS.decAssetAlloc }] } },
+  });
+  // David CPP Defer ↔ Sarah CPP (spouse coordination)
+  await prisma.decisionRecord.update({
+    where: { id: IDS.decCppDefer },
+    data: { relatedTo: { connect: [{ id: IDS.decSarahCpp }] } },
+  });
+  // Downsize ↔ Estate (home equity is a key estate asset)
+  await prisma.decisionRecord.update({
+    where: { id: IDS.decDownsize },
+    data: { relatedTo: { connect: [{ id: IDS.decEstate }] } },
+  });
+  // Insurance ↔ Estate (life insurance is part of estate plan)
+  await prisma.decisionRecord.update({
+    where: { id: IDS.decInsurance },
+    data: { relatedTo: { connect: [{ id: IDS.decEstate }] } },
+  });
+
+  console.log(`  Decisions:  ${decisions.length} records (${decisions.filter(d => d.status === 'DECIDED').length} decided, ${decisions.filter(d => d.status === 'PROPOSED').length} proposed)`);
 }
 
 main()
