@@ -364,7 +364,6 @@ jobs:
           gh release create "$TAG" \
             --title "Retiree Plan ${VERSION}" \
             --generate-notes \
-            --verify-tag \
             $PRERELEASE \
             "${FILES[@]}"
         env:
