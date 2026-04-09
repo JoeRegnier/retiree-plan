@@ -93,26 +93,27 @@ See the full gap analysis and proposal in [docs/ROADMAP-proposed-enhancements.md
 | Accounts | Real Estate & Rental Income | ✅ Shipped |
 | Planning | Goals-Based Retirement View | ✅ Shipped |
 | Planning | Milestone Templates | ✅ Shipped |
+| Planning | Decision Journal & Mind Map | ✅ Shipped |
 | Income | RRSP Meltdown Wizard | ✅ Shipped |
+| Income | Spousal RRSP Optimizer | ✅ Shipped |
+| Simulations | Withdrawal Order Optimizer | ✅ Shipped |
+| Simulations | Bucket Strategy Modeller | ✅ Shipped |
+| Simulations | Life Insurance Needs Calculator | ✅ Shipped |
+| Tax | TFSA vs. Non-Reg Withdrawal Optimizer | ✅ Shipped |
+| Desktop | Auto-update mechanism | ✅ Shipped |
+| Desktop | Windows/Linux packaged installers | ✅ Shipped |
 | Export | PDF Report Improvements | ✅ Shipped |
-| Income | CPP Timing Optimizer | 🔜 Planned |
-| Income | OAS Deferral + Clawback Optimizer | 🔜 Planned |
+| Income | CPP Timing Optimizer | 🚧 In Progress |
+| Income | OAS Deferral + Clawback Optimizer | 🚧 In Progress |
+| Accounts | Defined Benefit Pension Deep-Dive | 🚧 In Progress |
+| Simulations | Sequence-of-Returns Risk Visualizer | 🚧 In Progress |
+| Data | Linked live account balances (Questrade/WS) | 🚧 In Progress |
+| Data | RESP Planner | 🚧 In Progress |
 | Income | Pension Splitting Optimizer | 🔜 Planned |
 | Income | GIS Planner | 🔜 Planned |
-| Income | Spousal RRSP Optimizer | 🔜 Planned |
-| Accounts | Defined Benefit Pension Deep-Dive | 🔜 Planned |
-| Tax | TFSA vs. Non-Reg Withdrawal Optimizer | 🔜 Planned |
 | Tax | Corporate Structure (HoldCo) | 🔜 Planned |
-| Simulations | Withdrawal Order Optimizer | 🔜 Planned |
-| Simulations | Bucket Strategy Modeller | 🔜 Planned |
-| Simulations | Sequence-of-Returns Risk Visualizer | 🔜 Planned |
-| Simulations | Life Insurance Needs Calculator | 🔜 Planned |
 | Data | CRA My Account Data Import | 🔜 Planned |
-| Data | Linked live account balances (Questrade/WS) | 🔜 Planned |
 | Data | RDSP support | 🔜 Planned |
-| Data | RESP Planner | 🔜 Planned |
-| Desktop | Auto-update mechanism | 🔜 Planned |
-| Desktop | Windows/Linux packaged installers | ✅ Shipped |
 
 ---
 
