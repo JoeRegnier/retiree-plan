@@ -61,7 +61,24 @@ interface Account {
   brokerageAccountId?: string | null;
   brokerageProvider?: string | null;
   brokerageAccountName?: string | null;
+  taxAttributionHistory?: AccountTaxAttributionHistory[];
 }
+
+interface AccountTaxAttributionHistory {
+  id?: string;
+  effectiveYear: number;
+  mode: 'JOINT_UNSPECIFIED' | 'SINGLE_MEMBER' | 'JOINT_PERCENTAGE';
+  primaryMemberId?: string | null;
+  secondaryMemberId?: string | null;
+  primaryPercentage?: number | null;
+  secondaryPercentage?: number | null;
+}
+
+const ATTRIBUTION_MODES: Array<{ value: AccountTaxAttributionHistory['mode']; label: string }> = [
+  { value: 'JOINT_UNSPECIFIED', label: 'Joint / Unspecified (default)' },
+  { value: 'SINGLE_MEMBER', label: 'Single member' },
+  { value: 'JOINT_PERCENTAGE', label: 'Joint percentage split' },
+];
 
 interface YnabBudgetAccount {
   id: string;
@@ -147,6 +164,16 @@ export function AccountsPage() {
   const [allocationFixedIncome, setAllocationFixedIncome] = useState<number | null>(null);
   const [allocationAlternatives, setAllocationAlternatives] = useState<number | null>(null);
   const [allocationCash, setAllocationCash] = useState<number | null>(null);
+  const [attributionHistory, setAttributionHistory] = useState<AccountTaxAttributionHistory[]>([
+    {
+      effectiveYear: new Date().getFullYear(),
+      mode: 'JOINT_UNSPECIFIED',
+      primaryMemberId: null,
+      secondaryMemberId: null,
+      primaryPercentage: 0.5,
+      secondaryPercentage: 0.5,
+    },
+  ]);
 
   const [propertyDialogOpen, setPropertyDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<RealEstateProperty | null>(null);
@@ -311,6 +338,26 @@ export function AccountsPage() {
       setAllocationFixedIncome(account.fixedIncomePercent != null ? account.fixedIncomePercent * 100 : null);
       setAllocationAlternatives(account.alternativesPercent != null ? account.alternativesPercent * 100 : null);
       setAllocationCash(account.cashPercent != null ? account.cashPercent * 100 : null);
+      setAttributionHistory(
+        account.taxAttributionHistory && account.taxAttributionHistory.length
+          ? account.taxAttributionHistory.map((h) => ({
+              id: h.id,
+              effectiveYear: h.effectiveYear,
+              mode: h.mode,
+              primaryMemberId: h.primaryMemberId ?? null,
+              secondaryMemberId: h.secondaryMemberId ?? null,
+              primaryPercentage: h.primaryPercentage ?? 0.5,
+              secondaryPercentage: h.secondaryPercentage ?? 0.5,
+            }))
+          : [{
+              effectiveYear: new Date().getFullYear(),
+              mode: 'JOINT_UNSPECIFIED',
+              primaryMemberId: null,
+              secondaryMemberId: null,
+              primaryPercentage: 0.5,
+              secondaryPercentage: 0.5,
+            }],
+      );
     } else {
       setEditingAccount(null);
       setActiveBrokerageProvider('');
@@ -319,6 +366,16 @@ export function AccountsPage() {
       setAllocationFixedIncome(null);
       setAllocationAlternatives(null);
       setAllocationCash(null);
+      setAttributionHistory([
+        {
+          effectiveYear: new Date().getFullYear(),
+          mode: 'JOINT_UNSPECIFIED',
+          primaryMemberId: null,
+          secondaryMemberId: null,
+          primaryPercentage: 0.5,
+          secondaryPercentage: 0.5,
+        },
+      ]);
     }
     setDialogOpen(true);
   };
@@ -332,6 +389,16 @@ export function AccountsPage() {
     setAllocationFixedIncome(null);
     setAllocationAlternatives(null);
     setAllocationCash(null);
+    setAttributionHistory([
+      {
+        effectiveYear: new Date().getFullYear(),
+        mode: 'JOINT_UNSPECIFIED',
+        primaryMemberId: null,
+        secondaryMemberId: null,
+        primaryPercentage: 0.5,
+        secondaryPercentage: 0.5,
+      },
+    ]);
   };
 
   const openPropertyDialog = (property?: RealEstateProperty) => {
@@ -406,6 +473,33 @@ export function AccountsPage() {
       return;
     }
 
+    const members = household?.members ?? [];
+    const memberIds = new Set(members.map((m) => m.id));
+    for (const row of attributionHistory) {
+      if (!Number.isFinite(row.effectiveYear)) {
+        setError('Each attribution row must have a valid effective year.');
+        return;
+      }
+      if (row.mode === 'SINGLE_MEMBER') {
+        if (!row.primaryMemberId || !memberIds.has(row.primaryMemberId)) {
+          setError('Single-member attribution requires a valid owner member.');
+          return;
+        }
+      }
+      if (row.mode === 'JOINT_PERCENTAGE') {
+        if (!row.primaryMemberId || !row.secondaryMemberId) {
+          setError('Joint percentage attribution requires two members.');
+          return;
+        }
+        const p1 = row.primaryPercentage ?? 0;
+        const p2 = row.secondaryPercentage ?? 0;
+        if (Math.abs(p1 + p2 - 1) > 0.001) {
+          setError('Joint percentage attribution must sum to 100%.');
+          return;
+        }
+      }
+    }
+
     const selectedYnab = ynabAccounts?.find((a) => a.id === form.ynabAccountId);
     const selectedBrokerage = (brokerageAccounts ?? []).find((a) => a.id === form.brokerageAccountId);
     const payload = {
@@ -426,6 +520,14 @@ export function AccountsPage() {
       brokerageAccountId:   form.brokerageAccountId || null,
       brokerageProvider:    form.brokerageProvider   || null,
       brokerageAccountName: selectedBrokerage?.name  ?? null,
+      taxAttributionHistory: attributionHistory.map((h) => ({
+        effectiveYear: h.effectiveYear,
+        mode: h.mode,
+        primaryMemberId: h.primaryMemberId ?? null,
+        secondaryMemberId: h.secondaryMemberId ?? null,
+        primaryPercentage: h.mode === 'JOINT_PERCENTAGE' ? (h.primaryPercentage ?? 0.5) : null,
+        secondaryPercentage: h.mode === 'JOINT_PERCENTAGE' ? (h.secondaryPercentage ?? 0.5) : null,
+      })),
     };
     if (editingAccount) {
       updateAccount.mutate({ id: editingAccount.id, data: payload });
@@ -481,6 +583,19 @@ export function AccountsPage() {
   const totalBalance = (accounts ?? []).reduce((s, a) => s + a.balance, 0);
   const totalContributions = (accounts ?? []).reduce((s, a) => s + a.annualContribution, 0);
   const totalRealEstateValue = realEstate.reduce((sum, property) => sum + property.currentValue, 0);
+
+  const latestAttribution = (acc: Account): AccountTaxAttributionHistory | null => {
+    const history = acc.taxAttributionHistory ?? [];
+    if (!history.length) return null;
+    return [...history].sort((a, b) => b.effectiveYear - a.effectiveYear)[0] ?? null;
+  };
+
+  const attributionLabel = (acc: Account): string => {
+    const latest = latestAttribution(acc);
+    if (!latest || latest.mode === 'JOINT_UNSPECIFIED') return 'Ownership: Joint/Unspecified';
+    if (latest.mode === 'SINGLE_MEMBER') return 'Ownership: Single member';
+    return 'Ownership: Joint % split';
+  };
 
   const householdAllocation = useMemo(() => {
     const allocAccounts = (accounts ?? []).filter((a) => (
@@ -652,6 +767,13 @@ export function AccountsPage() {
                                   />
                                 </Tooltip>
                               )}
+                              <Chip
+                                label={attributionLabel(acc)}
+                                size="small"
+                                color={latestAttribution(acc)?.mode === 'JOINT_UNSPECIFIED' || !latestAttribution(acc) ? 'warning' : 'success'}
+                                variant="outlined"
+                                sx={{ height: 20, fontSize: '0.65rem' }}
+                              />
                             </Stack>
                           }
                           secondary={`Balance: $${acc.balance.toLocaleString('en-CA', { maximumFractionDigits: 0 })} ${acc.currency}${acc.annualContribution > 0 ? ` • Contributes $${acc.annualContribution.toLocaleString()}/yr` : ''}${acc.estimatedReturnRate != null ? ` • ${(acc.estimatedReturnRate * 100).toFixed(1)}% est. return` : ''}`}
@@ -1006,6 +1128,159 @@ export function AccountsPage() {
                 : ''}
             </Alert>
           )}
+
+          <Divider />
+          <Typography variant="subtitle2">Tax Attribution Ownership History</Typography>
+          <Alert severity="info" sx={{ py: 0.5 }}>
+            Accounts default to joint/unspecified. Add historical rows to capture year-by-year tax attribution ownership.
+          </Alert>
+          {attributionHistory.map((row, idx) => (
+            <Grid container spacing={1} key={`${row.effectiveYear}-${idx}`} alignItems="center">
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <TextField
+                  label="From Year"
+                  type="number"
+                  fullWidth
+                  value={row.effectiveYear}
+                  onChange={(e) => {
+                    const next = [...attributionHistory];
+                    next[idx] = { ...next[idx], effectiveYear: Number(e.target.value) };
+                    setAttributionHistory(next);
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 5 }}>
+                <TextField
+                  select
+                  label="Mode"
+                  fullWidth
+                  value={row.mode}
+                  onChange={(e) => {
+                    const mode = e.target.value as AccountTaxAttributionHistory['mode'];
+                    const next = [...attributionHistory];
+                    next[idx] = { ...next[idx], mode };
+                    setAttributionHistory(next);
+                  }}
+                >
+                  {ATTRIBUTION_MODES.map((m) => (
+                    <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <Button
+                  color="error"
+                  variant="text"
+                  disabled={attributionHistory.length <= 1}
+                  onClick={() => setAttributionHistory(attributionHistory.filter((_, j) => j !== idx))}
+                >
+                  Remove
+                </Button>
+              </Grid>
+
+              {row.mode === 'SINGLE_MEMBER' && (
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    select
+                    label="Owner Member"
+                    fullWidth
+                    value={row.primaryMemberId ?? ''}
+                    onChange={(e) => {
+                      const next = [...attributionHistory];
+                      next[idx] = { ...next[idx], primaryMemberId: e.target.value || null, secondaryMemberId: null };
+                      setAttributionHistory(next);
+                    }}
+                  >
+                    {(household?.members ?? []).map((m) => (
+                      <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+              )}
+
+              {row.mode === 'JOINT_PERCENTAGE' && (
+                <>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      select
+                      label="Primary Member"
+                      fullWidth
+                      value={row.primaryMemberId ?? ''}
+                      onChange={(e) => {
+                        const next = [...attributionHistory];
+                        next[idx] = { ...next[idx], primaryMemberId: e.target.value || null };
+                        setAttributionHistory(next);
+                      }}
+                    >
+                      {(household?.members ?? []).map((m) => (
+                        <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Primary %"
+                      type="number"
+                      fullWidth
+                      value={Math.round((row.primaryPercentage ?? 0.5) * 100)}
+                      onChange={(e) => {
+                        const pct = Number(e.target.value) / 100;
+                        const next = [...attributionHistory];
+                        next[idx] = {
+                          ...next[idx],
+                          primaryPercentage: pct,
+                          secondaryPercentage: 1 - pct,
+                        };
+                        setAttributionHistory(next);
+                      }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      select
+                      label="Secondary Member"
+                      fullWidth
+                      value={row.secondaryMemberId ?? ''}
+                      onChange={(e) => {
+                        const next = [...attributionHistory];
+                        next[idx] = { ...next[idx], secondaryMemberId: e.target.value || null };
+                        setAttributionHistory(next);
+                      }}
+                    >
+                      {(household?.members ?? []).map((m) => (
+                        <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Secondary %"
+                      type="number"
+                      fullWidth
+                      value={Math.round((row.secondaryPercentage ?? 0.5) * 100)}
+                      InputProps={{ readOnly: true }}
+                    />
+                  </Grid>
+                </>
+              )}
+            </Grid>
+          ))}
+          <Button
+            variant="outlined"
+            onClick={() => setAttributionHistory([
+              ...attributionHistory,
+              {
+                effectiveYear: new Date().getFullYear(),
+                mode: 'JOINT_UNSPECIFIED',
+                primaryMemberId: null,
+                secondaryMemberId: null,
+                primaryPercentage: 0.5,
+                secondaryPercentage: 0.5,
+              },
+            ])}
+          >
+            Add Attribution Year
+          </Button>
 
           <TextField label="Currency" select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} fullWidth>
             <MenuItem value="CAD">CAD – Canadian Dollar</MenuItem>

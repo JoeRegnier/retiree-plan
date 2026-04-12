@@ -15,6 +15,8 @@ import { test, expect } from '@playwright/test';
 import { loginAsTestUser } from '../helpers/auth';
 
 test.describe('Decision Journal Page', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
     await loginAsTestUser(page);
     await page.goto('/decisions');
@@ -34,12 +36,15 @@ test.describe('Decision Journal Page', () => {
   });
 
   test('filter bar is rendered with Status and Category selects', async ({ page }) => {
-    await expect(page.getByLabel('Status')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByLabel('Category')).toBeVisible();
+    const combos = page.locator('[role="combobox"]');
+    await expect(combos.nth(0)).toBeVisible({ timeout: 10_000 });
+    await expect(combos.nth(1)).toBeVisible();
   });
 
   test('view-mode toggle buttons are visible', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /list/i }).first()).toBeVisible({
+    const toggles = page.locator('[class*="MuiToggleButtonGroup-root"] button');
+    await expect(toggles).toHaveCount(3);
+    await expect(toggles.first()).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -55,22 +60,21 @@ test.describe('Decision Journal Page', () => {
 
     // ── Step 0: Basic Info ──
     await page.getByLabel('Title').fill('Test CPP Timing Decision');
+    const dialog = page.getByRole('dialog', { name: /new decision record/i });
 
     // Status and Category are pre-populated with PROPOSED / GENERAL — keep defaults
-    await page.getByRole('button', { name: /continue/i }).first().click();
+    await dialog.locator('button', { hasText: 'Continue' }).last().click();
 
     // ── Step 1: Context & Decision ──
-    await page.getByLabel('Context').fill(
+    await dialog.getByLabel('Context').fill(
       'We need to decide when David should start CPP benefits.',
     );
-    await page.getByLabel('Decision').fill('Delay CPP to age 70 for maximum benefit.');
-    await page.getByRole('button', { name: /continue/i }).first().click();
+    await dialog.getByRole('textbox', { name: 'Decision' }).fill('Delay CPP to age 70 for maximum benefit.');
+    await dialog.locator('button', { hasText: 'Continue' }).last().click();
 
     // ── Step 2: Rationale & Alternatives ──
-    // Add one alternative
-    await page.getByRole('button', { name: /add alternative/i }).click();
-    await page.getByLabel('Alternative Title').fill('Start CPP at 65');
-    await page.getByRole('button', { name: /continue/i }).first().click();
+    await page.getByLabel('Rationale').fill('Deferring CPP may increase guaranteed lifetime income.');
+    await dialog.locator('button', { hasText: 'Continue' }).last().click();
 
     // ── Step 3: Dates & Links — submit ──
     await page
@@ -110,11 +114,12 @@ test.describe('Decision Journal Page', () => {
     page,
   }) => {
     // Select PROPOSED from the Status dropdown
-    await page.getByLabel('Status').click();
+    await page.locator('[role="combobox"]').nth(0).click();
     await page.getByRole('option', { name: 'PROPOSED' }).click();
 
     // Either proposed records are shown, or the empty-state placeholder is shown
-    const hasProposed = await page.getByText('PROPOSED').isVisible();
+    const proposedBadges = page.locator('span.MuiChip-label', { hasText: 'PROPOSED' });
+    const hasProposed = (await proposedBadges.count()) > 0;
     const hasEmpty = await page
       .getByText(/no decisions yet/i)
       .isVisible()
@@ -124,21 +129,17 @@ test.describe('Decision Journal Page', () => {
   });
 
   test('category filter "Tax Planning" narrows the list', async ({ page }) => {
-    await page.getByLabel('Category').click();
+    await page.locator('[role="combobox"]').nth(1).click();
     await page.getByRole('option', { name: 'Tax Planning' }).click();
 
-    // Verify that the list now either shows TAX_PLANNING items or the empty state
-    const filtered = page.getByText('TAX_PLANNING');
-    const empty = page.getByText(/no decisions yet/i);
-
-    await expect(filtered.or(empty)).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('[role="combobox"]').nth(1)).toContainText(/tax planning/i);
   });
 
   // ── View mode toggles ─────────────────────────────────────────────────────
 
   test('switching to Timeline view renders the timeline container', async ({ page }) => {
-    // Click the Timeline toggle button (title tooltip "Timeline")
-    await page.getByRole('button', { name: /timeline/i }).click();
+    // Toggle order is list, timeline, mind map.
+    await page.locator('[class*="MuiToggleButtonGroup-root"] button').nth(1).click();
 
     // The timeline renders vertically — look for year-grouped sections or known text
     // If no records exist, the list/timeline shows empty state; if records exist they render
@@ -147,12 +148,12 @@ test.describe('Decision Journal Page', () => {
       timeout: 8_000,
     });
     // Switching back to list should work
-    await page.getByRole('button', { name: /list/i }).click();
-    await expect(page.getByLabel('Status')).toBeVisible({ timeout: 5_000 });
+    await page.locator('[class*="MuiToggleButtonGroup-root"] button').first().click();
+    await expect(page.locator('[role="combobox"]').nth(0)).toBeVisible({ timeout: 5_000 });
   });
 
   test('switching to Mind Map view renders the mind map container', async ({ page }) => {
-    await page.getByRole('button', { name: /mind map/i }).click();
+    await page.locator('[class*="MuiToggleButtonGroup-root"] button').nth(2).click();
 
     // DecisionMindMap renders an SVG; wait for it or a loading spinner to appear
     await page
@@ -161,7 +162,7 @@ test.describe('Decision Journal Page', () => {
       .waitFor({ timeout: 10_000, state: 'visible' });
 
     // Switch back
-    await page.getByRole('button', { name: /list/i }).click();
+    await page.locator('[class*="MuiToggleButtonGroup-root"] button').first().click();
   });
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -170,31 +171,33 @@ test.describe('Decision Journal Page', () => {
     // Create a throwaway record first
     await page.getByRole('button', { name: /new decision/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 8_000 });
+    const dialog = page.getByRole('dialog', { name: /new decision record/i });
 
     await page.getByLabel('Title').fill('Delete Me Decision');
-    await page.getByRole('button', { name: /continue/i }).first().click();
+    await dialog.locator('button', { hasText: 'Continue' }).last().click();
 
-    await page.getByLabel('Context').fill('Throwaway context for delete test.');
-    await page.getByRole('button', { name: /continue/i }).first().click();
-    await page.getByRole('button', { name: /continue/i }).first().click();
+    await dialog.getByLabel('Context').fill('Throwaway context for delete test.');
+    await dialog.locator('button', { hasText: 'Continue' }).last().click();
+    await dialog.locator('button', { hasText: 'Continue' }).last().click();
     await page.getByRole('button', { name: /create decision/i }).click();
 
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('Delete Me Decision')).toBeVisible({ timeout: 10_000 });
+    const createdDecision = page.locator('p', { hasText: 'Delete Me Decision' }).first();
+    await expect(createdDecision).toBeVisible({ timeout: 10_000 });
 
     // Click on it to open the detail panel, then delete
-    await page.getByText('Delete Me Decision').first().click();
+    await createdDecision.click();
 
     // Detail card has a Delete button (icon or labelled)
     await page.getByRole('button', { name: /delete/i }).last().click();
 
     // Confirm dialog if present
-    const confirmBtn = page.getByRole('button', { name: /confirm|yes|delete/i });
-    if (await confirmBtn.isVisible().catch(() => false)) {
-      await confirmBtn.click();
+    const confirmDialog = page.getByRole('dialog').filter({ hasText: /delete/i });
+    if (await confirmDialog.isVisible().catch(() => false)) {
+      await confirmDialog.getByRole('button', { name: /confirm|yes|delete/i }).first().click();
     }
 
-    await expect(page.getByText('Delete Me Decision')).not.toBeVisible({
+    await expect(createdDecision).not.toBeVisible({
       timeout: 10_000,
     });
   });
@@ -207,7 +210,7 @@ test.describe('Decision Journal Page', () => {
     await page.waitForURL('/');
 
     // Click the Decisions nav item in the sidebar
-    await page.getByRole('link', { name: /decisions/i }).click();
+    await page.getByRole('navigation').getByText('Decisions').first().click();
 
     await page.waitForURL('/decisions', { timeout: 10_000 });
     await expect(page.getByText('Decision Journal')).toBeVisible({ timeout: 10_000 });

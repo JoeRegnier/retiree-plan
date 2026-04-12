@@ -166,6 +166,16 @@ For each account, provide:
 - **Estimated annual return rate** — your expected nominal return (e.g., 6% for a balanced portfolio). This can be overridden per account or left to use the Scenario's default rate.
 - **Annual contribution** — how much you plan to add each year until retirement. The system caps RRSP contributions at your available room.
 
+### Ownership and tax attribution history
+
+The account dialog includes **Tax Attribution Ownership History** so you can model who reports income over time.
+
+- **Joint / Unspecified**: default mode when ownership is not explicitly assigned.
+- **Single member**: one member receives full attribution.
+- **Joint percentage split**: two members share attribution with percentages that must sum to 100%.
+
+Each row has an effective year. The projection engine uses the latest row active in each simulated year, which means ownership changes (for example, account transfers or spousal attribution adjustments) can be reflected without creating duplicate accounts.
+
 ### How accounts are drawn down in retirement
 
 The projection engine uses a *waterfall* withdrawal strategy in this priority order:

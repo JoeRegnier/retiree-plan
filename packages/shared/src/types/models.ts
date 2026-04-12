@@ -65,9 +65,36 @@ export interface Account {
   annuitantMemberId: string | null;
   /** Tax year of the most recent spousal RRSP contribution — needed for 3-year attribution rule. */
   lastContributionYear: number | null;
+  /** Historical member attribution records used for ownership/tax allocation. */
+  taxAttributionHistory?: AccountTaxAttributionHistory[];
   householdId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AccountTaxAttributionHistory {
+  id: string;
+  accountId: string;
+  effectiveYear: number;
+  mode: 'JOINT_UNSPECIFIED' | 'SINGLE_MEMBER' | 'JOINT_PERCENTAGE' | string;
+  primaryMemberId: string | null;
+  secondaryMemberId: string | null;
+  primaryPercentage: number | null;
+  secondaryPercentage: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MemberYearBreakdown {
+  memberId: string;
+  memberName: string;
+  province: string;
+  income: number;
+  rrspWithdrawal: number;
+  tfsaWithdrawal: number;
+  nonRegWithdrawal: number;
+  cashWithdrawal: number;
+  tax: number;
 }
 
 /** Represents a planning scenario */
@@ -136,6 +163,8 @@ export interface ProjectionYear {
   nonRegCapitalGain?: number;
   /** Withdrawal strategy id in effect this year. */
   withdrawalStrategy?: string;
+  /** Per-member income/withdrawal/tax breakdown for this year. */
+  memberBreakdown?: MemberYearBreakdown[];
 }
 
 /** Result of a cash-flow projection */

@@ -234,6 +234,11 @@ async function captureSettings(page) {
   await save(page, '16-settings.png');
 }
 
+async function captureHelp(page) {
+  await goto(page, '/help', '.MuiCard-root');
+  await save(page, '19-help.png');
+}
+
 (async () => {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -278,6 +283,7 @@ async function captureSettings(page) {
     ['AI Chat',       captureAiChat],
     ['Integrations',  captureIntegrations],
     ['Settings',      captureSettings],
+    ['Help',          captureHelp],
   ];
 
   console.log('\nCapturing authenticated pages…');

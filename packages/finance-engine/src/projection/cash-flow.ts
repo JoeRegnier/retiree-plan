@@ -35,6 +35,27 @@ export interface ExpenseEntry {
   indexToInflation?: boolean;
 }
 
+export interface MemberDescriptor {
+  id: string;
+  name: string;
+  province: Province;
+}
+
+export interface MemberIncomeSourceEntry extends IncomeSourceEntry {
+  memberId: string;
+}
+
+export interface MemberTypeShareTimelineEntry {
+  effectiveYear: number;
+  memberId: string;
+  memberName?: string;
+  province?: Province;
+  rrspShare: number;
+  tfsaShare: number;
+  nonRegShare: number;
+  cashShare: number;
+}
+
 /**
  * A portfolio glide-path step. At the given age the nominal return rate
  * shifts to `returnRate`. Steps are applied in ascending age order; the
@@ -75,6 +96,12 @@ export interface CashFlowInput {
    * When provided this replaces the flat `employmentIncome` scalar.
    */
   incomeSources?: IncomeSourceEntry[];
+  /** Member-level income sources for per-member reporting and taxation. */
+  memberIncomeSources?: MemberIncomeSourceEntry[];
+  /** Optional member list for per-member output. */
+  members?: MemberDescriptor[];
+  /** Historical per-member account-type attribution shares by effective year. */
+  memberTypeShareTimeline?: MemberTypeShareTimelineEntry[];
   /** Annual living expenses (today's dollars) — used when expenseEntries is not provided. */
   annualExpenses: number;
   /**
@@ -223,6 +250,62 @@ function resolveSpendingFactor(age: number, spendingPhases?: SpendingPhase[]): n
   return match ? match.factor : 1;
 }
 
+function resolveMemberTypeShares(
+  members: MemberDescriptor[],
+  timeline: MemberTypeShareTimelineEntry[] | undefined,
+  year: number,
+  key: 'rrspShare' | 'tfsaShare' | 'nonRegShare' | 'cashShare',
+): Record<string, number> {
+  const ids = members.map((m) => m.id);
+  if (!ids.length) return {};
+
+  const equal = 1 / ids.length;
+  if (!timeline || timeline.length === 0) {
+    return Object.fromEntries(ids.map((id) => [id, equal]));
+  }
+
+  const byMember: Record<string, MemberTypeShareTimelineEntry | undefined> = {};
+  for (const id of ids) {
+    byMember[id] = timeline
+      .filter((t) => t.memberId === id && t.effectiveYear <= year)
+      .sort((a, b) => b.effectiveYear - a.effectiveYear)[0];
+  }
+
+  const raw: Record<string, number> = Object.fromEntries(
+    ids.map((id) => [id, Math.max(0, byMember[id]?.[key] ?? 0)]),
+  );
+  const total = Object.values(raw).reduce((s, v) => s + v, 0);
+  if (total <= 0) {
+    return Object.fromEntries(ids.map((id) => [id, equal]));
+  }
+  for (const id of ids) raw[id] = raw[id] / total;
+  return raw;
+}
+
+function resolveMemberOtherIncome(
+  members: MemberDescriptor[],
+  memberIncomeSources: MemberIncomeSourceEntry[] | undefined,
+  age: number,
+  inflationFactor: number,
+  retirementAge: number,
+): Record<string, number> {
+  const base = Object.fromEntries(members.map((m) => [m.id, 0])) as Record<string, number>;
+  if (!memberIncomeSources || memberIncomeSources.length === 0) return base;
+
+  for (const src of memberIncomeSources) {
+    const start = src.startAge ?? 0;
+    const end = src.endAge ?? (retirementAge - 1);
+    if (age < start || age > end) continue;
+    const amount = src.indexToInflation !== false
+      ? src.annualAmount * inflationFactor
+      : src.annualAmount;
+    if (base[src.memberId] == null) base[src.memberId] = 0;
+    base[src.memberId] += amount;
+  }
+
+  return base;
+}
+
 // ---------------------------------------------------------------------------
 // Withdrawal strategy dispatch helpers
 // ---------------------------------------------------------------------------
@@ -349,6 +432,7 @@ function _customOrder(sh: number, cash: number, availRrsp: number, tfsa: number,
 export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
   const years: ProjectionYear[] = [];
   const currentYear = new Date().getFullYear();
+  const members = input.members ?? [];
 
   const rrifConversionAge = input.rrifConversionAge ?? 71;
   const nonRegTaxDragRate = input.nonRegTaxDragRate ?? 0;
@@ -440,6 +524,14 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     } else {
       employmentIncome = isWorking ? input.employmentIncome * inflationFactor : 0;
     }
+
+    const memberOtherIncome = resolveMemberOtherIncome(
+      members,
+      input.memberIncomeSources,
+      age,
+      inflationFactor,
+      input.retirementAge,
+    );
 
     // ── CPP ───────────────────────────────────────────────────────────────────
     const cppIncome = age >= input.cppStartAge
@@ -583,7 +675,74 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     const totalIncome =
       employmentIncome + cppIncome + oasIncome + rrspWithdrawal + tfsaWithdrawal + cashWithdrawal + nonRegWithdrawal;
 
-    const taxResult = calculateTotalTax(taxableIncome, input.province);
+    let taxResult = calculateTotalTax(taxableIncome, input.province);
+    let memberBreakdown: ProjectionYear['memberBreakdown'] = undefined;
+
+    if (members.length > 0) {
+      const rrspShares = resolveMemberTypeShares(members, input.memberTypeShareTimeline, year, 'rrspShare');
+      const tfsaShares = resolveMemberTypeShares(members, input.memberTypeShareTimeline, year, 'tfsaShare');
+      const nonRegShares = resolveMemberTypeShares(members, input.memberTypeShareTimeline, year, 'nonRegShare');
+      const cashShares = resolveMemberTypeShares(members, input.memberTypeShareTimeline, year, 'cashShare');
+
+      memberBreakdown = members.map((m, idx) => {
+        const rrspW = rrspWithdrawal * (rrspShares[m.id] ?? 0);
+        const tfsaW = tfsaWithdrawal * (tfsaShares[m.id] ?? 0);
+        const nonRegW = nonRegWithdrawal * (nonRegShares[m.id] ?? 0);
+        const cashW = cashWithdrawal * (cashShares[m.id] ?? 0);
+        const memberCpp = idx === 0 ? cppIncome : 0;
+        const memberOas = idx === 0 ? oasIncome : 0;
+        const memberNonRegGain = nonRegCapitalGain * (nonRegShares[m.id] ?? 0);
+        const memberTaxable =
+          (memberOtherIncome[m.id] ?? 0) +
+          memberCpp +
+          memberOas +
+          rrspW +
+          memberNonRegGain;
+        const memberTaxResult = calculateTotalTax(memberTaxable, m.province ?? input.province);
+        const memberIncome =
+          (memberOtherIncome[m.id] ?? 0) +
+          memberCpp +
+          memberOas +
+          rrspW +
+          tfsaW +
+          nonRegW +
+          cashW;
+
+        return {
+          memberId: m.id,
+          memberName: m.name,
+          province: m.province,
+          income: round(memberIncome),
+          rrspWithdrawal: round(rrspW),
+          tfsaWithdrawal: round(tfsaW),
+          nonRegWithdrawal: round(nonRegW),
+          cashWithdrawal: round(cashW),
+          tax: round(memberTaxResult.totalTax),
+        };
+      });
+
+      const totalMemberTax = memberBreakdown.reduce((sum, m) => sum + m.tax, 0);
+      const federalApprox = members.reduce((sum, m, idx) => {
+        const rrspW = rrspWithdrawal * (rrspShares[m.id] ?? 0);
+        const memberCpp = idx === 0 ? cppIncome : 0;
+        const memberOas = idx === 0 ? oasIncome : 0;
+        const memberNonRegGain = nonRegCapitalGain * (nonRegShares[m.id] ?? 0);
+        const memberTaxable =
+          (memberOtherIncome[m.id] ?? 0) +
+          memberCpp +
+          memberOas +
+          rrspW +
+          memberNonRegGain;
+        return sum + calculateTotalTax(memberTaxable, m.province ?? input.province).federalTax;
+      }, 0);
+
+      taxResult = {
+        ...taxResult,
+        totalTax: totalMemberTax,
+        federalTax: federalApprox,
+        provincialTax: totalMemberTax - federalApprox,
+      };
+    }
 
     // Net cash available for spending:
     //   Pre-retirement: gross received − tax − RRSP redirect − TFSA contribution cost
@@ -628,7 +787,7 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
       rrspWithdrawal: round(rrspWithdrawal),
       tfsaWithdrawal: round(tfsaWithdrawal),
       nonRegWithdrawal: round(nonRegWithdrawal),
-      otherIncome: 0,
+      otherIncome: round(employmentIncome),
       totalIncome: round(totalIncome),
       federalTax: round(taxResult.federalTax),
       provincialTax: round(taxResult.provincialTax),
@@ -658,6 +817,7 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
       nonRegAcb: round(nonRegAcb),
       nonRegCapitalGain: round(nonRegCapitalGain),
       withdrawalStrategy: strategy,
+      memberBreakdown,
     });
   }
 

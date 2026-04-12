@@ -75,4 +75,54 @@ describe('Cash Flow Projection', () => {
     const result = runCashFlowProjection(baseInput);
     expect(result[0].totalNetWorth).toBeGreaterThan(0);
   });
+
+  it('produces per-member breakdown when member inputs are provided', () => {
+    const result = runCashFlowProjection({
+      ...baseInput,
+      // Force retirement immediately so withdrawals/taxes are generated in first row.
+      retirementAge: 55,
+      employmentIncome: 0,
+      annualExpenses: 90_000,
+      members: [
+        { id: 'm1', name: 'Alex', province: 'ON' as const },
+        { id: 'm2', name: 'Sam', province: 'ON' as const },
+      ],
+      memberTypeShareTimeline: [
+        {
+          effectiveYear: new Date().getFullYear(),
+          memberId: 'm1',
+          rrspShare: 1,
+          tfsaShare: 0,
+          nonRegShare: 0.7,
+          cashShare: 0.5,
+        },
+        {
+          effectiveYear: new Date().getFullYear(),
+          memberId: 'm2',
+          rrspShare: 0,
+          tfsaShare: 1,
+          nonRegShare: 0.3,
+          cashShare: 0.5,
+        },
+      ],
+      memberIncomeSources: [
+        { memberId: 'm1', annualAmount: 20_000, startAge: 55, endAge: 55 },
+        { memberId: 'm2', annualAmount: 10_000, startAge: 55, endAge: 55 },
+      ],
+    });
+
+    const firstYear = result[0];
+    expect(firstYear.memberBreakdown).toBeDefined();
+    expect(firstYear.memberBreakdown).toHaveLength(2);
+
+    const memberTotalTax = (firstYear.memberBreakdown ?? []).reduce((sum, row) => sum + row.tax, 0);
+    expect(Math.abs(memberTotalTax - firstYear.totalTax)).toBeLessThanOrEqual(0.5);
+
+    const m1 = firstYear.memberBreakdown?.find((m) => m.memberId === 'm1');
+    const m2 = firstYear.memberBreakdown?.find((m) => m.memberId === 'm2');
+    expect(m1).toBeDefined();
+    expect(m2).toBeDefined();
+    // RRSP split is fully attributed to m1 in timeline above.
+    expect(m1!.rrspWithdrawal).toBeGreaterThanOrEqual(m2!.rrspWithdrawal);
+  });
 });
