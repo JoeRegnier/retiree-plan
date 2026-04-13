@@ -62,6 +62,6 @@
     "picomatch": "^4.0.4",
     "prisma": "^7.6.0",
     "typescript": "^6.0.2",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.4"
   }
 }
