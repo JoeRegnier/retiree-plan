@@ -30,7 +30,7 @@
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
-    "@rolldown/binding-linux-x64-musl": "1.0.0-rc.12",
+    "@rolldown/binding-linux-x64-musl": "1.0.0-rc.15",
     "@rolldown/binding-linux-x64-gnu": "1.0.0-rc.12",
     "@rolldown/binding-win32-x64-msvc": "1.0.0-rc.12",
     "@rolldown/binding-darwin-arm64": "1.0.0-rc.12",
