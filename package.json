@@ -66,6 +66,25 @@
   },
   "overrides": {
     "file-type": "^21.3.2",
+    "fast-uri": "^3.1.2",
+    "qs": "^6.15.2",
+    "hono": "^4.12.21",
+    "@hono/node-server": "^1.19.13",
+    "@prisma/dev": {
+      "hono": "^4.12.21",
+      "@hono/node-server": "^1.19.13"
+    },
+    "@angular-devkit/core": {
+      "ajv": {
+        "fast-uri": "^3.1.2"
+      }
+    },
+    "express": {
+      "qs": "^6.15.2"
+    },
+    "body-parser": {
+      "qs": "^6.15.2"
+    },
     "@nestjs/common": {
       "file-type": "^21.3.2"
     },
