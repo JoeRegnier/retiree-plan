@@ -173,7 +173,7 @@ jobs:
           path: release-artifacts/
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: Retiree Plan ${{ github.ref_name }}
           draft: false
