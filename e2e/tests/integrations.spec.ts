@@ -254,7 +254,7 @@ test.describe('Integrations Page', () => {
 
       // Navigate to that step (it's 3 clicks from the start: 1→2→3→4)
       for (let i = 0; i < 3; i++) {
-        await wzPage.getByRole('button', { name: /continue|next/i }).click();
+        await wizardDialog.getByRole('button', { name: /continue|next/i }).first().click();
         await wzPage.waitForTimeout(300);
       }
 

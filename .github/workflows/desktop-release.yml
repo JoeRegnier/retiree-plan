@@ -101,7 +101,7 @@ jobs:
 
       # ── Build React web ───────────────────────────────────────────────────
       - name: Build web
-        run: npm run build -w apps/web
+        run: npm exec --workspace=apps/web vite build
 
       # ── Bundle API with ncc ───────────────────────────────────────────────
       - name: Bundle API (ncc)

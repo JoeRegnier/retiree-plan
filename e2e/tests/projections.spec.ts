@@ -67,7 +67,7 @@ test.describe('Projections Page', () => {
     await page.getByRole('button', { name: /run projection/i }).click();
     await expect(page.getByText(/peak net worth/i)).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole('tab', { name: /table/i }).click();
+    await page.getByRole('tab', { name: /year-by-year/i }).click();
     // Should have at least one data row
     await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 8_000 });
   });

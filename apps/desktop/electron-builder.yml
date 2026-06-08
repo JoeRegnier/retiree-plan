@@ -63,6 +63,7 @@ nsis:
 
 # ── Linux ──────────────────────────────────────────────────────────────────────
 linux:
+  executableName: retiree-plan
   icon: build-resources/icon.png
   category: Finance
   maintainer: "Retiree Plan <maintainer@retireeplan.app>"

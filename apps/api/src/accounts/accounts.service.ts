@@ -5,6 +5,46 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AccountsService {
   constructor(private prisma: PrismaService) {}
 
+  private normalizeHistoryEntries(
+    entries: Array<{
+      effectiveYear: number;
+      mode?: string;
+      primaryMemberId?: string | null;
+      secondaryMemberId?: string | null;
+      primaryPercentage?: number | null;
+      secondaryPercentage?: number | null;
+    }> | undefined,
+  ) {
+    const currentYear = new Date().getFullYear();
+    const source = entries && entries.length
+      ? entries
+      : [{ effectiveYear: currentYear, mode: 'JOINT_UNSPECIFIED' }];
+
+    const dedup = new Map<number, {
+      effectiveYear: number;
+      mode: string;
+      primaryMemberId: string | null;
+      secondaryMemberId: string | null;
+      primaryPercentage: number | null;
+      secondaryPercentage: number | null;
+    }>();
+
+    for (const entry of source) {
+      const year = Number(entry.effectiveYear);
+      if (!Number.isFinite(year)) continue;
+      dedup.set(year, {
+        effectiveYear: year,
+        mode: entry.mode ?? 'JOINT_UNSPECIFIED',
+        primaryMemberId: entry.primaryMemberId ?? null,
+        secondaryMemberId: entry.secondaryMemberId ?? null,
+        primaryPercentage: entry.primaryPercentage ?? null,
+        secondaryPercentage: entry.secondaryPercentage ?? null,
+      });
+    }
+
+    return [...dedup.values()].sort((a, b) => a.effectiveYear - b.effectiveYear);
+  }
+
   async create(data: {
     name: string;
     type: string;
@@ -22,7 +62,16 @@ export class AccountsService {
     brokerageAccountId?: string | null;
     brokerageProvider?: string | null;
     brokerageAccountName?: string | null;
+    taxAttributionHistory?: Array<{
+      effectiveYear: number;
+      mode?: string;
+      primaryMemberId?: string | null;
+      secondaryMemberId?: string | null;
+      primaryPercentage?: number | null;
+      secondaryPercentage?: number | null;
+    }>;
   }) {
+    const normalizedHistory = this.normalizeHistoryEntries(data.taxAttributionHistory);
     return this.prisma.account.create({
       data: {
         name: data.name,
@@ -41,16 +90,38 @@ export class AccountsService {
         brokerageAccountId:   data.brokerageAccountId ?? null,
         brokerageProvider:    data.brokerageProvider ?? null,
         brokerageAccountName: data.brokerageAccountName ?? null,
+        taxAttributionHistory: {
+          create: normalizedHistory,
+        },
+      },
+      include: {
+        taxAttributionHistory: {
+          orderBy: { effectiveYear: 'asc' },
+        },
       },
     });
   }
 
   async findByHousehold(householdId: string) {
-    return this.prisma.account.findMany({ where: { householdId } });
+    return this.prisma.account.findMany({
+      where: { householdId },
+      include: {
+        taxAttributionHistory: {
+          orderBy: { effectiveYear: 'asc' },
+        },
+      },
+    });
   }
 
   async findOne(id: string) {
-    const account = await this.prisma.account.findUnique({ where: { id } });
+    const account = await this.prisma.account.findUnique({
+      where: { id },
+      include: {
+        taxAttributionHistory: {
+          orderBy: { effectiveYear: 'asc' },
+        },
+      },
+    });
     if (!account) throw new NotFoundException('Account not found');
     return account;
   }
@@ -70,9 +141,33 @@ export class AccountsService {
     brokerageAccountId?: string | null;
     brokerageProvider?: string | null;
     brokerageAccountName?: string | null;
+    taxAttributionHistory?: Array<{
+      effectiveYear: number;
+      mode?: string;
+      primaryMemberId?: string | null;
+      secondaryMemberId?: string | null;
+      primaryPercentage?: number | null;
+      secondaryPercentage?: number | null;
+    }>;
   }) {
     await this.findOne(id);
-    return this.prisma.account.update({ where: { id }, data: data as any });
+    const { taxAttributionHistory, ...rest } = data;
+    const updateData: any = { ...rest };
+    if (taxAttributionHistory) {
+      updateData.taxAttributionHistory = {
+        deleteMany: {},
+        create: this.normalizeHistoryEntries(taxAttributionHistory),
+      };
+    }
+    return this.prisma.account.update({
+      where: { id },
+      data: updateData,
+      include: {
+        taxAttributionHistory: {
+          orderBy: { effectiveYear: 'asc' },
+        },
+      },
+    });
   }
 
   async remove(id: string) {
