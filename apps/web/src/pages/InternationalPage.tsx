@@ -18,7 +18,7 @@ import PublicIcon from '@mui/icons-material/Public';
 import FlagIcon from '@mui/icons-material/Flag';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 
 import {
   CA_US_WITHHOLDING,
