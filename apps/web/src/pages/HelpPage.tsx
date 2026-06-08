@@ -6,7 +6,7 @@ import {
   Tab, Tabs, Table, TableBody, TableCell, TableHead, TableRow,
   Paper, Stack, Button, useTheme, alpha, LinearProgress, Tooltip,
 } from '@mui/material';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import TimelineIcon from '@mui/icons-material/Timeline';
@@ -20,7 +20,7 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';

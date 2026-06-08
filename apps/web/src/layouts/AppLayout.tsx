@@ -39,7 +39,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import FlagIcon from '@mui/icons-material/Flag';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import CompareIcon from '@mui/icons-material/Compare';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstructions';
 import SmartToyIcon from '@mui/icons-material/SmartToy';

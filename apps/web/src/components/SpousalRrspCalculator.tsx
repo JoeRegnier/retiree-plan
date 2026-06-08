@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import { useApi } from '../hooks/useApi';
 
 const PROVINCES = [
