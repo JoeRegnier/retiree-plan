@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@retiree-plan/shared": "*",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "typescript": "^6.0.2",

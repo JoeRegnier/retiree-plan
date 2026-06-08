@@ -27,7 +27,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router": "^7.17.0",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "1.0.0-rc.12",
