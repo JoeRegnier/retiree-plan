@@ -16,7 +16,7 @@ COPY apps/web ./apps/web/
 
 RUN npm run build --workspace=packages/shared \
 	&& npm run build --workspace=packages/finance-engine \
-	&& npm run build --workspace=apps/web
+	&& npm exec --workspace=apps/web vite build
 
 # Serve stage
 FROM nginx:alpine AS runner
