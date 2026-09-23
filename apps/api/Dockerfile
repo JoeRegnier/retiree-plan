@@ -8,6 +8,7 @@ COPY packages/shared/package*.json ./packages/shared/
 COPY packages/finance-engine/package*.json ./packages/finance-engine/
 COPY apps/api/package*.json ./apps/api/
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 
 RUN npm ci --workspace=packages/shared --workspace=packages/finance-engine --workspace=apps/api \
 	&& npx prisma generate
@@ -34,6 +35,7 @@ COPY --from=builder /app/packages/finance-engine/dist ./packages/finance-engine/
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 RUN mkdir -p /data
 

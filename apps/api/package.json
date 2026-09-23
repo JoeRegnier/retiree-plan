@@ -10,9 +10,9 @@
     "start:prod": "node dist/main.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:push": "prisma db push"
+    "db:generate": "prisma generate --config ../../prisma.config.ts",
+    "db:migrate": "prisma migrate dev --config ../../prisma.config.ts",
+    "db:push": "prisma db push --config ../../prisma.config.ts"
   },
   "dependencies": {
     "@github/copilot-sdk": "^0.2.2",
