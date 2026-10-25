@@ -77,6 +77,15 @@ export interface SpendingPhase {
   factor: number;
 }
 
+/**
+ * A change of province of residence. From `fromAge` onward, income tax is
+ * calculated using `province` instead of the input's starting province.
+ */
+export interface ProvinceChange {
+  fromAge: number;
+  province: Province;
+}
+
 export interface CashFlowInput {
   /** Current age of primary member */
   currentAge: number;
@@ -155,6 +164,12 @@ export interface CashFlowInput {
    * E.g. [{fromAge: 65, factor: 0.85}] reduces spending 15 % at retirement.
    */
   spendingPhases?: SpendingPhase[];
+  /**
+   * Planned moves between provinces. The most recent change at or before the
+   * current age sets the province used for tax. Before the first change,
+   * `province` applies.
+   */
+  provinceChanges?: ProvinceChange[];
   /**
    * Optional per-year return sequence. When provided, index i is used for year i
    * instead of nominalReturnRate / glide path (enables historical bootstrap).
@@ -304,6 +319,17 @@ function resolveMemberOtherIncome(
   }
 
   return base;
+}
+
+/**
+ * Resolve the province of residence for a given age from the province changes.
+ * Returns the starting province if no change applies.
+ */
+function resolveProvince(age: number, province: Province, provinceChanges?: ProvinceChange[]): Province {
+  if (!provinceChanges || provinceChanges.length === 0) return province;
+  const sorted = [...provinceChanges].sort((a, b) => b.fromAge - a.fromAge);
+  const match = sorted.find((c) => c.fromAge <= age);
+  return match ? match.province : province;
 }
 
 // ---------------------------------------------------------------------------
@@ -551,6 +577,7 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
 
     // ── Expenses ──────────────────────────────────────────────────────────────
     const spendingFactor = resolveSpendingFactor(age, input.spendingPhases);
+    const province = resolveProvince(age, input.province, input.provinceChanges);
     let baseExpenses: number;
     if (input.expenseEntries && input.expenseEntries.length > 0) {
       baseExpenses = input.expenseEntries
@@ -598,7 +625,7 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     // Pre-retirement: taxable income is reduced by the RRSP deduction.
     // Estimated available cash = gross income − RRSP redirect − TFSA cash cost − tax.
     const knownTaxableIncome = employmentIncome - rrspDeduction + cppIncome + oasBenefitGross + forcedRrspWithdrawal + nonRegTaxDrag;
-    const estimatedTaxOnKnown = calculateTotalTax(knownTaxableIncome, input.province).totalTax;
+    const estimatedTaxOnKnown = calculateTotalTax(knownTaxableIncome, province).totalTax;
     // Net spendable cash from known income sources (after tax and redirected amounts).
     // Shortfall = gap between expenses and what income alone can cover; withdrawals make up the rest.
     const estimatedGrossKnown = employmentIncome + cppIncome + oasBenefitGross + forcedRrspWithdrawal;
@@ -675,6 +702,7 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     const totalIncome =
       employmentIncome + cppIncome + oasIncome + rrspWithdrawal + tfsaWithdrawal + cashWithdrawal + nonRegWithdrawal;
 
+<<<<<<< HEAD
     let taxResult = calculateTotalTax(taxableIncome, input.province);
     let memberBreakdown: ProjectionYear['memberBreakdown'] = undefined;
 
@@ -743,6 +771,9 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
         provincialTax: totalMemberTax - federalApprox,
       };
     }
+=======
+    const taxResult = calculateTotalTax(taxableIncome, province);
+>>>>>>> origin/main
 
     // Net cash available for spending:
     //   Pre-retirement: gross received − tax − RRSP redirect − TFSA contribution cost

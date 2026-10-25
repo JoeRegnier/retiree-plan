@@ -222,5 +222,6 @@ export function buildProjectionPayload(
     ...(nonRegRate != null ? { nonRegReturnRate: nonRegRate } : {}),
     ...(p.glidePathSteps?.length ? { glidePathSteps: p.glidePathSteps } : {}),
     ...(p.spendingPhases?.length ? { spendingPhases: p.spendingPhases } : {}),
+    ...(p.provinceChanges?.length ? { provinceChanges: p.provinceChanges } : {}),
   };
 }

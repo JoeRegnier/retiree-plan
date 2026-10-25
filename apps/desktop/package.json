@@ -20,12 +20,12 @@
     "package:dir": "npm run build && electron-builder --dir"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.3",
-    "@types/node": "^25.5.0",
+    "@electron/rebuild": "4.2.1",
+    "@types/node": "^25.9.2",
     "@vercel/ncc": "^0.38.3",
-    "electron": "41.2.1",
-    "electron-builder": "^26.9.0",
-    "typescript": "^6.0.2"
+    "electron": "42.11.18",
+    "electron-builder": "26.18.0",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "electron-updater": "^6.3.0"

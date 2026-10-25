@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { WITHDRAWAL_STRATEGY_IDS, ACCOUNT_BUCKETS } from '../types/withdrawal.js';
+import { PROVINCES } from '../constants/canada.js';
 
 /** A single glide-path step: at `age`, switch the portfolio return rate to `returnRate`. */
 const glidePathStepSchema = z.object({
@@ -11,6 +12,12 @@ const glidePathStepSchema = z.object({
 const spendingPhaseSchema = z.object({
   fromAge: z.number().int().min(18).max(100),
   factor: z.number().min(0).max(2),
+});
+
+/** A province move: from `fromAge` onward, tax is calculated for `province`. */
+const provinceChangeSchema = z.object({
+  fromAge: z.number().int().min(18).max(110),
+  province: z.enum(PROVINCES),
 });
 
 export const scenarioParametersSchema = z.object({
@@ -51,6 +58,12 @@ export const scenarioParametersSchema = z.object({
    */
   spendingPhases: z.array(spendingPhaseSchema).optional(),
   /**
+   * Planned moves between provinces. The most recent move at or before the
+   * current age sets the province used for tax; before the first move, the
+   * primary member's province applies.
+   */
+  provinceChanges: z.array(provinceChangeSchema).optional(),
+  /**
    * Annual return rate applied to the cash/savings bucket (bank accounts).
    * Models HISA or chequing interest. Default: 0.025 (2.5%).
    */
@@ -85,6 +98,7 @@ export const updateScenarioSchema = createScenarioSchema.partial().omit({ househ
 export type ScenarioParameters = z.infer<typeof scenarioParametersSchema>;
 export type GlidePathStep = z.infer<typeof glidePathStepSchema>;
 export type SpendingPhase = z.infer<typeof spendingPhaseSchema>;
+export type ProvinceChange = z.infer<typeof provinceChangeSchema>;
 export type CreateScenarioInput = z.infer<typeof createScenarioSchema>;
 export type UpdateScenarioInput = z.infer<typeof updateScenarioSchema>;
 

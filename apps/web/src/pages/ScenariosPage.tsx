@@ -15,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { useApi } from '../hooks/useApi';
 import { SpendingCurveChart } from '../components/charts/SpendingCurveChart';
+import { PROVINCE_NAMES } from '@retiree-plan/shared';
 
 interface ScenarioParameters {
   retirementAge: number;
@@ -34,6 +35,8 @@ interface ScenarioParameters {
   nonRegTaxDragRate?: number;
   glidePathSteps?: { age: number; returnRate: number }[];
   spendingPhases?: { fromAge: number; factor: number }[];
+  /** Planned moves between provinces; tax switches to `province` from `fromAge` onward. */
+  provinceChanges?: { fromAge: number; province: string }[];
   /** Annual interest/savings rate on the cash bucket (bank accounts). Default 2.5%. */
   cashSavingsRate?: number;
   /** When true, income surplus after expenses is automatically invested in non-reg. Default false. */
@@ -101,6 +104,7 @@ const DEFAULT_PARAMS: ScenarioParameters = {
   nonRegTaxDragRate: 0,
   glidePathSteps: [],
   spendingPhases: [],
+  provinceChanges: [],
   cashSavingsRate: 0.025,
   investSurplus: false,
   withdrawalStrategy: 'oas-optimized',
@@ -251,6 +255,9 @@ export function ScenariosPage() {
                       <Chip label={`${(p.expectedReturnRate * 100).toFixed(1)}% return`} size="small" />
                       <Chip label={`${(p.inflationRate * 100).toFixed(1)}% inflation`} size="small" />
                       {p.annualExpenses && <Chip label={`$${p.annualExpenses.toLocaleString('en-CA', { maximumFractionDigits: 0 })} exp.`} size="small" variant="outlined" />}
+                      {(p.provinceChanges ?? []).map((m, i) => (
+                        <Chip key={i} label={`Move → ${m.province} @ ${m.fromAge}`} size="small" variant="outlined" />
+                      ))}
                     </Box>
                     <Typography variant="caption" color="text.disabled">
                       CPP @ {p.cppStartAge} • OAS @ {p.oasStartAge} • Province: {p.province}
@@ -796,6 +803,79 @@ export function ScenariosPage() {
                     />
                   </Box>
                 )}
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Divider />
+                <Typography variant="overline" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Province Moves
+                  <Tooltip title="Switch the province used for income tax from a given age (e.g. moving from Alberta to BC at 30).">
+                    <span style={{ marginLeft: 6, cursor: 'help', fontSize: 14, color: '#888' }}>ⓘ</span>
+                  </Tooltip>
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Planning a move? Taxes use your household province until the first move, then the new province from that age on.
+                </Typography>
+                <TableContainer component={Box} sx={{ mb: 1 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>From Age</TableCell>
+                        <TableCell>Province</TableCell>
+                        <TableCell />
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(params.provinceChanges ?? []).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3}>
+                            <Typography variant="caption" color="text.disabled">No moves — taxes use your household province throughout.</Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {(params.provinceChanges ?? []).map((move, i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <TextField type="number" size="small" variant="standard"
+                              value={move.fromAge}
+                              onChange={(e) => {
+                                const moves = [...(params.provinceChanges ?? [])];
+                                moves[i] = { ...moves[i], fromAge: Number(e.target.value) };
+                                setParam('provinceChanges', moves);
+                              }}
+                              slotProps={{ htmlInput: { min: 18, max: 110, step: 1 } }}
+                              sx={{ width: 80 }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <TextField select size="small" variant="standard"
+                              value={move.province}
+                              onChange={(e) => {
+                                const moves = [...(params.provinceChanges ?? [])];
+                                moves[i] = { ...moves[i], province: e.target.value };
+                                setParam('provinceChanges', moves);
+                              }}
+                              sx={{ minWidth: 200 }}
+                            >
+                              {Object.entries(PROVINCE_NAMES).map(([code, name]) => (
+                                <MenuItem key={code} value={code}>{name}</MenuItem>
+                              ))}
+                            </TextField>
+                          </TableCell>
+                          <TableCell align="right">
+                            <IconButton size="small" onClick={() =>
+                              setParam('provinceChanges', (params.provinceChanges ?? []).filter((_, idx) => idx !== i))
+                            }><DeleteIcon fontSize="small" /></IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Button size="small" startIcon={<AddIcon />} onClick={() =>
+                  setParam('provinceChanges', [...(params.provinceChanges ?? []), { fromAge: params.retirementAge ?? 65, province: 'BC' }])
+                }>
+                  Add Move
+                </Button>
               </Grid>
             </Grid>
           )}
