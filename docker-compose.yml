@@ -15,8 +15,9 @@ services:
     volumes:
       - db_data:/data
     healthcheck:
-      test: ['CMD', 'wget', '-qO', '-', 'http://localhost:3000/health']
+      test: ['CMD', 'wget', '-qO', '-', 'http://127.0.0.1:3000/api/health']
       interval: 30s
+      start_period: 20s
       timeout: 5s
       retries: 3
 

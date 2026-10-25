@@ -76,3 +76,63 @@ describe('Cash Flow Projection', () => {
     expect(result[0].totalNetWorth).toBeGreaterThan(0);
   });
 });
+
+describe('Cash Flow Projection — province changes', () => {
+  const abInput = {
+    currentAge: 55,
+    endAge: 90,
+    province: 'AB' as const,
+    employmentIncome: 100_000,
+    retirementAge: 65,
+    annualExpenses: 60_000,
+    inflationRate: 0.02,
+    nominalReturnRate: 0.06,
+    cppStartAge: 65,
+    oasStartAge: 65,
+    rrspBalance: 500_000,
+    tfsaBalance: 80_000,
+    nonRegBalance: 100_000,
+    rrspContribution: 15_000,
+    tfsaContribution: 7_000,
+  };
+
+  it('matches the baseline when no changes are supplied', () => {
+    const baseline = runCashFlowProjection(abInput);
+    expect(runCashFlowProjection({ ...abInput, provinceChanges: [] })).toEqual(baseline);
+  });
+
+  it('keeps the original province before the move and switches after', () => {
+    const stayed = runCashFlowProjection(abInput);
+    const moved = runCashFlowProjection({
+      ...abInput,
+      provinceChanges: [{ fromAge: 60, province: 'BC' as const }],
+    });
+    for (const y of moved.filter((r) => r.age < 60)) {
+      expect(y).toEqual(stayed.find((s) => s.age === y.age));
+    }
+    const ageSixtyMoved = moved.find((y) => y.age === 60)!;
+    const ageSixtyStayed = stayed.find((y) => y.age === 60)!;
+    expect(ageSixtyMoved.totalTax).not.toBe(ageSixtyStayed.totalTax);
+  });
+
+  it('a move at the current age is the same as living there all along', () => {
+    const allBc = runCashFlowProjection({ ...abInput, province: 'BC' as const });
+    const movedNow = runCashFlowProjection({
+      ...abInput,
+      provinceChanges: [{ fromAge: 55, province: 'BC' as const }],
+    });
+    expect(movedNow).toEqual(allBc);
+  });
+
+  it('uses the latest move when there are several, regardless of order', () => {
+    const allOn = runCashFlowProjection({ ...abInput, province: 'ON' as const });
+    const moved = runCashFlowProjection({
+      ...abInput,
+      provinceChanges: [
+        { fromAge: 55, province: 'ON' as const },
+        { fromAge: 50, province: 'BC' as const },
+      ],
+    });
+    expect(moved).toEqual(allOn);
+  });
+});

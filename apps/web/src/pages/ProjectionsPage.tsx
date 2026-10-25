@@ -269,6 +269,7 @@ export function ProjectionsPage() {
       ...(nonRegRate != null ? { nonRegReturnRate: nonRegRate } : {}),
       ...(p.glidePathSteps?.length ? { glidePathSteps: p.glidePathSteps } : {}),
       ...(p.spendingPhases?.length ? { spendingPhases: p.spendingPhases } : {}),
+      ...(p.provinceChanges?.length ? { provinceChanges: p.provinceChanges } : {}),
       // Flex spending guardrails
       flexSpendingEnabled: p.flexSpending ?? false,
       ...(p.flexFloor != null ? { flexSpendingFloor: p.flexFloor } : {}),
@@ -318,6 +319,9 @@ export function ProjectionsPage() {
     }
     for (const phase of (p.spendingPhases ?? [])) {
       markers.push({ age: phase.fromAge, label: `${Math.round(phase.factor * 100)}% spend`, color: '#FF5722', type: 'spending' });
+    }
+    for (const move of (p.provinceChanges ?? [])) {
+      markers.push({ age: move.fromAge, label: `Move → ${move.province}`, color: '#00897B', type: 'event' });
     }
     // Expense end-age events (mortgage payoff, debt payoff, etc.)
     for (const exp of (expenseItems ?? [])) {
