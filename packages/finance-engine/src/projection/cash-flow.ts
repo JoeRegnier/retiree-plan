@@ -702,7 +702,6 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
     const totalIncome =
       employmentIncome + cppIncome + oasIncome + rrspWithdrawal + tfsaWithdrawal + cashWithdrawal + nonRegWithdrawal;
 
-<<<<<<< HEAD
     let taxResult = calculateTotalTax(taxableIncome, input.province);
     let memberBreakdown: ProjectionYear['memberBreakdown'] = undefined;
 
@@ -771,9 +770,6 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
         provincialTax: totalMemberTax - federalApprox,
       };
     }
-=======
-    const taxResult = calculateTotalTax(taxableIncome, province);
->>>>>>> origin/main
 
     // Net cash available for spending:
     //   Pre-retirement: gross received − tax − RRSP redirect − TFSA contribution cost
@@ -858,4 +854,3 @@ export function runCashFlowProjection(input: CashFlowInput): ProjectionYear[] {
 function round(n: number): number {
   return Math.round(n * 100) / 100;
 }
-
