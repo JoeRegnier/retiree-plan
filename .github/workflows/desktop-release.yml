@@ -353,10 +353,10 @@ jobs:
           if [[ "$TAG" == *"-"* ]]; then PRERELEASE="--prerelease"; fi
 
           REPO="${{ github.repository }}"
-
-          # Delete any existing release for this tag so this step is idempotent
-          # (avoids "target_commitish cannot be changed when release is immutable").
-          gh release delete "$TAG" --repo "$REPO" --yes 2>/dev/null || echo "No existing release to delete."
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Skipping publish from workflow."
+            exit 0
+          fi
 
           # Gather all artifact files
           mapfile -t FILES < <(find artifacts -type f -not -name '.*')
