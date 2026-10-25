@@ -270,6 +270,28 @@ jobs:
           DVER=$(node -e "process.stdout.write(require('./node_modules/dmg-license/package.json').version)" 2>/dev/null || echo "1.0.11")
           test -d "node_modules/dmg-license" || npm install --no-save --ignore-scripts "dmg-license@$DVER"
 
+      - name: Verify mac signing/notarization secrets
+        if: runner.os == 'macOS' && github.event_name == 'push'
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=0
+          for key in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [[ -z "${!key:-}" ]]; then
+              echo "::error::$key is required for signed/notarized macOS releases."
+              missing=1
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            echo "::error::Refusing to publish unsigned macOS artifacts."
+            exit 1
+          fi
+
       # ── Package with electron-builder ─────────────────────────────────────
       - name: Package (macOS)
         if: runner.os == 'macOS'
@@ -278,12 +300,12 @@ jobs:
         run: |
           npx electron-builder --mac --x64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
           npx electron-builder --mac --arm64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
-        # Code-signing (optional – leave unset to skip):
-        # CSC_LINK: ${{ secrets.CSC_LINK }}
-        # CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-        # APPLE_ID: ${{ secrets.APPLE_ID }}
-        # APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-        # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
