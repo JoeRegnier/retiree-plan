@@ -33,11 +33,11 @@ jobs:
     steps:
       # ── Checkout ──────────────────────────────────────────────────────────
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # ── Node.js 24 ────────────────────────────────────────────────────────
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'npm'
