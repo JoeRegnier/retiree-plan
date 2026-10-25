@@ -122,8 +122,32 @@ model Account {
   annuitantMemberId    String?
   /// Calendar year of the most recent spousal contribution — drives attribution rule check.
   lastContributionYear Int?
+  /// Historical ownership/tax attribution records used for member-level reporting.
+  taxAttributionHistory AccountTaxAttributionHistory[]
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+}
+
+model AccountTaxAttributionHistory {
+  id                String   @id @default(cuid())
+  accountId         String
+  account           Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  /// Calendar year from which this attribution applies.
+  effectiveYear     Int
+  /// 'JOINT_UNSPECIFIED' | 'SINGLE_MEMBER' | 'JOINT_PERCENTAGE'
+  mode              String   @default("JOINT_UNSPECIFIED")
+  /// Member id receiving full attribution for SINGLE_MEMBER mode.
+  primaryMemberId   String?
+  /// Optional second member id for JOINT_PERCENTAGE mode.
+  secondaryMemberId String?
+  /// 0..1 fraction for primary member in JOINT_PERCENTAGE mode.
+  primaryPercentage Float?
+  /// 0..1 fraction for secondary member in JOINT_PERCENTAGE mode.
+  secondaryPercentage Float?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([accountId, effectiveYear])
 }
 
 model RealEstate {

@@ -174,7 +174,7 @@ test.describe('Estate Page', () => {
 
   // ── Navigation regression ──────────────────────────────────────────────────
 
-  test('tab state resets correctly when navigating away and back', async ({ page }) => {
+  test('tab state persists when navigating away and back', async ({ page }) => {
     // Switch to Legacy Strategies
     await page.getByRole('tab', { name: 'Legacy Strategies' }).click();
     await expect(page.getByText(/Spousal RRSP Rollover/i)).toBeVisible();
@@ -185,7 +185,8 @@ test.describe('Estate Page', () => {
     await page.getByRole('navigation').getByText('Estate').click();
     await page.waitForURL('/estate', { timeout: 8_000 });
 
-    // Should default back to Estate Calculator tab
-    await expect(page.getByLabel('RRSP / RRIF Balance')).toBeVisible({ timeout: 8_000 });
+    // Tab selection should persist on Legacy Strategies after returning
+    await expect(page.getByRole('tab', { name: 'Legacy Strategies', selected: true })).toBeVisible();
+    await expect(page.getByLabel('RRSP / RRIF Balance at First Death')).toBeVisible({ timeout: 8_000 });
   });
 });

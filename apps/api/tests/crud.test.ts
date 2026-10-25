@@ -181,6 +181,63 @@ describe('AccountsService', () => {
     await service.remove('a1');
     expect(prisma.account.delete).toHaveBeenCalledWith({ where: { id: 'a1' } });
   });
+
+  it('create() defaults to JOINT_UNSPECIFIED attribution when omitted', async () => {
+    prisma.account.create.mockResolvedValue({ id: 'a1' });
+    await service.create({ name: 'Cash', type: 'CASH', balance: 1000, householdId: 'h1' });
+
+    const callArg = prisma.account.create.mock.calls[0][0];
+    const createdHistory = callArg.data.taxAttributionHistory.create;
+    expect(createdHistory).toHaveLength(1);
+    expect(createdHistory[0].mode).toBe('JOINT_UNSPECIFIED');
+    expect(typeof createdHistory[0].effectiveYear).toBe('number');
+  });
+
+  it('create() normalizes history rows (dedupe by year and sort ascending)', async () => {
+    prisma.account.create.mockResolvedValue({ id: 'a1' });
+    await service.create({
+      name: 'Non-Reg',
+      type: 'NON_REG',
+      balance: 100000,
+      householdId: 'h1',
+      taxAttributionHistory: [
+        { effectiveYear: 2028, mode: 'SINGLE_MEMBER', primaryMemberId: 'm1' },
+        { effectiveYear: 2026, mode: 'JOINT_UNSPECIFIED' },
+        { effectiveYear: 2028, mode: 'JOINT_PERCENTAGE', primaryMemberId: 'm1', secondaryMemberId: 'm2', primaryPercentage: 0.7, secondaryPercentage: 0.3 },
+      ],
+    });
+
+    const callArg = prisma.account.create.mock.calls[0][0];
+    const createdHistory = callArg.data.taxAttributionHistory.create;
+    expect(createdHistory).toHaveLength(2);
+    expect(createdHistory[0].effectiveYear).toBe(2026);
+    expect(createdHistory[1].effectiveYear).toBe(2028);
+    // Last row for duplicate year should win
+    expect(createdHistory[1].mode).toBe('JOINT_PERCENTAGE');
+  });
+
+  it('update() replaces attribution history when provided', async () => {
+    prisma.account.findUnique.mockResolvedValue({ id: 'a1' });
+    prisma.account.update.mockResolvedValue({ id: 'a1' });
+
+    await service.update('a1', {
+      taxAttributionHistory: [{ effectiveYear: 2027, mode: 'SINGLE_MEMBER', primaryMemberId: 'm2' }],
+    });
+
+    expect(prisma.account.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'a1' },
+        data: expect.objectContaining({
+          taxAttributionHistory: expect.objectContaining({
+            deleteMany: {},
+            create: expect.arrayContaining([
+              expect.objectContaining({ effectiveYear: 2027, mode: 'SINGLE_MEMBER', primaryMemberId: 'm2' }),
+            ]),
+          }),
+        }),
+      }),
+    );
+  });
 });
 
 // ─── MembersService ───────────────────────────────────────────────────────────

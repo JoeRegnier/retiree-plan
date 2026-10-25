@@ -5,6 +5,12 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HouseholdsService {
   constructor(private prisma: PrismaService) {}
 
+  private readonly accountInclude = {
+    taxAttributionHistory: {
+      orderBy: { effectiveYear: 'asc' as const },
+    },
+  } as const;
+
   async create(userId: string, data: { name: string; members: { name: string; dateOfBirth: string; province: string }[] }) {
     return this.prisma.household.create({
       data: {
@@ -27,14 +33,22 @@ export class HouseholdsService {
   async findAllByUser(userId: string) {
     return this.prisma.household.findMany({
       where: { userId },
-      include: { members: { include: this.memberInclude }, accounts: true, scenarios: true },
+      include: {
+        members: { include: this.memberInclude },
+        accounts: { include: this.accountInclude },
+        scenarios: true,
+      },
     });
   }
 
   async findOne(id: string, userId: string) {
     const household = await this.prisma.household.findFirst({
       where: { id, userId },
-      include: { members: { include: this.memberInclude }, accounts: true, scenarios: true },
+      include: {
+        members: { include: this.memberInclude },
+        accounts: { include: this.accountInclude },
+        scenarios: true,
+      },
     });
     if (!household) throw new NotFoundException('Household not found');
     return household;

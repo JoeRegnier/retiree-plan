@@ -13,6 +13,7 @@ This guide covers all ways to run RetireePlan — desktop app, web-only developm
 - [Desktop Development Build](#desktop-development-build)
 - [Desktop Production Package](#desktop-production-package)
 - [Production Deployment (Web)](#production-deployment-web)
+- [Docs, Demo, Screenshots, and GitHub Pages](#docs-demo-screenshots-and-github-pages)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -240,6 +241,48 @@ node apps/api/dist/main.js
 # Serve the web dist behind nginx or a CDN
 # Point your web server at apps/web/dist/
 ```
+
+---
+
+## Docs, Demo, Screenshots, and GitHub Pages
+
+When a feature changes UI behavior, update docs assets in the same PR so README and GitHub Pages stay accurate.
+
+1. Run the full e2e suite and confirm green:
+
+```bash
+npm run test:e2e
+```
+
+2. Start both local servers in separate terminals:
+
+```bash
+npm run dev:api
+npm run dev:web
+```
+
+3. Regenerate screenshots used by [README](../README.md) and [docs/index.html](index.html):
+
+```bash
+npm run screenshots:update
+```
+
+4. Regenerate demo video used by GitHub Pages:
+
+```bash
+npm run demo:record
+```
+
+5. Validate the pages and report locally:
+
+```bash
+npx playwright show-report e2e/playwright-report
+```
+
+6. Commit updated assets together:
+- `docs/demo.webm`
+- `docs/screenshots/*`
+- any docs files changed for the feature narrative
 
 ---
 

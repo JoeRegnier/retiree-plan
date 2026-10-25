@@ -97,14 +97,14 @@ function InfoPanel({ title, what, inputs, interpretation, relevance }: InfoPanel
               <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
                   <BarChartIcon fontSize="small" color="primary" />
-                  <Typography variant="caption" fontWeight={600} color="primary">What it does</Typography>
+                  <Typography variant="caption" color="primary" sx={{ fontWeight: 600 }}>What it does</Typography>
                 </Box>
                 <Typography variant="caption" color="text.secondary">{what}</Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
                   <TuneIcon fontSize="small" color="warning" />
-                  <Typography variant="caption" fontWeight={600} color="warning.main">Key inputs</Typography>
+                  <Typography variant="caption" color="warning.main" sx={{ fontWeight: 600 }}>Key inputs</Typography>
                 </Box>
                 <List dense disablePadding>
                   {inputs.map((inp) => (
@@ -120,9 +120,9 @@ function InfoPanel({ title, what, inputs, interpretation, relevance }: InfoPanel
               <Grid size={{ xs: 12, sm: 4 }}>
                 <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
                   <CheckCircleOutlineIcon fontSize="small" color="success" />
-                  <Typography variant="caption" fontWeight={600} color="success.main">How to read results</Typography>
+                  <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>How to read results</Typography>
                 </Box>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.75 }}>{interpretation}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>{interpretation}</Typography>
                 <Typography variant="caption" color="text.secondary" fontStyle="italic">{relevance}</Typography>
               </Grid>
             </Grid>
@@ -251,13 +251,13 @@ function MonteCarloTab() {
                 <Divider />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">Median Final Net Worth</Typography>
-                  <Typography variant="body2" fontWeight={600}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     ${(result.percentilesByYear?.slice(-1)[0]?.p50 ?? 0).toLocaleString('en-CA', { maximumFractionDigits: 0 })}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">Years modelled</Typography>
-                  <Typography variant="body2" fontWeight={600}>{result.percentilesByYear?.length ?? 0}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{result.percentilesByYear?.length ?? 0}</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -701,7 +701,7 @@ function HeatmapTab() {
       <Grid size={{ xs: 12, md: 4 }}>
         <Card>
           <CardContent>
-            <Typography variant="h6" mb={2}>Parameters</Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>Parameters</Typography>
             <FormControl fullWidth size="small" sx={{ mb: 2 }}>
               <InputLabel>Scenario</InputLabel>
               <Select value={scenarioId} label="Scenario" onChange={(e) => setScenarioId(e.target.value)}>
@@ -710,7 +710,7 @@ function HeatmapTab() {
                 ))}
               </Select>
             </FormControl>
-            <Typography variant="body2" color="text.secondary" mb={2}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               This will run 36 Monte Carlo simulations across a grid of 6 withdrawal rates × 6 equity fractions.
               Each cell shows the probability your portfolio survives the full retirement period.
             </Typography>
@@ -730,8 +730,8 @@ function HeatmapTab() {
         {heatmapData ? (
           <Card>
             <CardContent>
-              <Typography variant="h6" mb={1}>Success Rate Heatmap</Typography>
-              <Typography variant="body2" color="text.secondary" mb={2}>
+              <Typography variant="h6" sx={{ mb: 1 }}>Success Rate Heatmap</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Green = high success, Red = portfolio likely depleted
               </Typography>
               <HeatmapChart
@@ -1024,7 +1024,7 @@ function HistoricalScenariosTab() {
                       {sources.map((s: SeriesInfo) => (
                         <TableRow key={s.asset}>
                           <TableCell>
-                            <Typography variant="caption" fontWeight={700} sx={{ fontFamily: 'monospace' }}>{s.asset}</Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>{s.asset}</Typography>
                           </TableCell>
                           <TableCell><Chip size="small" label={s.source} /></TableCell>
                           <TableCell align="right"><Typography variant="caption">{s.count}</Typography></TableCell>
@@ -1060,8 +1060,12 @@ function HistoricalScenariosTab() {
                   <TextField
                     size="small" variant="standard" value={run.label}
                     onChange={e => updateRun(run.id, { label: e.target.value })}
-                    inputProps={{ style: { fontWeight: 600, fontSize: 15 } }}
-                    sx={{ width: 130 }}
+                    sx={{
+                      width: 130,
+                      '& .MuiInputBase-input': {
+                        fontWeight: 600,
+                      },
+                    }}
                   />
                   <Typography variant="caption" color="text.disabled">#{idx + 1}</Typography>
                 </Box>
@@ -1142,15 +1146,15 @@ function HistoricalScenariosTab() {
                         size="small"
                         sx={{ mb: 0.5 }}
                       />
-                      <Typography variant="caption" color="text.secondary" display="block">
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                         {run.result.dataYears ? `${run.result.dataYears} data yrs · ` : ''}{run.result.trials} trials
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                         Eq: <strong>{run.result.equityAsset ?? run.equityAsset}</strong> · Bd: <strong>{run.result.bondAsset ?? run.bondAsset}</strong>
                       </Typography>
                     </Box>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                     {successMsg(run.result.successRate)}
                   </Typography>
                   <Divider sx={{ mb: 1 }} />
@@ -1165,7 +1169,7 @@ function HistoricalScenariosTab() {
                             </Box>
                           </TableCell>
                           <TableCell align="right" sx={{ py: 0.3, border: 0 }}>
-                            <Typography variant="caption" fontWeight={600}>
+                            <Typography variant="caption" sx={{ fontWeight: 600 }}>
                               {run.result!.outcomeCategories[key].pct.toFixed(1)}%
                             </Typography>
                           </TableCell>

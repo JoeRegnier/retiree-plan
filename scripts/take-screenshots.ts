@@ -40,7 +40,9 @@ const PAGES: Array<{ route: string; filename: string; waitFor?: string; note?: s
   { route: '/goals',         filename: '13-goals.png',           waitFor: 'text=Goals' },
   { route: '/ai-chat',       filename: '14-ai-chat.png',         waitFor: 'text=AI' },
   { route: '/integrations',  filename: '15-integrations.png',    waitFor: 'text=Integrations' },
-  { route: '/settings',      filename: '16-settings.png',        waitFor: 'text=Settings' },  { route: '/decisions',     filename: '17-decisions.png',     waitFor: 'text=Decision Journal' },
+  { route: '/settings',      filename: '16-settings.png',        waitFor: 'text=Settings' },
+  { route: '/decisions',     filename: '17-decisions.png',       waitFor: 'text=Decision Journal' },
+  { route: '/help',          filename: '19-help.png',            waitFor: 'text=Help & Documentation' },
 ];
 
 async function login(page: Page) {

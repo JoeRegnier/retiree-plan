@@ -36,6 +36,10 @@ test.describe('Accounts Page', () => {
     await expect(page.getByText(moneyPattern).first()).toBeVisible({ timeout: 10_000 });
   });
 
+  test('shows ownership attribution chips on account rows', async ({ page }) => {
+    await expect(page.getByText(/ownership: /i).first()).toBeVisible({ timeout: 10_000 });
+  });
+
   test('can add a new account', async ({ page }) => {
     await page.getByRole('button', { name: /add account/i }).click();
 
@@ -81,5 +85,29 @@ test.describe('Accounts Page', () => {
     await item.getByRole('button', { name: 'Delete account' }).click();
 
     await expect(page.getByText('Delete Me Account')).not.toBeVisible({ timeout: 8_000 });
+  });
+
+  test('can create account with single-member attribution', async ({ page }) => {
+    await page.getByRole('button', { name: /add account/i }).click();
+
+    await page.getByLabel('Account Name').fill('Single Owner Test Account');
+    const typeSelect = page.getByLabel('Account Type');
+    await typeSelect.click();
+    await page.getByRole('option', { name: /rrsp/i }).first().click();
+    await page.getByLabel(/current balance/i).fill('12000');
+
+    const modeSelect = page.getByLabel('Mode');
+    await modeSelect.click();
+    await page.getByRole('option', { name: /single member/i }).click();
+
+    const ownerSelect = page.getByLabel('Owner Member');
+    await ownerSelect.click();
+    await page.getByRole('option').nth(0).click();
+
+    await page.getByRole('button', { name: /add account|save/i }).last().click();
+
+    const accountItem = page.locator('li', { has: page.getByText('Single Owner Test Account') });
+    await expect(accountItem).toBeVisible({ timeout: 8_000 });
+    await expect(accountItem.getByText(/ownership: single member/i)).toBeVisible({ timeout: 8_000 });
   });
 });

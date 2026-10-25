@@ -47,6 +47,9 @@ A single 0–100 composite score weighted across Monte Carlo success rate (40%),
 ### 🔄 What-If Scenarios
 Create and compare multiple named scenarios side-by-side. The Compare page overlays projections, net worth curves, and tax summaries across any two plans at once.
 
+### 👥 Member Ownership & Tax Attribution
+Track account ownership using year-effective attribution history (joint, single member, or percentage split). Projections now produce per-member income, withdrawals, and tax breakdowns while preserving reconciled household totals.
+
 ### 🏠 Real Estate & Estate Planning
 Model rental properties, principal-residence exemptions, and deemed-disposition tax on death. Estimate probate by province. Model beneficiary designations and inheritance events.
 
@@ -130,7 +133,12 @@ npm run dev:api & npm run dev:web &
 # Then record:
 npm run demo:record
 # → saves docs/demo.webm
+
+# Refresh screenshots used by README + GitHub Pages
+npm run screenshots:update
 ```
+
+The recommended publish flow is: run `npm run test:e2e`, refresh `docs/demo.webm`, refresh `docs/screenshots/*`, then commit the updated assets together.
 
 ---
 
@@ -155,6 +163,24 @@ npm run demo:record
 | AI Assistant | Integrations | International |
 |---|---|---|
 | ![AI Chat](docs/screenshots/14-ai-chat.png) | ![Integrations](docs/screenshots/15-integrations.png) | ![International](docs/screenshots/11-international.png) |
+
+| Decision Journal | Decision Mind Map | Help & Docs |
+|---|---|---|
+| ![Decisions](docs/screenshots/17-decisions.png) | ![Decision Mind Map](docs/screenshots/18-decision-mindmap.png) | ![Help](docs/screenshots/19-help.png) |
+
+---
+
+## ✅ Regression Coverage
+
+The e2e suite includes route smoke tests plus capability-focused flows across Goals, Decisions, Retire Finder, Compare, International, AI Assistant, Integrations, Help, and Settings.
+
+```bash
+# Run all Playwright coverage
+npm run test:e2e
+
+# Open HTML report from the e2e workspace
+npx playwright show-report e2e/playwright-report
+```
 
 ---
 

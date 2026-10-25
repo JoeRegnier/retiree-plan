@@ -152,10 +152,14 @@ async function waitFor(page: import('playwright').Page, selector: string, ms = 1
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
   await pause(1000);
 
-  // ── 6. Accounts ────────────────────────────────────────────────────────────
+  // ── 6. Accounts (ownership attribution) ───────────────────────────────────
   console.log('  [6/8] Accounts');
   await page.goto(`${BASE_URL}/accounts`);
   await waitFor(page, "text=David's RRSP", 10_000);
+  await waitFor(page, 'text=Ownership:', 8_000);
+  await page.evaluate(() => window.scrollBy({ top: 260, behavior: 'smooth' }));
+  await pause(1200);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
   await pause(3000);
 
   // ── 7. Scenarios ───────────────────────────────────────────────────────────

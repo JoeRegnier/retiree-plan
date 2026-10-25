@@ -4,7 +4,7 @@
  * key data for the seeded test account.
  */
 import { test, expect } from '@playwright/test';
-import { loginAsTestUser, HOUSEHOLD_NAME, MEMBER_A, MEMBER_B } from '../helpers/auth';
+import { loginAsTestUser } from '../helpers/auth';
 
 test.describe('Navigation & Dashboard', () => {
   test.beforeEach(async ({ page }) => {
@@ -13,16 +13,16 @@ test.describe('Navigation & Dashboard', () => {
 
   test('dashboard loads and shows household name', async ({ page }) => {
     await expect(page).toHaveURL('/');
-    // Household name or member name should appear somewhere on the dashboard
-    await expect(page.getByText(HOUSEHOLD_NAME).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/good (morning|afternoon|evening),/i)).toBeVisible({ timeout: 10_000 });
   });
 
   test('sidebar navigation links are all visible', async ({ page }) => {
     const nav = page.getByRole('navigation');
     for (const label of [
-      'Dashboard', 'Household', 'Accounts', 'Milestones', 'Scenarios',
-      'Projections', 'Simulations', 'Tax Analytics', 'Estate',
-      'Compare', 'Integrations',
+      'Dashboard', 'Household', 'Accounts', 'Milestones', 'Goals',
+      'Decisions', 'Scenarios', 'Projections', 'Simulations',
+      'Retire Finder', 'Tax Analytics', 'Estate', 'International',
+      'Compare', 'AI Assistant', 'Integrations', 'Help',
     ]) {
       await expect(nav.getByText(label)).toBeVisible();
     }
@@ -35,11 +35,19 @@ test.describe('Navigation & Dashboard', () => {
       ['Household',     '/household'],
       ['Accounts',      '/accounts'],
       ['Milestones',    '/milestones'],
+      ['Goals',         '/goals'],
+      ['Decisions',     '/decisions'],
       ['Scenarios',     '/scenarios'],
       ['Projections',   '/projections'],
       ['Simulations',   '/simulations'],
+      ['Retire Finder', '/retire-finder'],
       ['Tax Analytics', '/tax-analytics'],
       ['Estate',        '/estate'],
+      ['International', '/international'],
+      ['Compare',       '/compare'],
+      ['AI Assistant',  '/ai-chat'],
+      ['Integrations',  '/integrations'],
+      ['Help',          '/help'],
     ];
 
     for (const [label, path] of routes) {

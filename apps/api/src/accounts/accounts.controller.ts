@@ -25,6 +25,14 @@ export class AccountsController {
     brokerageAccountId?: string | null;
     brokerageProvider?: string | null;
     brokerageAccountName?: string | null;
+    taxAttributionHistory?: Array<{
+      effectiveYear: number;
+      mode?: string;
+      primaryMemberId?: string | null;
+      secondaryMemberId?: string | null;
+      primaryPercentage?: number | null;
+      secondaryPercentage?: number | null;
+    }>;
   }) {
     return this.accountsService.create(body);
   }
@@ -55,6 +63,14 @@ export class AccountsController {
     brokerageAccountId?: string | null;
     brokerageProvider?: string | null;
     brokerageAccountName?: string | null;
+    taxAttributionHistory?: Array<{
+      effectiveYear: number;
+      mode?: string;
+      primaryMemberId?: string | null;
+      secondaryMemberId?: string | null;
+      primaryPercentage?: number | null;
+      secondaryPercentage?: number | null;
+    }>;
   }) {
     return this.accountsService.update(id, body);
   }
