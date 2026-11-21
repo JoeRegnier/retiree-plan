@@ -10,9 +10,9 @@
     "start:prod": "node dist/main.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:generate": "prisma generate --config ../../prisma.config.ts",
-    "db:migrate": "prisma migrate dev --config ../../prisma.config.ts",
-    "db:push": "prisma db push --config ../../prisma.config.ts"
+    "db:generate": "cd ../.. && prisma generate --config prisma.config.ts --schema prisma/schema.prisma",
+    "db:migrate": "cd ../.. && prisma migrate dev --config prisma.config.ts --schema prisma/schema.prisma",
+    "db:push": "cd ../.. && prisma db push --config prisma.config.ts --schema prisma/schema.prisma"
   },
   "dependencies": {
     "@github/copilot-sdk": "^0.2.2",
@@ -26,8 +26,8 @@
     "@nestjs/schedule": "^12.0.1",
     "@nestjs/serve-static": "^12.0.0",
     "@nestjs/swagger": "^12.0.1",
-    "@prisma/adapter-libsql": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/adapter-libsql": "6.12.0",
+    "@prisma/client": "6.12.0",
     "@retiree-plan/finance-engine": "*",
     "@retiree-plan/shared": "*",
     "bcrypt": "^6.0.0",
@@ -39,7 +39,7 @@
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
     "winston": "^3.17.0",
-    "yahoo-finance2": "^3.14.0",
+    "yahoo-finance2": "^4.0.6",
     "zod": "^4.4.3"
   },
   "optionalDependencies": {
@@ -60,7 +60,7 @@
     "@types/passport-jwt": "^4.0.0",
     "lodash": "^4.18.1",
     "picomatch": "^4.0.4",
-    "prisma": "^7.8.0",
+    "prisma": "6.12.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.2"
   }

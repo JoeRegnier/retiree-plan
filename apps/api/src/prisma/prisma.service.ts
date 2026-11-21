@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
 import * as path from 'path';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const url =
       process.env.DATABASE_URL ||
       `file:${path.resolve(__dirname, '../../../..', 'data', 'retiree-plan.db').replace(/\\/g, '/')}`;
-    const adapter = new PrismaLibSql({ url });
+    const adapter = new PrismaLibSQL({ url });
     super({ adapter } as any);
   }
 
