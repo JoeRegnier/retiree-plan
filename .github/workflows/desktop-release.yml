@@ -303,6 +303,7 @@ jobs:
         run: |
           if [[ "${{ steps.mac_signing.outputs.enabled }}" != "true" ]]; then
             export CSC_IDENTITY_AUTO_DISCOVERY=false
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
           fi
           npx electron-builder --mac --x64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
           npx electron-builder --mac --arm64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
