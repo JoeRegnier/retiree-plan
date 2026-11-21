@@ -115,9 +115,9 @@
     }
   },
   "devDependencies": {
-    "@prisma/adapter-libsql": "6.12.0",
-    "@prisma/config": "6.12.0",
-    "prisma": "6.12.0",
+    "@prisma/adapter-libsql": "7.10.1",
+    "@prisma/config": "7.10.1",
+    "prisma": "7.10.1",
     "tsx": "^4.22.4"
   }
 }
