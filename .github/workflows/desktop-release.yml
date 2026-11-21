@@ -270,8 +270,9 @@ jobs:
           DVER=$(node -e "process.stdout.write(require('./node_modules/dmg-license/package.json').version)" 2>/dev/null || echo "1.0.11")
           test -d "node_modules/dmg-license" || npm install --no-save --ignore-scripts "dmg-license@$DVER"
 
-      - name: Verify mac signing/notarization secrets
-        if: runner.os == 'macOS' && github.event_name == 'push'
+      - name: Detect mac signing configuration
+        id: mac_signing
+        if: runner.os == 'macOS'
         shell: bash
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
@@ -288,8 +289,10 @@ jobs:
             fi
           done
           if [[ "$missing" -ne 0 ]]; then
-            echo "::error::Refusing to publish unsigned macOS artifacts."
-            exit 1
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Signing credentials are incomplete. Building an unsigned macOS artifact."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
 
       # ── Package with electron-builder ─────────────────────────────────────
@@ -298,8 +301,17 @@ jobs:
         working-directory: apps/desktop
         shell: bash
         run: |
+          if [[ "${{ steps.mac_signing.outputs.enabled }}" != "true" ]]; then
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
           npx electron-builder --mac --x64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
           npx electron-builder --mac --arm64 --publish never --config.extraMetadata.version="$RELEASE_VERSION"
+          if [[ "${{ steps.mac_signing.outputs.enabled }}" != "true" ]]; then
+            for artifact in release/*.dmg release/*.zip; do
+              [[ -e "$artifact" ]] || continue
+              mv "$artifact" "${artifact%.*}-unsigned.${artifact##*.}"
+            done
+          fi
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}

@@ -29,6 +29,11 @@ The desktop app bundles everything — no Node.js, no database setup, no configu
 
 2. Install/open as normal for your platform.
 
+   If the macOS filename contains `-unsigned`, the app was not signed or
+   notarized. Control-click the app and choose **Open**, confirm the prompt,
+   and macOS will remember that approval for future launches. Prefer a signed
+   build when one is available.
+
 3. On first launch, you will be prompted to choose a folder for your plan data. This folder will contain:
    - `retiree-plan.db` — your SQLite database
    - `secrets.json` — your JWT and encryption keys (never share this file)

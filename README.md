@@ -191,7 +191,9 @@ npx playwright show-report e2e/playwright-report
 
 Download the latest release for your platform from the [Releases page](../../releases).
 
-- **macOS:** Open the `.dmg`, drag RetireePlan to Applications.
+- **macOS:** Open the `.dmg`, drag RetireePlan to Applications. Artifacts named
+  `-unsigned` were not notarized; macOS may require **Control-click → Open**
+  on first launch. Prefer signed artifacts when available.
 - **Windows:** Run the `.exe` installer.
 - **Linux:** Use the `.AppImage`.
 
