@@ -21,6 +21,9 @@ import { useApi } from '../hooks/useApi';
 import { PROVINCE_NAMES } from '@retiree-plan/shared';
 
 interface UserProfile { id: string; email: string; name?: string; }
+interface MfaStatus { enabled: boolean; enabledAt: string | null; pendingSetup: boolean; }
+interface MfaSetupResponse { manualEntryKey: string; otpAuthUrl: string; issuer: string; }
+interface RecoveryCodesResponse { recoveryCodes: string[]; }
 
 interface YnabStatus { connected: boolean; budgetName?: string; }
 
@@ -64,6 +67,10 @@ export function SettingsPage() {
     queryKey: ['profile'],
     queryFn: () => apiFetch('/auth/me'),
   });
+  const { data: mfaStatus } = useQuery<MfaStatus>({
+    queryKey: ['mfa-status'],
+    queryFn: () => apiFetch('/auth/mfa/status'),
+  });
 
   const { data: households } = useQuery<any[]>({
     queryKey: ['households'],
@@ -81,6 +88,10 @@ export function SettingsPage() {
   const [name, setName] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [mfaSetup, setMfaSetup] = useState<MfaSetupResponse | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaCurrentPassword, setMfaCurrentPassword] = useState('');
+  const [mfaRecoveryCodes, setMfaRecoveryCodes] = useState<string[]>([]);
   const [defaultProvince, setDefaultProvince] = useState<string>('ON');
   const [inflationAssumption, setInflationAssumption] = useState<string>('2.5');
   const [expectedReturn, setExpectedReturn] = useState<string>('6.0');
@@ -126,6 +137,66 @@ export function SettingsPage() {
         setSnack('Failed to save profile');
       }
     },
+  });
+
+  const beginMfaSetup = useMutation({
+    mutationFn: () => apiFetch<MfaSetupResponse>('/auth/mfa/setup', { method: 'POST' }),
+    onSuccess: (data) => {
+      setMfaSetup(data);
+      setMfaCode('');
+      setMfaRecoveryCodes([]);
+    },
+    onError: (err: any) => setSnack(err?.message ?? 'Failed to start MFA setup'),
+  });
+
+  const enableMfa = useMutation({
+    mutationFn: () => apiFetch<RecoveryCodesResponse>('/auth/mfa/enable', {
+      method: 'POST',
+      body: JSON.stringify({ verificationCode: mfaCode.trim() }),
+    }),
+    onSuccess: (data) => {
+      setMfaSetup(null);
+      setMfaCode('');
+      setMfaRecoveryCodes(data.recoveryCodes);
+      qc.invalidateQueries({ queryKey: ['mfa-status'] });
+      setSnack('MFA enabled');
+    },
+    onError: (err: any) => setSnack(err?.message ?? 'Failed to enable MFA'),
+  });
+
+  const disableMfa = useMutation({
+    mutationFn: () => apiFetch('/auth/mfa/disable', {
+      method: 'POST',
+      body: JSON.stringify({
+        currentPassword: mfaCurrentPassword,
+        verificationCode: mfaCode.trim(),
+      }),
+    }),
+    onSuccess: () => {
+      setMfaCurrentPassword('');
+      setMfaCode('');
+      setMfaRecoveryCodes([]);
+      qc.invalidateQueries({ queryKey: ['mfa-status'] });
+      setSnack('MFA disabled');
+    },
+    onError: (err: any) => setSnack(err?.message ?? 'Failed to disable MFA'),
+  });
+
+  const regenerateRecoveryCodes = useMutation({
+    mutationFn: () => apiFetch<RecoveryCodesResponse>('/auth/mfa/recovery-codes', {
+      method: 'POST',
+      body: JSON.stringify({
+        currentPassword: mfaCurrentPassword,
+        verificationCode: mfaCode.trim(),
+      }),
+    }),
+    onSuccess: (data) => {
+      setMfaRecoveryCodes(data.recoveryCodes);
+      setMfaCode('');
+      qc.invalidateQueries({ queryKey: ['mfa-status'] });
+      setSnack('Recovery codes regenerated');
+    },
+    onError: (err: any) => setSnack(err?.message ?? 'Failed to regenerate recovery codes'),
   });
 
   // ── Database backup & restore ─────────────────────────────────────────────
@@ -212,9 +283,115 @@ export function SettingsPage() {
                 variant="contained"
                 startIcon={<SaveIcon />}
                 onClick={() => updateProfile.mutate()}
+                sx={{ mb: 2 }}
               >
                 Save Profile
               </Button>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Multi-factor Authentication</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                Status: {mfaStatus?.enabled ? 'Enabled' : 'Disabled'}
+              </Typography>
+              {mfaStatus?.enabledAt && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                  Enabled on {new Date(mfaStatus.enabledAt).toLocaleString()}
+                </Typography>
+              )}
+              {!mfaStatus?.enabled && (
+                <Stack spacing={1.5} sx={{ mb: 2 }}>
+                  {!mfaSetup ? (
+                    <Button
+                      variant="outlined"
+                      onClick={() => beginMfaSetup.mutate()}
+                      disabled={beginMfaSetup.isPending}
+                    >
+                      {beginMfaSetup.isPending ? 'Starting…' : 'Set Up MFA'}
+                    </Button>
+                  ) : (
+                    <>
+                      <Alert severity="info">
+                        Add an account in your authenticator app using this key:
+                        <br />
+                        <strong>{mfaSetup.manualEntryKey}</strong>
+                        <br />
+                        <Typography variant="caption" component="span">
+                          URI: {mfaSetup.otpAuthUrl}
+                        </Typography>
+                      </Alert>
+                      <TextField
+                        label="Authenticator Code"
+                        value={mfaCode}
+                        onChange={(e) => setMfaCode(e.target.value)}
+                        fullWidth
+                      />
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          variant="contained"
+                          onClick={() => enableMfa.mutate()}
+                          disabled={!mfaCode || enableMfa.isPending}
+                        >
+                          Confirm & Enable
+                        </Button>
+                        <Button
+                          variant="text"
+                          onClick={() => {
+                            setMfaSetup(null);
+                            setMfaCode('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </Stack>
+                    </>
+                  )}
+                </Stack>
+              )}
+              {mfaStatus?.enabled && (
+                <Stack spacing={1.5}>
+                  <TextField
+                    label="Current Password"
+                    type="password"
+                    value={mfaCurrentPassword}
+                    onChange={(e) => setMfaCurrentPassword(e.target.value)}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Authenticator or Recovery Code"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.toUpperCase())}
+                    fullWidth
+                  />
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => regenerateRecoveryCodes.mutate()}
+                      disabled={!mfaCurrentPassword || !mfaCode || regenerateRecoveryCodes.isPending}
+                    >
+                      Regenerate Recovery Codes
+                    </Button>
+                    <Button
+                      color="error"
+                      variant="outlined"
+                      onClick={() => disableMfa.mutate()}
+                      disabled={!mfaCurrentPassword || !mfaCode || disableMfa.isPending}
+                    >
+                      Disable MFA
+                    </Button>
+                  </Stack>
+                </Stack>
+              )}
+              {mfaRecoveryCodes.length > 0 && (
+                <Alert severity="warning" sx={{ mt: 1.5 }}>
+                  Save these recovery codes now. They are shown only once.
+                  <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
+                    {mfaRecoveryCodes.map((code) => (
+                      <li key={code}>
+                        <Typography component="span" sx={{ fontFamily: 'monospace' }}>{code}</Typography>
+                      </li>
+                    ))}
+                  </Box>
+                </Alert>
+              )}
             </CardContent>
           </Card>
         </Grid>

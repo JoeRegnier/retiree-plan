@@ -71,7 +71,7 @@ Edit `.env` and set at minimum:
 ```dotenv
 # Required
 JWT_SECRET=any-long-random-string-for-local-dev
-TOKEN_ENCRYPTION_KEY=32-char-hex-string           # openssl rand -hex 32
+TOKEN_ENCRYPTION_KEY=64-char-hex-string           # openssl rand -hex 32
 
 # Optional integrations
 YNAB_API_KEY=your-ynab-personal-access-token
@@ -113,7 +113,7 @@ npm run dev:web   # Web only
 |---|---|---|---|
 | `DATABASE_URL` | Yes | `file:./data/retiree-plan.db` | Prisma database connection string |
 | `JWT_SECRET` | Yes | — | Secret key for signing JWT tokens. Use a long random string in production. |
-| `TOKEN_ENCRYPTION_KEY` | Yes | — | 32-byte hex key for encrypting stored API tokens (YNAB etc.) |
+| `TOKEN_ENCRYPTION_KEY` | Yes | — | 32-byte key encoded as 64 hex chars for encrypting stored API tokens and MFA secrets. |
 | `PORT` | No | `3001` | API server port |
 | `CORS_ORIGIN` | No | `http://localhost:5173` | Allowed CORS origin for the frontend |
 | `SERVE_STATIC` | No | `false` | Set to `true` to serve the built web app from the API (used by desktop) |

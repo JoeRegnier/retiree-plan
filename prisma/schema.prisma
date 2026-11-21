@@ -11,6 +11,11 @@ model User {
   email                String                @unique
   password             String
   name                 String?
+  mfaEnabled           Boolean               @default(false)
+  mfaSecret            String?
+  mfaPendingSecret     String?
+  mfaRecoveryCodes     String?
+  mfaEnabledAt         DateTime?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   households           Household[]
