@@ -17,15 +17,15 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^7.3.9",
-    "@mui/material": "^7.3.9",
+    "@mui/icons-material": "^9.5.0",
+    "@mui/material": "^9.5.0",
     "@react-pdf/renderer": "^4.3.2",
-    "@tanstack/react-query": "^5.99.0",
+    "@tanstack/react-query": "^5.108.2",
     "@types/d3-sankey": "^0.12.5",
     "d3": "^7.9.0",
     "d3-sankey": "^0.12.3",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-router": "^7.17.0",
     "zod": "^4.4.3"
   },
@@ -37,16 +37,16 @@
     "@rolldown/binding-win32-x64-msvc": "1.0.0-rc.12"
   },
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "^1.65.1",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.3.0",
     "@types/d3": "^7.4.0",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.1.0",
-    "@vitejs/plugin-react": "^6.0.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
     "jsdom": "^29.0.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.13",
-    "vitest": "^4.1.6"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   }
 }
