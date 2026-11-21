@@ -28,6 +28,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects';
 import SavingsOutlinedIcon from '@mui/icons-material/SavingsOutlined';
+import SecurityIcon from '@mui/icons-material/Security';
 
 interface FaqItem {
   q: string;
@@ -60,6 +61,30 @@ const SECTIONS: Section[] = [
       {
         q: 'Can I model a couple?',
         a: 'Yes — add both spouses as household members. The projection engine considers each member\'s age, income sources, and OAS/CPP eligibility separately.',
+      },
+    ],
+  },
+  {
+    title: 'Security & Sign-In',
+    icon: <SecurityIcon />,
+    color: '#455a64',
+    description: 'Protect your account with authenticator-app MFA and recovery codes.',
+    faqs: [
+      {
+        q: 'How do I enable MFA?',
+        a: 'Go to Settings → Profile → Multi-factor Authentication, select Set Up MFA, add the manual key to your authenticator app, then enter the 6-digit code to confirm.',
+      },
+      {
+        q: 'Which authenticator apps work?',
+        a: 'Any app that supports TOTP works, including 1Password, Authy, Microsoft Authenticator, and Google Authenticator.',
+      },
+      {
+        q: 'What are recovery codes used for?',
+        a: 'Recovery codes are one-time backups for sign-in if you lose access to your authenticator app. Save them in a secure location when shown.',
+      },
+      {
+        q: 'How do I disable MFA or rotate recovery codes?',
+        a: 'In Settings → Profile → Multi-factor Authentication, provide your current password and an authenticator (or recovery) code, then choose Disable MFA or Regenerate Recovery Codes.',
       },
     ],
   },
@@ -1704,6 +1729,5 @@ export function HelpPage() {
     </Box>
   );
 }
-
 
 

@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { defineConfig } from '@prisma/config';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
 
 // The Prisma CLI does not read .env on its own. Load the repo-root .env so
 // `npm run db:migrate` works from any workspace. Existing env vars win.
@@ -15,10 +14,5 @@ export default defineConfig({
   schema: path.resolve(__dirname, 'prisma/schema.prisma'),
   datasource: {
     url,
-  },
-  migrate: {
-    async adapter() {
-      return new PrismaLibSql({ url });
-    },
   },
 });

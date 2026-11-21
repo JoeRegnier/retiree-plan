@@ -70,6 +70,7 @@ A native macOS/Windows/Linux desktop application with:
 - No server required — the API runs locally inside the app
 - Multiple financial plans (profiles) in different folders
 - One-click plan switching from the login screen
+- Optional authenticator-app MFA (TOTP + one-time recovery codes)
 - Automatic daily backups, per-plan and isolated
 - Packaged as a DMG (macOS), NSIS installer (Windows), or AppImage/deb (Linux)
 - GitHub Actions CI builds installers for all three platforms automatically
@@ -227,7 +228,7 @@ npm install
 
 # 3. Set up environment
 cp .env.example .env
-# Edit .env — set JWT_SECRET and optionally YNAB_API_KEY
+# Edit .env — set JWT_SECRET and TOKEN_ENCRYPTION_KEY
 
 # 4. Initialize the database
 npm run db:migrate

@@ -25,6 +25,7 @@
 17. [Step 16 — Tax Analytics and Optimization](#17-step-16--tax-analytics-and-optimization)
 18. [Step 17 — Keeping the Plan Current](#18-step-17--keeping-the-plan-current)
 19. [Quick Reference: Key Numbers for 2024](#19-quick-reference-key-numbers-for-2024)
+20. [Account Security — Multi-Factor Authentication (MFA)](#20-account-security--multi-factor-authentication-mfa)
 
 ---
 
@@ -698,6 +699,44 @@ Each calendar year, update the following:
 | **CPP earliest start age** | 60 |
 | **OAS earliest start age** | 65 |
 | **Maximum deferral age (CPP and OAS)** | 70 |
+
+---
+
+## 20. Account Security — Multi-Factor Authentication (MFA)
+
+**Where:** `Settings` page → `Profile` card → **Multi-factor Authentication**
+
+MFA adds a second proof of identity after your password. In RetireePlan, this uses **TOTP authenticator apps** (not SMS), which is free and works offline.
+
+### Recommended setup flow
+
+1. Sign in with your password.
+2. Open **Settings** and find **Multi-factor Authentication**.
+3. Select **Set Up MFA**.
+4. Add the provided key to your authenticator app (1Password, Authy, Microsoft Authenticator, Google Authenticator, etc.).
+5. Enter the 6-digit code from the app and confirm.
+6. Save the recovery codes shown on screen in a secure place.
+
+### What changes after MFA is enabled
+
+- Sign-in becomes two-step:
+  1. password
+  2. authenticator code (or a one-time recovery code)
+- Recovery codes are single-use and removed after use.
+- You can regenerate recovery codes anytime from the same Settings section.
+
+### If you lose your authenticator app
+
+Use one saved recovery code at sign-in, then immediately:
+
+1. Go to **Settings** → **Multi-factor Authentication**
+2. Regenerate recovery codes, or disable and re-enable MFA on your new device
+
+### Operational tips
+
+- Store recovery codes in a password manager or encrypted note.
+- Do not keep recovery codes in plain text on shared devices.
+- If you change phones, migrate your authenticator entries before wiping your old device.
 
 ---
 

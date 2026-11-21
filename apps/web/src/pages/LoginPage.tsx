@@ -20,11 +20,12 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 export function LoginPage() {
-  const { login, register } = useAuth();
+  const { login, register, mfaChallenge, verifyMfaLogin, cancelMfaLogin } = useAuth();
   const [tab, setTab] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   // Desktop integration: show data directory and allow switching profiles
@@ -113,6 +114,20 @@ export function LoginPage() {
     }
   };
 
+  const handleVerifyMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await verifyMfaLogin(verificationCode.trim());
+      setVerificationCode('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -135,10 +150,12 @@ export function LoginPage() {
             </Typography>
           </Box>
 
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} centered sx={{ mb: 3 }}>
-            <Tab label="Sign In" />
-            <Tab label="Register" />
-          </Tabs>
+          {!mfaChallenge && (
+            <Tabs value={tab} onChange={(_, v) => setTab(v)} centered sx={{ mb: 3 }}>
+              <Tab label="Sign In" />
+              <Tab label="Register" />
+            </Tabs>
+          )}
 
           {desktopAvailable && (
             <Box sx={{ mb: 2.5 }}>
@@ -233,45 +250,82 @@ export function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit}>
-            {tab === 1 && (
+          {mfaChallenge ? (
+            <form onSubmit={handleVerifyMfa}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Enter the 6-digit code from your authenticator app, or a recovery code, for {mfaChallenge.email}.
+              </Alert>
               <TextField
-                label="Name"
+                label="Verification Code"
                 fullWidth
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                required
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
                 sx={{ mb: 2 }}
               />
-            )}
-            <TextField
-              label="Email"
-              type="email"
-              fullWidth
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Password"
-              type="password"
-              fullWidth
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              sx={{ mb: 3 }}
-              inputProps={{ minLength: 8 }}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              size="large"
-              disabled={loading}
-            >
-              {loading ? 'Please wait…' : tab === 0 ? 'Sign In' : 'Create Account'}
-            </Button>
-          </form>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  fullWidth
+                  size="large"
+                  disabled={loading}
+                >
+                  {loading ? 'Please wait…' : 'Verify Code'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  fullWidth
+                  size="large"
+                  disabled={loading}
+                  onClick={cancelMfaLogin}
+                >
+                  Back
+                </Button>
+              </Stack>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              {tab === 1 && (
+                <TextField
+                  label="Name"
+                  fullWidth
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  sx={{ mb: 2 }}
+                />
+              )}
+              <TextField
+                label="Email"
+                type="email"
+                fullWidth
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                label="Password"
+                type="password"
+                fullWidth
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                sx={{ mb: 3 }}
+                inputProps={{ minLength: 8 }}
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                size="large"
+                disabled={loading}
+              >
+                {loading ? 'Please wait…' : tab === 0 ? 'Sign In' : 'Create Account'}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </Box>

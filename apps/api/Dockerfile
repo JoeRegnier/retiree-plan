@@ -1,5 +1,5 @@
 # Build stage
-FROM node:26-alpine AS builder
+FROM node:26-bookworm-slim AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -22,7 +22,7 @@ RUN npm run build --workspace=packages/shared \
 	&& npm run build --workspace=apps/api
 
 # Runtime stage
-FROM node:26-alpine AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

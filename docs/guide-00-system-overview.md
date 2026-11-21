@@ -32,7 +32,7 @@ retiree-plan/
 ├── apps/
 │   ├── api/                    # NestJS backend (REST API, auth, DB access)
 │   │   └── src/
-│   │       ├── auth/           # JWT authentication module
+│   │       ├── auth/           # JWT + optional TOTP MFA authentication module
 │   │       ├── households/     # Household + member CRUD
 │   │       ├── accounts/       # Account + real estate CRUD
 │   │       ├── scenarios/      # Scenario parameter CRUD
